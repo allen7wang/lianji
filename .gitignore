@@ -31,7 +31,22 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+.env
+.env.*
+!.env.example
+
+# local records, release packages and research
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+/release-assets/
+/research-*/
+/assets/icon 2.png
+apple/build/
+apple/**/xcuserdata/
+*.xcuserstate
 
 # typescript
 *.tsbuildinfo

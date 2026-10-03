@@ -1,0 +1,34 @@
+name: App checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Verify training programs
+        run: npm run test:templates
+      - name: Export iOS bundle
+        run: npx expo export --platform ios --output-dir dist/ios
+      - name: Export Android bundle
+        run: npx expo export --platform android --output-dir dist/android

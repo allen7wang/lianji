@@ -1,0 +1,418 @@
+[
+  {
+    "id": "full-body",
+    "name": "1分化",
+    "subtitle": "全身训练",
+    "description": "每次覆盖上下肢与核心，用一个训练日组织全身动作。",
+    "days": [
+      {
+        "id": "full",
+        "name": "全身",
+        "focus": "腿 · 胸 · 背 · 肩 · 核心",
+        "exercises": [
+          {
+            "name": "杠铃深蹲",
+            "sets": 3,
+            "reps": 8
+          },
+          {
+            "name": "杠铃卧推",
+            "sets": 3,
+            "reps": 8
+          },
+          {
+            "name": "坐姿划船",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "罗马尼亚硬拉",
+            "sets": 2,
+            "reps": 10
+          },
+          {
+            "name": "杠铃肩推",
+            "sets": 2,
+            "reps": 10
+          },
+          {
+            "name": "卷腹",
+            "sets": 2,
+            "reps": 15
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "three-way",
+    "name": "3分化",
+    "subtitle": "胸 / 背 / 腿肩",
+    "description": "按部位划分三个训练日，胸背分别搭配手臂，腿与肩安排在同一天。",
+    "days": [
+      {
+        "id": "chest",
+        "name": "胸与三头",
+        "focus": "胸 · 肱三头肌",
+        "exercises": [
+          {
+            "name": "杠铃卧推",
+            "sets": 3,
+            "reps": 8
+          },
+          {
+            "name": "上斜哑铃卧推",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "绳索夹胸",
+            "sets": 2,
+            "reps": 12
+          },
+          {
+            "name": "绳索下压",
+            "sets": 3,
+            "reps": 12
+          },
+          {
+            "name": "仰卧臂屈伸",
+            "sets": 2,
+            "reps": 10
+          }
+        ]
+      },
+      {
+        "id": "back",
+        "name": "背与二头",
+        "focus": "背 · 肱二头肌",
+        "exercises": [
+          {
+            "name": "高位下拉",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "杠铃划船",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "单臂哑铃划船",
+            "sets": 2,
+            "reps": 10
+          },
+          {
+            "name": "杠铃弯举",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "锤式弯举",
+            "sets": 2,
+            "reps": 12
+          }
+        ]
+      },
+      {
+        "id": "legs-shoulders",
+        "name": "腿与肩",
+        "focus": "腿 · 肩 · 核心",
+        "exercises": [
+          {
+            "name": "杠铃深蹲",
+            "sets": 3,
+            "reps": 8
+          },
+          {
+            "name": "罗马尼亚硬拉",
+            "sets": 2,
+            "reps": 10
+          },
+          {
+            "name": "腿弯举",
+            "sets": 2,
+            "reps": 12
+          },
+          {
+            "name": "杠铃肩推",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "哑铃侧平举",
+            "sets": 2,
+            "reps": 12
+          },
+          {
+            "name": "卷腹",
+            "sets": 2,
+            "reps": 15
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "five-way",
+    "name": "5分化",
+    "subtitle": "胸 / 背 / 腿 / 肩 / 手臂",
+    "description": "主要部位各自安排一个训练日，便于分别记录与调整训练量。",
+    "days": [
+      {
+        "id": "chest",
+        "name": "胸",
+        "focus": "胸",
+        "exercises": [
+          {
+            "name": "杠铃卧推",
+            "sets": 3,
+            "reps": 8
+          },
+          {
+            "name": "上斜哑铃卧推",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "绳索夹胸",
+            "sets": 3,
+            "reps": 12
+          },
+          {
+            "name": "俯卧撑",
+            "sets": 2,
+            "reps": 12
+          }
+        ]
+      },
+      {
+        "id": "back",
+        "name": "背",
+        "focus": "背",
+        "exercises": [
+          {
+            "name": "引体向上",
+            "sets": 3,
+            "reps": 8
+          },
+          {
+            "name": "杠铃划船",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "高位下拉",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "坐姿划船",
+            "sets": 2,
+            "reps": 12
+          }
+        ]
+      },
+      {
+        "id": "legs",
+        "name": "腿",
+        "focus": "腿 · 核心",
+        "exercises": [
+          {
+            "name": "杠铃深蹲",
+            "sets": 3,
+            "reps": 8
+          },
+          {
+            "name": "腿举",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "腿弯举",
+            "sets": 3,
+            "reps": 12
+          },
+          {
+            "name": "站姿提踵",
+            "sets": 3,
+            "reps": 15
+          },
+          {
+            "name": "卷腹",
+            "sets": 2,
+            "reps": 15
+          }
+        ]
+      },
+      {
+        "id": "shoulders",
+        "name": "肩",
+        "focus": "肩",
+        "exercises": [
+          {
+            "name": "杠铃肩推",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "哑铃侧平举",
+            "sets": 3,
+            "reps": 12
+          },
+          {
+            "name": "反向飞鸟",
+            "sets": 3,
+            "reps": 12
+          },
+          {
+            "name": "面拉",
+            "sets": 2,
+            "reps": 12
+          }
+        ]
+      },
+      {
+        "id": "arms",
+        "name": "手臂",
+        "focus": "肱二头肌 · 肱三头肌 · 核心",
+        "exercises": [
+          {
+            "name": "杠铃弯举",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "锤式弯举",
+            "sets": 3,
+            "reps": 12
+          },
+          {
+            "name": "绳索下压",
+            "sets": 3,
+            "reps": 12
+          },
+          {
+            "name": "仰卧臂屈伸",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "悬垂举腿",
+            "sets": 2,
+            "reps": 12
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ppl",
+    "name": "推拉腿",
+    "subtitle": "PPL · 推 / 拉 / 腿",
+    "description": "按发力模式划分三个训练日：上肢推、上肢拉、下肢与核心。",
+    "days": [
+      {
+        "id": "push",
+        "name": "推日",
+        "focus": "胸 · 肩 · 肱三头肌",
+        "exercises": [
+          {
+            "name": "杠铃卧推",
+            "sets": 3,
+            "reps": 8
+          },
+          {
+            "name": "上斜哑铃卧推",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "杠铃肩推",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "哑铃侧平举",
+            "sets": 2,
+            "reps": 12
+          },
+          {
+            "name": "绳索下压",
+            "sets": 3,
+            "reps": 12
+          }
+        ]
+      },
+      {
+        "id": "pull",
+        "name": "拉日",
+        "focus": "背 · 后束 · 肱二头肌",
+        "exercises": [
+          {
+            "name": "引体向上",
+            "sets": 3,
+            "reps": 8
+          },
+          {
+            "name": "杠铃划船",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "高位下拉",
+            "sets": 2,
+            "reps": 10
+          },
+          {
+            "name": "面拉",
+            "sets": 2,
+            "reps": 12
+          },
+          {
+            "name": "杠铃弯举",
+            "sets": 3,
+            "reps": 10
+          }
+        ]
+      },
+      {
+        "id": "legs",
+        "name": "腿日",
+        "focus": "腿 · 核心",
+        "exercises": [
+          {
+            "name": "杠铃深蹲",
+            "sets": 3,
+            "reps": 8
+          },
+          {
+            "name": "罗马尼亚硬拉",
+            "sets": 3,
+            "reps": 10
+          },
+          {
+            "name": "腿举",
+            "sets": 2,
+            "reps": 10
+          },
+          {
+            "name": "腿弯举",
+            "sets": 2,
+            "reps": 12
+          },
+          {
+            "name": "站姿提踵",
+            "sets": 3,
+            "reps": 15
+          },
+          {
+            "name": "卷腹",
+            "sets": 2,
+            "reps": 15
+          }
+        ]
+      }
+    ]
+  }
+]
