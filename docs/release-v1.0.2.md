@@ -11,7 +11,7 @@
 
 [下载 Android APK](https://github.com/allen7wang/lianji/releases/download/v1.0.2/Lianji-1.0.2-Android.apk)。Android 7.0+，安装后可独立运行。应用标识保持 `com.allenwang.lianji`，版本号 1.0.2、版本代码 3，使用与 v1.0.1 相同的发布签名，可直接覆盖升级；不要卸载旧应用以免删除数据。
 
-[发布页](https://github.com/allen7wang/lianji/releases/tag/v1.0.2)提供 Mac 通用预览包和 Apple Watch 模拟器包。Mac 包尚未签名或公证；手表包仅供模拟器使用，不能安装到真实 Apple Watch。iPhone 新计划已包含在源码中，使用 `npm run preview:ios` 更新模拟器；旧 v1.0.1 模拟器二进制不包含这些新计划。
+[发布页](https://github.com/allen7wang/lianji/releases/tag/v1.0.2)提供 Mac 通用预览包、iPhone 和 Apple Watch 模拟器包。Mac 包尚未签名或公证；手机和手表模拟器包不能安装到真实设备。iPhone v1.0.2 已在 iPhone 17 Pro / iOS 26.5 模拟器更新启动，验证了旧计划保留、12 套模板、场景筛选和新计划预览。使用 `npm run preview:ios` 可继续更新模拟器。
 
 ## 内容说明
 

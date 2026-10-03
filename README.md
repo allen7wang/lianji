@@ -6,7 +6,7 @@
 
 [下载 Android APK · v1.0.2](https://github.com/allen7wang/lianji/releases/download/v1.0.2/Lianji-1.0.2-Android.apk)。在 Android 7.0+ 手机上下载后打开安装，按系统提示允许当前下载来源安装应用。安装后直接打开「练迹」，无需 Expo Go 或连接开发电脑。
 
-[GitHub 发布页](https://github.com/allen7wang/lianji/releases/tag/v1.0.2)提供新版 Android、macOS 通用预览包和 Apple Watch 模拟器预览包；iPhone 模拟器预览包仍可从 [v1.0.1](https://github.com/allen7wang/lianji/releases/tag/v1.0.1) 下载，更新手机代码可运行下方预览命令。macOS 包尚未签名或公证；Apple 模拟器包不能安装到真实手机或手表。
+[GitHub 发布页](https://github.com/allen7wang/lianji/releases/tag/v1.0.2)提供新版 Android、macOS 通用预览包，以及 iPhone / Apple Watch 模拟器预览包。macOS 包尚未签名或公证；Apple 模拟器包不能安装到真实手机或手表。
 
 各平台的安装方式和验证范围见 [v1.0.2 发布说明](docs/release-v1.0.2.md)。这是公开预览版，尚未发布到 App Store 或 Google Play。
 

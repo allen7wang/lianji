@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 
 
 PACKAGE = "com.allenwang.lianji"
+PROGRAM_COUNT = len(json.loads(Path("assets/plans/training-programs.json").read_text()))
 APK = Path(sys.argv[1])
 RESULTS = Path(sys.argv[2])
 RESULTS.mkdir(parents=True, exist_ok=True)
@@ -54,7 +55,7 @@ try:
     adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/.MainActivity")
     screen("home", ["今天练什么？", "开始自由训练"])
     adb("shell", "am", "start", "-W", "-a", "android.intent.action.VIEW", "-d", "lianji://plans", PACKAGE)
-    screen("plans", ["训练计划", f"计划模板 · {len(json.loads(Path("assets/plans/training-programs.json").read_text()))} 套"])
+    screen("plans", ["训练计划", f"计划模板 · {PROGRAM_COUNT} 套"])
     adb("shell", "am", "force-stop", PACKAGE)
     adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/.MainActivity", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER")
     screen("relaunch", ["今天练什么？", "开始自由训练"])
