@@ -7,11 +7,11 @@ appId: com.allenwang.lianji
 - tapOn: "居家训练"
 - assertVisible: "居家哑铃全身.*"
 - takeScreenshot: home-programs
-- tapOn: "查看居家哑铃全身模板"
+- tapOn: ".*查看居家哑铃全身模板.*"
 - assertVisible: ".*哑铃 A.*"
-- assertVisible: "添加整套计划 · 2 个训练日"
+- assertVisible: ".*添加整套计划 · 2 个训练日.*"
 - takeScreenshot: program-preview
-- tapOn: "添加整套计划 · 2 个训练日"
+- tapOn: ".*添加整套计划 · 2 个训练日.*"
 - assertVisible: "我的计划 5"
 - scrollUntilVisible:
     element:
@@ -25,6 +25,6 @@ appId: com.allenwang.lianji
 - assertVisible: "我的计划 5"
 - tapOn: "计划模板 · 12 套"
 - tapOn: "居家训练"
-- tapOn: "查看居家哑铃全身模板"
-- assertVisible: "已添加到我的计划"
+- tapOn: ".*查看居家哑铃全身模板.*"
+- assertVisible: ".*已添加到我的计划.*"
 - takeScreenshot: repeat-import-preserved
