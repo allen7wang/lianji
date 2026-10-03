@@ -1,0 +1,64 @@
+name: Android APK smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release containing the signed Android APK
+        default: v1.0.1
+        required: true
+      apk_sha256:
+        description: Expected SHA-256 of the signed APK
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  install-and-launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Download the signed release APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          APK_SHA256: ${{ inputs.apk_sha256 }}
+        run: |
+          mkdir -p apk-qa
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern '*-Android.apk' --dir apk-qa
+          python3 - <<'PY'
+          import hashlib, os, pathlib, re
+          expected = os.environ['APK_SHA256'].lower()
+          assert re.fullmatch(r'[0-9a-f]{64}', expected), 'Invalid expected checksum'
+          files = list(pathlib.Path('apk-qa').glob('*.apk'))
+          assert len(files) == 1, 'Expected exactly one Android APK'
+          assert hashlib.sha256(files[0].read_bytes()).hexdigest() == expected, 'APK checksum mismatch'
+          files[0].rename('apk-qa/app.apk')
+          print('Signed release APK checksum verified')
+          PY
+      - name: Enable emulator acceleration
+        run: sudo chown "$USER" /dev/kvm
+      - name: Install and launch the published APK
+        uses: reactivecircus/android-emulator-runner@4c44018e59b437e86cdfc41da381398f93ed8808 # v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: python3 scripts/verify-android-apk.py apk-qa/app.apk apk-qa/results
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: android-apk-smoke-test
+          path: apk-qa/results/
+          if-no-files-found: warn
+          retention-days: 7
