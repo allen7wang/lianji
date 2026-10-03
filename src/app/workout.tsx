@@ -48,7 +48,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
   const [demoExercise, setDemoExercise] = useState<Exercise | null>(null);
   const [note, setNote] = useState(workout.note);
   const [timer, setTimer] = useState<{ label: string; deadline: number } | null>(null);
-  const [clock, setClock] = useState(Date.now());
+  const [clock, setClock] = useState(0);
   useEffect(() => { const interval = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(interval); }, []);
   const seconds = timer ? Math.max(0, Math.ceil((timer.deadline - clock) / 1000)) : 0;
   const startTimer = (duration: number, label: string) => {

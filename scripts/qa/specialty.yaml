@@ -17,10 +17,20 @@ appId: com.allenwang.lianji
 - takeScreenshot: hiit-preview
 - tapOn: ".*添加整套计划 · 2 个训练日.*"
 - assertVisible: "我的计划 5"
+- scrollUntilVisible:
+    element:
+      text: "编辑HIIT 全身 · 全身 A"
+    direction: DOWN
+    timeout: 30000
 - tapOn: "编辑HIIT 全身 · 全身 A"
 - assertVisible: "编辑计划"
 - takeScreenshot: timed-plan-editor
 - tapOn: ".*保存计划.*"
+- scrollUntilVisible:
+    element:
+      text: "我的计划 5"
+    direction: UP
+    timeout: 30000
 - assertVisible: "我的计划 5"
 - scrollUntilVisible:
     element:
@@ -43,7 +53,7 @@ appId: com.allenwang.lianji
 - takeScreenshot: hiit-rest-timer
 - tapOn: ".*结束训练.*"
 - tapOn: "完成"
-- assertVisible: "HIIT 全身 · 全身 A"
+- assertVisible: "HIIT 全身 · 全身 [AB]"
 - stopApp
 - launchApp
 - tapOn: "计划"
