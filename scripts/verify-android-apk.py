@@ -26,9 +26,16 @@ def screen(name, expected):
     deadline = time.monotonic() + 90
     last_error = ""
     while time.monotonic() < deadline:
+        adb("shell", "rm", "-f", "/sdcard/lianji-qa.xml")
         dump = adb("shell", "uiautomator", "dump", "/sdcard/lianji-qa.xml", check=False)
+        last_error = (dump.stdout + dump.stderr).decode("utf-8", errors="replace")
         if dump.returncode == 0:
-            raw = adb("shell", "cat", "/sdcard/lianji-qa.xml").stdout
+            captured = adb("shell", "cat", "/sdcard/lianji-qa.xml", check=False)
+            if captured.returncode != 0:
+                last_error += captured.stderr.decode("utf-8", errors="replace")
+                time.sleep(3)
+                continue
+            raw = captured.stdout
             (RESULTS / f"{name}.xml").write_bytes(raw)
             try:
                 root = ET.fromstring(raw)
@@ -50,6 +57,9 @@ def screen(name, expected):
 
 try:
     adb("install", "--no-streaming", str(APK))
+    # The CI image's Pixel Launcher can ANR during package installation and leave
+    # a system dialog over a healthy app. Stop only that launcher, never Lianji.
+    adb("shell", "am", "force-stop", "com.google.android.apps.nexuslauncher")
     adb("logcat", "-c")
     adb("shell", "wm", "dismiss-keyguard")
     adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/.MainActivity")
@@ -72,6 +82,7 @@ try:
     (RESULTS / "verification.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report), flush=True)
 finally:
+    (RESULTS / "crash-log.txt").write_bytes(adb("logcat", "-b", "crash", "-d", check=False).stdout)
     (RESULTS / "device-log.txt").write_bytes(adb("logcat", "-d", check=False).stdout)
     final_screen = adb("exec-out", "screencap", "-p", check=False)
     if final_screen.returncode == 0:
