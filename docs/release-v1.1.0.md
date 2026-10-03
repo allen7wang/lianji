@@ -26,7 +26,11 @@
 
 [Android APK](https://github.com/allen7wang/lianji/releases/download/v1.1.0/Lianji-1.1.0-Android.apk)及 Apple 预览包见[发布页](https://github.com/allen7wang/lianji/releases/tag/v1.1.0)。Mac 预览包未签名或公证；iPhone 和 Apple Watch 包用于模拟器，无法安装到真机。尚未发布到应用商店。
 
-发布前运行代码规范、类型和隔离 SQLite 测试；Apple 共享数据测试检查旧记录、导入、单位和休息、复制组数及重新读取。原生构建与最终 APK 的界面检查结果、包校验值见发布页和随包元数据。
+已通过[代码规范、类型和隔离 SQLite 测试](https://github.com/allen7wang/lianji/actions/runs/37135683833)、[Android 原生构建](https://github.com/allen7wang/lianji/actions/runs/37132273784)和[Apple 原生构建与共享数据测试](https://github.com/allen7wang/lianji/actions/runs/37132276896)。数据测试覆盖旧记录、模板导入、单位和休息、复制组数及重新读取。
+
+[发布 APK 的 Android 15 模拟器验收](https://github.com/allen7wang/lianji/actions/runs/37135696215)已通过：安装与冷启动、居家计划导入与重复添加、HIIT 计划编辑及 20 秒动作/40 秒休息计时、训练保存、动物流导入、九项专项力量筛选与预览、重新打开后计划保留。该检查从公开发布页下载安装包，并核对包校验值。
+
+本地 iPhone 17 Pro / iOS 26.5 和 Mac 预览已成功启动，升级后原有计划与记录字段保留。Apple Watch 已验证原生构建和共享数据逻辑，尚未验证手表运行界面；本版未做真机验收。各包校验值与源码、构建信息见发布页的 `SHA256SUMS` 和 `BUILDINFO.json`。
 
 ## 参考
 
