@@ -10,7 +10,7 @@ import { C } from '@/ui/theme';
 import { demoFor } from '@/lib/exercise-demos';
 import { ExerciseDemoModal } from '@/ui/exercise-demo';
 
-function SetRow({ item, onUpdate, onDelete, onComplete }: { item: WorkoutSet; onUpdate: (setId: string, patch: Partial<WorkoutSet>) => void; onDelete: (setId: string) => void; onComplete: (setId: string) => void }) {
+function SetRow({ item, onUpdate, onDelete, onComplete, onTimer }: { item: WorkoutSet; onUpdate: (setId: string, patch: Partial<WorkoutSet>) => void; onDelete: (setId: string) => void; onComplete: (setId: string) => void; onTimer: (seconds: number) => void }) {
   const [weight, setWeight] = useState(String(item.weight));
   const [reps, setReps] = useState(String(item.reps));
   const commitWeight = () => {
@@ -23,14 +23,14 @@ function SetRow({ item, onUpdate, onDelete, onComplete }: { item: WorkoutSet; on
     if (Number.isInteger(value) && value >= 0 && value <= 1000) onUpdate(item.id, { reps: value });
     else setReps(String(item.reps));
   };
-  return <View style={[styles.setRow, item.completed ? styles.setDone : null]}>
+  return <View style={{ gap: 5 }}><View style={[styles.setRow, item.completed ? styles.setDone : null]}>
     <Pressable onLongPress={() => onDelete(item.id)} style={styles.setNumber}><Text style={styles.setNumberText}>{item.setNumber}</Text></Pressable>
     <TextInput value={weight} onChangeText={setWeight} onBlur={commitWeight} keyboardType="decimal-pad" selectTextOnFocus style={styles.setInput} />
     <Text style={styles.unit}>kg</Text>
     <TextInput value={reps} onChangeText={setReps} onBlur={commitReps} keyboardType="number-pad" selectTextOnFocus style={styles.setInput} />
-    <Text style={styles.unit}>次</Text>
-    <Pressable onPress={() => onComplete(item.id)} style={[styles.check, item.completed ? styles.checked : null]}><Ionicons name="checkmark" size={20} color={item.completed ? C.bg : C.faint} /></Pressable>
-  </View>;
+    <Text style={styles.unit}>{item.unit === 'seconds' ? '秒' : '次'}</Text>
+    <Pressable accessibilityLabel={`完成第 ${item.setNumber} 组`} onPress={() => onComplete(item.id)} style={[styles.check, item.completed ? styles.checked : null]}><Ionicons name="checkmark" size={20} color={item.completed ? C.bg : C.faint} /></Pressable>
+  </View>{item.unit === 'seconds' && !item.completed ? <Button label={`计时 ${item.reps} 秒`} icon="timer-outline" variant="ghost" onPress={() => onTimer(item.reps)} /> : null}</View>;
 }
 
 export default function WorkoutScreen() {
@@ -47,22 +47,27 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
   const [picker, setPicker] = useState(false);
   const [demoExercise, setDemoExercise] = useState<Exercise | null>(null);
   const [note, setNote] = useState(workout.note);
-  const [seconds, setSeconds] = useState(0);
-  const [clock, setClock] = useState(0);
-  useEffect(() => { const timer = setInterval(() => { setClock(value => value + 1); setSeconds(value => Math.max(0, value - 1)); }, 1000); return () => clearInterval(timer); }, []);
+  const [timer, setTimer] = useState<{ label: string; deadline: number } | null>(null);
+  const [clock, setClock] = useState(Date.now());
+  useEffect(() => { const interval = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(interval); }, []);
+  const seconds = timer ? Math.max(0, Math.ceil((timer.deadline - clock) / 1000)) : 0;
+  const startTimer = (duration: number, label: string) => {
+    const now = Date.now();
+    setClock(now);
+    setTimer(duration > 0 ? { label, deadline: now + duration * 1000 } : null);
+  };
   const groups = useMemo(() => {
     const keys = Array.from(new Set(sets.map(set => set.exerciseId)));
     return keys.map(exerciseId => ({ exerciseId, exercise: exercises.find(item => item.id === exerciseId), sets: sets.filter(item => item.exerciseId === exerciseId) }));
   }, [sets, exercises]);
-  void clock;
 
   const update = (setId: string, patch: Partial<WorkoutSet>) => { updateSet(setId, patch).catch(console.error); };
   const toggle = (setId: string) => {
     const set = sets.find(item => item.id === setId);
     if (!set) return;
-    if (!set.completed && !set.reps) return Alert.alert('先填写次数');
+    if (!set.completed && !set.reps) return Alert.alert(set.unit === 'seconds' ? '先填写秒数' : '先填写次数');
     update(setId, { completed: set.completed ? 0 : 1 });
-    if (!set.completed) setSeconds(90);
+    if (!set.completed) startTimer(set.restSeconds ?? 90, '组间休息');
   };
   const finish = () => {
     if (!workout) return;
@@ -84,12 +89,13 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
     <View style={styles.header}><IconButton icon="chevron-back" onPress={() => router.back()} /><View style={{ alignItems: 'center' }}><Text style={styles.headerLabel}>正在训练</Text><Text style={styles.headerName} numberOfLines={1}>{workout.name}</Text></View><IconButton icon="ellipsis-horizontal" onPress={discard} /></View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <Card style={styles.summary}><Metric value={durationLabel(workout.startedAt, null)} label="训练时长" accent /><Metric value={`${completed}/${sets.length}`} label="已完成组" /><Metric value={`${Math.round(volumeOf(sets))}`} label="容量 · kg" /></Card>
-      {seconds > 0 ? <Pressable onPress={() => setSeconds(0)} style={styles.timer}><Ionicons name="timer-outline" size={17} color={C.accent} /><Text style={styles.timerText}>组间休息 {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</Text><Text style={styles.timerSkip}>跳过</Text></Pressable> : null}
+      {timer ? <Pressable onPress={() => setTimer(null)} style={styles.timer}><Ionicons name="timer-outline" size={17} color={C.accent} /><Text style={styles.timerText}>{seconds > 0 ? `${timer.label} ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : timer.label === '动作计时' ? '动作计时结束，请按实际完成情况勾选' : '休息结束，可以开始下一组'}</Text><Text style={styles.timerSkip}>{seconds > 0 ? '停止' : '关闭'}</Text></Pressable> : null}
       {groups.map((group, index) => <Card key={group.exerciseId} style={{ gap: 14 }}>
         <View style={styles.exerciseHeader}><View style={styles.exerciseIndex}><Text style={styles.exerciseIndexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{group.exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta}>{group.exercise?.muscle} · {group.exercise?.equipment}</Text></View><Text style={styles.exerciseCount}>{group.sets.filter(set => set.completed).length}/{group.sets.length}</Text></View>
         {group.exercise && demoFor(group.exercise) ? <Button label="查看动图" icon="play-circle-outline" variant="ghost" onPress={() => setDemoExercise(group.exercise!)} /> : null}
-        <View style={styles.tableHead}><Text style={styles.headNumber}>组</Text><Text style={styles.headCell}>重量</Text><Text style={styles.headCell}>次数</Text><Text style={styles.headCheck}>完成</Text></View>
-        {group.sets.map(item => <SetRow key={item.id} item={item} onUpdate={update} onDelete={setId => Alert.alert('删除组数', '确定删除这一组？', [{ text: '取消', style: 'cancel' }, { text: '删除', style: 'destructive', onPress: () => deleteSet(setId) }])} onComplete={toggle} />)}
+        <View style={styles.tableHead}><Text style={styles.headNumber}>组</Text><Text style={styles.headCell}>重量</Text><Text style={styles.headCell}>{group.sets[0]?.unit === 'seconds' ? '时长 · 秒' : '次数'}</Text><Text style={styles.headCheck}>完成</Text></View>
+        {group.sets.map(item => <SetRow key={item.id} item={item} onUpdate={update} onDelete={setId => Alert.alert('删除组数', '确定删除这一组？', [{ text: '取消', style: 'cancel' }, { text: '删除', style: 'destructive', onPress: () => deleteSet(setId) }])} onComplete={toggle} onTimer={duration => startTimer(duration, '动作计时')} />)}
+        <Text style={styles.hint}>完成一组后休息 {group.sets[0]?.restSeconds ?? 90} 秒。按秒记录的组不计入重量 × 次数的容量。</Text>
         <Button label="添加一组" icon="add" variant="secondary" onPress={() => addSet(workout.id, group.exerciseId)} />
       </Card>)}
       <Button label="添加动作" icon="add-circle-outline" variant="secondary" onPress={() => setPicker(true)} />

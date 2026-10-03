@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useData } from '@/lib/data';
-import { dateLabel, durationLabel, volumeOf } from '@/lib/types';
+import { dateLabel, durationLabel, targetLabel, volumeOf } from '@/lib/types';
 import { Button, Card, Header, IconButton, Metric, Page, SectionTitle } from '@/ui/components';
 import { C } from '@/ui/theme';
 
@@ -25,7 +25,7 @@ export default function HistoryDetail() {
     {exerciseIds.map((exerciseId, index) => {
       const exercise = exercises.find(item => item.id === exerciseId);
       const exerciseSets = sets.filter(item => item.exerciseId === exerciseId);
-      return <Card key={exerciseId}><View style={styles.exerciseHeader}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View><Text style={styles.exerciseName}>{exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta}>{exerciseSets.length} 组 · {Math.round(volumeOf(exerciseSets))} kg 容量</Text></View></View><View style={styles.divider} />{exerciseSets.map(set => <View key={set.id} style={styles.setRow}><Text style={styles.setNumber}>第 {set.setNumber} 组</Text><Text style={styles.setValue}>{set.weight} kg × {set.reps} 次</Text><Ionicons name="checkmark-circle" size={17} color={C.accent} /></View>)}</Card>;
+      return <Card key={exerciseId}><View style={styles.exerciseHeader}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View><Text style={styles.exerciseName}>{exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta}>{exerciseSets.length} 组 · {Math.round(volumeOf(exerciseSets))} kg 容量</Text></View></View><View style={styles.divider} />{exerciseSets.map(set => <View key={set.id} style={styles.setRow}><Text style={styles.setNumber}>第 {set.setNumber} 组</Text><Text style={styles.setValue}>{set.weight} kg × {targetLabel(set.reps, set.unit)}</Text><Ionicons name="checkmark-circle" size={17} color={C.accent} /></View>)}</Card>;
     })}
     {workout.note ? <><SectionTitle title="训练笔记" /><Card><Text style={styles.note}>{workout.note}</Text></Card></> : null}
   </Page>;

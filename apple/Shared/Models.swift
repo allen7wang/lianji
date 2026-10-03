@@ -6,13 +6,19 @@ struct Exercise: Identifiable, Codable, Hashable {
     var muscle: String
     var equipment: String
     var isCustom: Bool = false
+    var defaultUnit: TrainingUnit {
+        !isCustom && (name == "平板支撑" || ExtraExercise.catalog.contains { $0.name == name && $0.recording == "seconds" }) ? .seconds : .reps
+    }
 }
+
+enum TrainingUnit: String, Codable, Hashable { case reps, seconds }
 
 struct ExtraExercise: Decodable {
     var id: String
     var name: String
     var muscle: String
     var equipment: String
+    var recording: String?
 
     static let catalog: [ExtraExercise] = {
         guard let url = Bundle.main.url(forResource: "extra-exercises", withExtension: "json"),
@@ -28,6 +34,9 @@ struct PlanItem: Identifiable, Codable, Hashable {
     var sets: Int
     var reps: Int
     var weight: Double
+    var unit: TrainingUnit?
+    var restSeconds: Int?
+    var targetLabel: String { "\(reps) \(unit == .seconds ? "秒" : "次")" }
 }
 
 struct Plan: Identifiable, Codable, Hashable {
@@ -45,6 +54,9 @@ struct TrainingSet: Identifiable, Codable, Hashable {
     var weight: Double
     var reps: Int
     var completed: Bool = false
+    var unit: TrainingUnit?
+    var restSeconds: Int?
+    var targetLabel: String { "\(reps) \(unit == .seconds ? "秒" : "次")" }
 }
 
 struct Workout: Identifiable, Codable, Hashable {
@@ -61,7 +73,7 @@ struct Workout: Identifiable, Codable, Hashable {
         var seen = Set<String>()
         return sets.compactMap { seen.insert($0.exerciseId).inserted ? $0.exerciseId : nil }
     }
-    var volume: Double { completedSets.reduce(0) { $0 + $1.weight * Double($1.reps) } }
+    var volume: Double { completedSets.reduce(0) { $0 + ($1.unit == .seconds ? 0 : $1.weight * Double($1.reps)) } }
 }
 
 struct BodyEntry: Identifiable, Codable, Hashable {
@@ -131,7 +143,7 @@ struct AppState: Codable {
         ]
         let exercises = entries.map { Exercise(id: $0.0, name: $0.1, muscle: $0.2, equipment: $0.3) }
         func items(_ ids: [String]) -> [PlanItem] {
-            ids.map { PlanItem(exerciseId: $0, sets: 3, reps: 10, weight: 0) }
+            ids.map { PlanItem(exerciseId: $0, sets: 3, reps: 10, weight: 0, unit: $0 == "plank" ? .seconds : .reps, restSeconds: 90) }
         }
         let plans = [
             Plan(id: "starter_push", name: "推日 · 胸肩三头", note: "适合上肢推力训练", items: items(["barbell_bench", "incline_dumbbell_press", "overhead_press", "lateral_raise", "triceps_pushdown"])),

@@ -151,6 +151,7 @@ private struct MacPlansView: View {
     @State private var adding = false
     @State private var showTemplates = false
     @State private var category = "全部"
+    @State private var sport = "全部项目"
     @State private var program: TrainingProgram?
 
     var body: some View {
@@ -168,8 +169,13 @@ private struct MacPlansView: View {
                 if showTemplates {
                     Picker("训练场景", selection: $category) {
                         ForEach(TrainingProgram.categories, id: \.self) { Text($0).tag($0) }
-                    }.frame(maxWidth: 360)
-                    ForEach(TrainingProgram.catalog.filter { category == "全部" || $0.category == category }) { template in
+                    }.frame(maxWidth: 360).onChange(of: category) { sport = "全部项目" }
+                    if category == "专项力量" {
+                        Picker("运动项目", selection: $sport) {
+                            ForEach(TrainingProgram.sports, id: \.self) { Text($0).tag($0) }
+                        }.frame(maxWidth: 360)
+                    }
+                    ForEach(TrainingProgram.catalog.filter { (category == "全部" || $0.category == category) && (category != "专项力量" || sport == "全部项目" || $0.sport == sport) }) { template in
                         Surface {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("\(template.name) · \(template.subtitle)").font(.title3.bold())
@@ -199,7 +205,7 @@ private struct MacPlansView: View {
                                 HStack {
                                     Text(store.exercise(item.exerciseId)?.name ?? "未知动作")
                                     Spacer()
-                                    Text("\(item.sets) × \(item.reps) · \(item.weight.formatted()) kg")
+                                    Text("\(item.sets) × \(item.targetLabel) · \(item.weight.formatted()) kg")
                                         .foregroundStyle(Palette.muted)
                                 }.font(.subheadline)
                             }
@@ -243,7 +249,7 @@ private struct MacProgramPreview: View {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(day.focus).font(.caption).foregroundStyle(.secondary)
                                 ForEach(day.exercises, id: \.name) { item in
-                                    HStack { Text(item.name); Spacer(); Text("\(item.sets) 组 × \(item.reps) 次").foregroundStyle(.secondary) }
+                                    HStack { Text(item.name); Spacer(); Text("\(item.sets) 组 × \(item.targetLabel) · 休息 \(item.restSeconds ?? 90) 秒").foregroundStyle(.secondary) }
                                 }
                             }.padding(8)
                         }
@@ -284,19 +290,27 @@ private struct MacPlanEditor: View {
                 }
                 Button("添加") {
                     guard !selectedExercise.isEmpty, !draft.items.contains(where: { $0.exerciseId == selectedExercise }) else { return }
-                    draft.items.append(PlanItem(exerciseId: selectedExercise, sets: 3, reps: 10, weight: 0))
+                    let unit = store.exercise(selectedExercise)?.defaultUnit ?? .reps
+                    draft.items.append(PlanItem(exerciseId: selectedExercise, sets: 3, reps: unit == .seconds ? 30 : 10, weight: 0, unit: unit, restSeconds: 90))
                     selectedExercise = ""
                 }
             }
             List {
                 ForEach($draft.items) { $item in
-                    HStack {
-                        Text(store.exercise(item.exerciseId)?.name ?? "未知动作").frame(width: 150, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(store.exercise(item.exerciseId)?.name ?? "未知动作").font(.headline)
+                        HStack(spacing: 8) {
                         Stepper("\(item.sets) 组", value: $item.sets, in: 1...20).frame(width: 110)
-                        Stepper("\(item.reps) 次", value: $item.reps, in: 1...100).frame(width: 110)
+                        Picker("记录", selection: Binding(get: { item.unit ?? .reps }, set: { item.unit = $0 })) {
+                            Text("次").tag(TrainingUnit.reps)
+                            Text("秒").tag(TrainingUnit.seconds)
+                        }.frame(width: 90)
+                        Stepper(item.targetLabel, value: $item.reps, in: 1...1000).frame(width: 110)
+                        Stepper("休息 \(item.restSeconds ?? 90) 秒", value: Binding(get: { item.restSeconds ?? 90 }, set: { item.restSeconds = $0 }), in: 0...600, step: 5).frame(width: 160)
                         TextField("kg", value: $item.weight, format: .number).frame(width: 60)
                         Button(role: .destructive) { draft.items.removeAll { $0.id == item.id } } label: {
                             Image(systemName: "trash")
+                        }
                         }
                     }
                 }
@@ -375,6 +389,7 @@ private struct MacActiveWorkout: View {
     @EnvironmentObject private var store: TrainingStore
     @State private var selectedExercise = ""
     @State private var restUntil: Date?
+    @State private var timerLabel = "组间休息"
     @State private var demoExercise: Exercise?
 
     var body: some View {
@@ -396,10 +411,11 @@ private struct MacActiveWorkout: View {
                     if let restUntil {
                         TimelineView(.periodic(from: .now, by: 1)) { context in
                             let remaining = max(0, Int(restUntil.timeIntervalSince(context.date)))
-                            Text(remaining > 0 ? "组间休息 · \(remaining) 秒" : "休息结束，可以开始下一组")
+                            Text(remaining > 0 ? "\(timerLabel) · \(remaining) 秒" : "计时结束，请按实际完成情况记录")
                                 .font(.subheadline.bold())
                                 .foregroundStyle(Palette.accent)
                         }
+                        Button("停止计时") { self.restUntil = nil }
                     }
                     ForEach(workout.exerciseIds, id: \.self) { exerciseId in
                         VStack(alignment: .leading, spacing: 8) {
@@ -416,12 +432,15 @@ private struct MacActiveWorkout: View {
                                     TextField("重量", value: Binding(get: { set.weight }, set: { store.updateSet(set.id, weight: $0) }), format: .number)
                                         .frame(width: 70)
                                     Text("kg")
-                                    TextField("次数", value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), format: .number)
+                                    TextField(set.unit == .seconds ? "秒数" : "次数", value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), format: .number)
                                         .frame(width: 70)
-                                    Text("次")
+                                    Text(set.unit == .seconds ? "秒" : "次")
+                                    if set.unit == .seconds && !set.completed {
+                                        Button("计时") { timerLabel = "动作计时"; restUntil = .now.addingTimeInterval(Double(set.reps)) }
+                                    }
                                     Toggle("完成", isOn: Binding(get: { set.completed }, set: {
                                         store.updateSet(set.id, completed: $0)
-                                        if $0 { restUntil = .now.addingTimeInterval(90) }
+                                        if $0 { timerLabel = "组间休息"; restUntil = .now.addingTimeInterval(Double(set.restSeconds ?? 90)) }
                                     }))
                                         .toggleStyle(.checkbox)
                                     Button(role: .destructive) { store.deleteSet(set.id) } label: { Image(systemName: "minus.circle") }
@@ -472,7 +491,7 @@ private struct MacHistoryView: View {
                             Text("\(workout.completedSets.count) 组 · \(Int(workout.volume)) kg 容量")
                                 .font(.subheadline).foregroundStyle(Palette.accent)
                             ForEach(workout.completedSets) { set in
-                                Text("\(store.exercise(set.exerciseId)?.name ?? "未知动作") · \(set.weight.formatted()) kg × \(set.reps) 次")
+                                Text("\(store.exercise(set.exerciseId)?.name ?? "未知动作") · \(set.weight.formatted()) kg × \(set.targetLabel)")
                                     .font(.caption).foregroundStyle(Palette.muted)
                             }
                         }

@@ -3,6 +3,8 @@ import { Alert, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useData } from '@/lib/data';
 import { templatePlanId, type TrainingProgram } from '@/lib/plan-templates';
+import { targetLabel } from '@/lib/types';
+import { defaultUnit } from '@/lib/training-target';
 import { Button, Card, IconButton } from './components';
 import { C } from './theme';
 
@@ -31,10 +33,10 @@ export function PlanTemplatePreview({ program, onClose, onImported }: {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.description}>{program.description}</Text>
         <View style={{ gap: 6 }}><Text style={styles.hint}>{program.category} · {program.level}</Text><Text style={styles.hint}>器材：{program.equipment.join(' / ')}</Text><Text style={styles.hint}>{program.frequency}</Text></View>
-        <Text style={styles.hint}>一轮包含 {program.days.length} 个训练日，可在训练日之间安排休息。添加后可修改动作、组数、次数和重量。</Text>
+        <Text style={styles.hint}>一轮包含 {program.days.length} 个训练日，可在训练日之间安排休息。添加后可修改动作、组数、次数或秒数、重量及休息时间。</Text>
         {program.days.map((day, index) => <Card key={day.id} style={{ gap: 12 }}>
           <Text style={styles.day}>{index + 1} · {day.name}</Text><Text style={styles.focus}>{day.focus}</Text>
-          {day.exercises.map(item => <View key={item.name} style={styles.row}><Text style={styles.exercise}>{item.name}</Text><Text style={styles.sets}>{item.sets} 组 × {item.reps} 次</Text></View>)}
+          {day.exercises.map(item => <View key={item.name} style={styles.row}><Text style={styles.exercise}>{item.name}</Text><View style={{ alignItems: 'flex-end' }}><Text style={styles.sets}>{item.sets} 组 × {targetLabel(item.reps, item.unit ?? defaultUnit({ name: item.name, isCustom: 0 }))}</Text><Text style={styles.total}>休息 {item.restSeconds ?? 90} 秒</Text></View></View>)}
           <Text style={styles.total}>{day.exercises.length} 个动作 · {day.exercises.reduce((sum, item) => sum + item.sets, 0)} 组</Text>
         </Card>)}
         <Text style={styles.hint}>目标重量初始为 0 kg，请在计划编辑或训练时填写实际重量。已添加的训练日会保留你的修改。</Text>

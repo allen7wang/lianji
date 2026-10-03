@@ -1297,5 +1297,1450 @@
         ]
       }
     ]
+  },
+  {
+    "id": "hiit-full-body",
+    "name": "HIIT 全身",
+    "subtitle": "20秒练 / 40秒休",
+    "description": "用徒手动作做短时高强度间歇，两个训练日交替安排。",
+    "category": "间歇训练",
+    "level": "有基础",
+    "frequency": "每周 1–2 次，训练日间至少休息一天。",
+    "equipment": [
+      "自重",
+      "地垫（可选）"
+    ],
+    "guidance": [
+      "先热身 5–8 分钟，再开始计时；结束后放慢动作并整理。",
+      "逐个动作完成全部组数再换下一个；动作质量优先，强度过高时延长休息。",
+      "按秒记录实际运动时间；计时结束后手动勾选完成，不自动判定完成。",
+      "工作段用力但保持动作可控；波比可改为登山跑，避免追求力竭。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "全身 A",
+        "focus": "站姿与地面交替",
+        "exercises": [
+          {
+            "name": "开合跳",
+            "sets": 4,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 40
+          },
+          {
+            "name": "自重深蹲",
+            "sets": 4,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 40
+          },
+          {
+            "name": "登山跑",
+            "sets": 4,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 40
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "全身 B",
+        "focus": "心肺与核心",
+        "exercises": [
+          {
+            "name": "波比",
+            "sets": 3,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 40
+          },
+          {
+            "name": "徒手弓步蹲",
+            "sets": 3,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 40
+          },
+          {
+            "name": "登山跑",
+            "sets": 3,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 40
+          },
+          {
+            "name": "臀桥",
+            "sets": 3,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 40
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "low-impact-interval",
+    "name": "低冲击间歇",
+    "subtitle": "30秒练 / 30秒休",
+    "description": "不安排跳跃，在舒适范围内练习腿、臀和核心。",
+    "category": "间歇训练",
+    "level": "新手",
+    "frequency": "每周 1–2 次；先做 1–2 组，适应后达到模板组数。",
+    "equipment": [
+      "自重",
+      "地垫（可选）"
+    ],
+    "guidance": [
+      "先热身 5–8 分钟，再开始计时；结束后放慢动作并整理。",
+      "逐个动作完成全部组数再换下一个；动作质量优先，强度过高时延长休息。",
+      "按秒记录实际运动时间；计时结束后手动勾选完成，不自动判定完成。",
+      "深蹲与弓步只做可控幅度；登山跑放慢交替抬膝，手腕不适可改站姿深蹲。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "低冲击全身",
+        "focus": "稳定节奏与基础体能",
+        "exercises": [
+          {
+            "name": "自重深蹲",
+            "sets": 3,
+            "reps": 30,
+            "unit": "seconds",
+            "restSeconds": 30
+          },
+          {
+            "name": "臀桥",
+            "sets": 3,
+            "reps": 30,
+            "unit": "seconds",
+            "restSeconds": 30
+          },
+          {
+            "name": "登山跑",
+            "sets": 3,
+            "reps": 30,
+            "unit": "seconds",
+            "restSeconds": 30
+          },
+          {
+            "name": "鸟狗式",
+            "sets": 3,
+            "reps": 30,
+            "unit": "seconds",
+            "restSeconds": 30
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "interval-20-10",
+    "name": "20/10 间歇",
+    "subtitle": "Tabata 节奏",
+    "description": "单个动作做 8 组，每组工作 20 秒、恢复 10 秒；两种动作分日选择。",
+    "category": "间歇训练",
+    "level": "有基础",
+    "frequency": "每周 1–2 次，每次选择一个训练日。",
+    "equipment": [
+      "自重",
+      "地垫（可选）"
+    ],
+    "guidance": [
+      "先热身 5–8 分钟，再开始计时；结束后放慢动作并整理。",
+      "逐个动作完成全部组数再换下一个；动作质量优先，强度过高时延长休息。",
+      "按秒记录实际运动时间；计时结束后手动勾选完成，不自动判定完成。",
+      "一个训练日约 4 分钟工作与恢复，不含热身；这里只使用 20/10 节奏，不要求原始 Tabata 的极限强度。",
+      "10 秒休息不足以恢复时主动延长；先做 4 组，再逐渐增加。"
+    ],
+    "days": [
+      {
+        "id": "squat",
+        "name": "深蹲间歇",
+        "focus": "下肢与心肺",
+        "exercises": [
+          {
+            "name": "自重深蹲",
+            "sets": 8,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 10
+          }
+        ]
+      },
+      {
+        "id": "climber",
+        "name": "登山跑间歇",
+        "focus": "地面间歇与核心",
+        "exercises": [
+          {
+            "name": "登山跑",
+            "sets": 8,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 10
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "animal-flow-basics",
+    "name": "动物流基础",
+    "subtitle": "兽式 / 蟹式 / 猿式",
+    "description": "从三种基础体位和简单移动开始，练习地面支撑与身体协调。",
+    "category": "地面流动",
+    "level": "新手",
+    "frequency": "每周 2 次，两天交替；也可作为力量训练前的轻量练习。",
+    "equipment": [
+      "自重",
+      "地垫（可选）"
+    ],
+    "guidance": [
+      "先活动手腕、肩、髋和踝，低速练习；支撑动作只在舒适幅度内完成。",
+      "本模板是自主编排的地面流动练习，先熟悉各动作，再平稳衔接。",
+      "支撑按秒记录；移动动作按时间练习，控制手脚交替，不追求速度。",
+      "兽式双膝微离地；蟹式保持胸口舒展；猿式只下蹲到可稳住的位置。"
+    ],
+    "days": [
+      {
+        "id": "positions",
+        "name": "基础体位",
+        "focus": "三种体位与关节活动",
+        "exercises": [
+          {
+            "name": "兽式支撑",
+            "sets": 3,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 30
+          },
+          {
+            "name": "蟹式支撑",
+            "sets": 3,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 30
+          },
+          {
+            "name": "猿式深蹲",
+            "sets": 3,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 30
+          },
+          {
+            "name": "猫牛式",
+            "sets": 2,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 30
+          }
+        ]
+      },
+      {
+        "id": "travel",
+        "name": "移动练习",
+        "focus": "交替移动与控制",
+        "exercises": [
+          {
+            "name": "熊爬",
+            "sets": 3,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 40
+          },
+          {
+            "name": "蟹行",
+            "sets": 3,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 40
+          },
+          {
+            "name": "猿式深蹲",
+            "sets": 2,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 30
+          },
+          {
+            "name": "鸟狗式",
+            "sets": 2,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 30
+          },
+          {
+            "name": "侧平板支撑",
+            "sets": 2,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 30
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ground-flow",
+    "name": "地面流动组合",
+    "subtitle": "支撑与转位准备",
+    "description": "练熟兽式、熊爬、蟹行和猿式后，在地面上练习稳定转换。",
+    "category": "地面流动",
+    "level": "有基础",
+    "frequency": "每周 1–2 次，或在轻松训练日练习。",
+    "equipment": [
+      "自重",
+      "地垫（可选）"
+    ],
+    "guidance": [
+      "先活动手腕、肩、髋和踝，低速练习；支撑动作只在舒适幅度内完成。",
+      "本模板是自主编排的地面流动练习，先熟悉各动作，再平稳衔接。",
+      "支撑按秒记录；移动动作按时间练习，控制手脚交替，不追求速度。",
+      "记录分动作练习；串联时按列表顺序缓慢换位，每个动作保留 10–20 秒。转换先落膝或坐地，再进入下一体位。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "流动练习",
+        "focus": "从支撑到移动与蹲姿",
+        "exercises": [
+          {
+            "name": "兽式支撑",
+            "sets": 2,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 30
+          },
+          {
+            "name": "熊爬",
+            "sets": 2,
+            "reps": 30,
+            "unit": "seconds",
+            "restSeconds": 40
+          },
+          {
+            "name": "蟹行",
+            "sets": 2,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 40
+          },
+          {
+            "name": "猿式深蹲",
+            "sets": 2,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 30
+          },
+          {
+            "name": "猫牛式",
+            "sets": 2,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 30
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "core-stability",
+    "name": "核心稳定",
+    "subtitle": "抗伸展与侧向支撑",
+    "description": "用死虫、鸟狗和支撑类动作练习躯干稳定，不靠快速卷腹堆次数。",
+    "category": "核心与活动度",
+    "level": "新手",
+    "frequency": "每周 2–3 次，可放在力量训练结束后。",
+    "equipment": [
+      "自重",
+      "地垫（可选）"
+    ],
+    "guidance": [
+      "自然呼吸，保持躯干稳定；不需要憋气完成目标。",
+      "单侧动作按每侧记录；先减少次数或秒数，再逐步提高。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "核心 A",
+        "focus": "抗伸展与侧向控制",
+        "exercises": [
+          {
+            "name": "死虫式",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 45
+          },
+          {
+            "name": "平板支撑",
+            "sets": 3,
+            "reps": 25,
+            "unit": "seconds",
+            "restSeconds": 45
+          },
+          {
+            "name": "侧平板支撑",
+            "sets": 2,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 45
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "核心 B",
+        "focus": "四足稳定与髋部控制",
+        "exercises": [
+          {
+            "name": "鸟狗式",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 45
+          },
+          {
+            "name": "臀桥",
+            "sets": 3,
+            "reps": 12,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "兽式支撑",
+            "sets": 3,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 45
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "mobility-recovery",
+    "name": "活动度与恢复",
+    "subtitle": "轻量活动日",
+    "description": "用慢速关节活动和轻量支撑作为训练日之间的身体活动。",
+    "category": "核心与活动度",
+    "level": "新手",
+    "frequency": "每周 2–4 次，每次保持轻松，不追求疲劳。",
+    "equipment": [
+      "自重",
+      "地垫（可选）"
+    ],
+    "guidance": [
+      "动作慢、呼吸自然，活动到舒适范围，不强行拉伸。",
+      "此模板记录轻量活动，不属于伤病康复处方。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "轻量活动",
+        "focus": "脊柱、髋与肩的温和活动",
+        "exercises": [
+          {
+            "name": "猫牛式",
+            "sets": 2,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 20
+          },
+          {
+            "name": "侧弓步",
+            "sets": 2,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 30
+          },
+          {
+            "name": "鸟狗式",
+            "sets": 2,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 30
+          },
+          {
+            "name": "蟹式支撑",
+            "sets": 2,
+            "reps": 15,
+            "unit": "seconds",
+            "restSeconds": 30
+          },
+          {
+            "name": "猿式深蹲",
+            "sets": 2,
+            "reps": 20,
+            "unit": "seconds",
+            "restSeconds": 30
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sprint-strength",
+    "name": "短跑专项力量",
+    "subtitle": "髋伸展与单腿力量",
+    "description": "围绕下肢力量、后侧链与单腿稳定，为短跑专项课提供辅助。",
+    "category": "专项力量",
+    "level": "有基础",
+    "frequency": "每周 2 次，A / B 间隔至少一天；赛季忙时选择一个训练日。",
+    "equipment": [
+      "杠铃",
+      "哑铃",
+      "器械",
+      "稳固踏台"
+    ],
+    "guidance": [
+      "先热身，再用轻重量完成 1–2 组准备组；表中的组数为正式训练组。",
+      "重量选择以动作稳定、通常还能完成约 2 次为准；不要求力竭。",
+      "单侧动作按每侧完成；组间恢复不足时可延长休息。",
+      "这是专项辅助力量模板，技术、速度和场地专项课需另行安排。",
+      "与比赛或高强度专项课协调安排，避免疲劳影响技术动作。",
+      "速度课在身体充分恢复时进行；力量训练不代替加速跑和跑姿练习。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "力量 A",
+        "focus": "下肢基础力量",
+        "exercises": [
+          {
+            "name": "杠铃深蹲",
+            "sets": 3,
+            "reps": 5,
+            "unit": "reps",
+            "restSeconds": 180
+          },
+          {
+            "name": "罗马尼亚硬拉",
+            "sets": 3,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 120
+          },
+          {
+            "name": "保加利亚分腿蹲",
+            "sets": 3,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 120
+          },
+          {
+            "name": "站姿提踵",
+            "sets": 3,
+            "reps": 10,
+            "unit": "reps",
+            "restSeconds": 75
+          },
+          {
+            "name": "平板支撑",
+            "sets": 3,
+            "reps": 30,
+            "unit": "seconds",
+            "restSeconds": 60
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "力量 B",
+        "focus": "单腿与髋部控制",
+        "exercises": [
+          {
+            "name": "哑铃登阶",
+            "sets": 3,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "哑铃单腿硬拉",
+            "sets": 3,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "臀桥",
+            "sets": 3,
+            "reps": 10,
+            "unit": "reps",
+            "restSeconds": 75
+          },
+          {
+            "name": "侧弓步",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 75
+          },
+          {
+            "name": "死虫式",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 45
+          }
+        ]
+      }
+    ],
+    "sport": "短跑"
+  },
+  {
+    "id": "half-marathon-strength",
+    "name": "半马专项力量",
+    "subtitle": "跑步力量与稳定",
+    "description": "用适量下肢力量、单腿和核心动作配合半马训练周。",
+    "category": "专项力量",
+    "level": "有基础",
+    "frequency": "每周 2 次，A / B 间隔至少一天；赛季忙时选择一个训练日。",
+    "equipment": [
+      "杠铃",
+      "哑铃",
+      "器械",
+      "稳固踏台"
+    ],
+    "guidance": [
+      "先热身，再用轻重量完成 1–2 组准备组；表中的组数为正式训练组。",
+      "重量选择以动作稳定、通常还能完成约 2 次为准；不要求力竭。",
+      "单侧动作按每侧完成；组间恢复不足时可延长休息。",
+      "这是专项辅助力量模板，跑步、骑行或游泳主课需另行安排。",
+      "高负荷力量日与长距离或高强度专项课分开；疲劳明显时减少力量组数。",
+      "临近比赛减少训练量，以恢复为主；不在比赛前尝试陌生动作。",
+      "长跑前一天避免第一次做较重腿部训练；根据跑量减少正式组。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "力量 A",
+        "focus": "下肢与踝部",
+        "exercises": [
+          {
+            "name": "杠铃深蹲",
+            "sets": 3,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 120
+          },
+          {
+            "name": "罗马尼亚硬拉",
+            "sets": 3,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 120
+          },
+          {
+            "name": "站姿提踵",
+            "sets": 3,
+            "reps": 12,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "侧平板支撑",
+            "sets": 2,
+            "reps": 25,
+            "unit": "seconds",
+            "restSeconds": 45
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "力量 B",
+        "focus": "单腿与躯干",
+        "exercises": [
+          {
+            "name": "哑铃登阶",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "哑铃单腿硬拉",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "单臂哑铃划船",
+            "sets": 2,
+            "reps": 10,
+            "unit": "reps",
+            "restSeconds": 75
+          },
+          {
+            "name": "死虫式",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 45
+          },
+          {
+            "name": "臀桥",
+            "sets": 2,
+            "reps": 12,
+            "unit": "reps",
+            "restSeconds": 60
+          }
+        ]
+      }
+    ],
+    "sport": "半马"
+  },
+  {
+    "id": "marathon-strength",
+    "name": "全马专项力量",
+    "subtitle": "较低训练量的维持模板",
+    "description": "以较少正式组练习髋、腿、踝和核心，给长距离跑步留出恢复空间。",
+    "category": "专项力量",
+    "level": "有基础",
+    "frequency": "每周 2 次，A / B 间隔至少一天；赛季忙时选择一个训练日。",
+    "equipment": [
+      "哑铃",
+      "器械",
+      "稳固踏台"
+    ],
+    "guidance": [
+      "先热身，再用轻重量完成 1–2 组准备组；表中的组数为正式训练组。",
+      "重量选择以动作稳定、通常还能完成约 2 次为准；不要求力竭。",
+      "单侧动作按每侧完成；组间恢复不足时可延长休息。",
+      "这是专项辅助力量模板，跑步、骑行或游泳主课需另行安排。",
+      "高负荷力量日与长距离或高强度专项课分开；疲劳明显时减少力量组数。",
+      "临近比赛减少训练量，以恢复为主；不在比赛前尝试陌生动作。",
+      "跑量较高时每周选 1 天；减量周可保留熟悉动作并减少组数。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "维持 A",
+        "focus": "髋腿基础力量",
+        "exercises": [
+          {
+            "name": "哑铃高脚杯深蹲",
+            "sets": 2,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "哑铃罗马尼亚硬拉",
+            "sets": 2,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "站姿提踵",
+            "sets": 2,
+            "reps": 12,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "平板支撑",
+            "sets": 2,
+            "reps": 30,
+            "unit": "seconds",
+            "restSeconds": 45
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "维持 B",
+        "focus": "单腿与核心稳定",
+        "exercises": [
+          {
+            "name": "哑铃登阶",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "臀桥",
+            "sets": 2,
+            "reps": 10,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "单臂哑铃划船",
+            "sets": 2,
+            "reps": 10,
+            "unit": "reps",
+            "restSeconds": 75
+          },
+          {
+            "name": "鸟狗式",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 45
+          },
+          {
+            "name": "侧平板支撑",
+            "sets": 2,
+            "reps": 25,
+            "unit": "seconds",
+            "restSeconds": 45
+          }
+        ]
+      }
+    ],
+    "sport": "全马"
+  },
+  {
+    "id": "swim-strength",
+    "name": "游泳专项力量",
+    "subtitle": "背部、肩胛与核心",
+    "description": "干陆力量训练，兼顾背部拉力、肩胛控制与躯干稳定。",
+    "category": "专项力量",
+    "level": "有基础",
+    "frequency": "每周 2 次，A / B 间隔至少一天；赛季忙时选择一个训练日。",
+    "equipment": [
+      "哑铃",
+      "器械",
+      "绳索"
+    ],
+    "guidance": [
+      "先热身，再用轻重量完成 1–2 组准备组；表中的组数为正式训练组。",
+      "重量选择以动作稳定、通常还能完成约 2 次为准；不要求力竭。",
+      "单侧动作按每侧完成；组间恢复不足时可延长休息。",
+      "这是专项辅助力量模板，跑步、骑行或游泳主课需另行安排。",
+      "高负荷力量日与长距离或高强度专项课分开；疲劳明显时减少力量组数。",
+      "临近比赛减少训练量，以恢复为主；不在比赛前尝试陌生动作。",
+      "肩推只在肩部舒适范围内练习；肩部不适时先取消该动作并寻求指导。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "干陆 A",
+        "focus": "背部拉力与核心",
+        "exercises": [
+          {
+            "name": "高位下拉",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "单臂哑铃划船",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "面拉",
+            "sets": 2,
+            "reps": 12,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "侧平板支撑",
+            "sets": 3,
+            "reps": 25,
+            "unit": "seconds",
+            "restSeconds": 45
+          },
+          {
+            "name": "死虫式",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 45
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "干陆 B",
+        "focus": "下肢与肩部控制",
+        "exercises": [
+          {
+            "name": "哑铃高脚杯深蹲",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "哑铃肩推",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "反向飞鸟",
+            "sets": 2,
+            "reps": 12,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "臀桥",
+            "sets": 2,
+            "reps": 12,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "鸟狗式",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 45
+          }
+        ]
+      }
+    ],
+    "sport": "游泳"
+  },
+  {
+    "id": "triathlon-strength",
+    "name": "铁三专项力量",
+    "subtitle": "游骑跑的力量补充",
+    "description": "把下肢、背部拉力和核心整合进较精简的力量训练日。",
+    "category": "专项力量",
+    "level": "有基础",
+    "frequency": "每周 2 次，A / B 间隔至少一天；赛季忙时选择一个训练日。",
+    "equipment": [
+      "杠铃",
+      "哑铃",
+      "器械",
+      "稳固踏台"
+    ],
+    "guidance": [
+      "先热身，再用轻重量完成 1–2 组准备组；表中的组数为正式训练组。",
+      "重量选择以动作稳定、通常还能完成约 2 次为准；不要求力竭。",
+      "单侧动作按每侧完成；组间恢复不足时可延长休息。",
+      "这是专项辅助力量模板，跑步、骑行或游泳主课需另行安排。",
+      "高负荷力量日与长距离或高强度专项课分开；疲劳明显时减少力量组数。",
+      "临近比赛减少训练量，以恢复为主；不在比赛前尝试陌生动作。",
+      "砖式训练和长距离游骑跑周优先保证恢复，力量日可减为每周 1 次。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "综合 A",
+        "focus": "下肢与背部",
+        "exercises": [
+          {
+            "name": "杠铃深蹲",
+            "sets": 3,
+            "reps": 5,
+            "unit": "reps",
+            "restSeconds": 150
+          },
+          {
+            "name": "单臂哑铃划船",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "罗马尼亚硬拉",
+            "sets": 2,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 120
+          },
+          {
+            "name": "平板支撑",
+            "sets": 2,
+            "reps": 30,
+            "unit": "seconds",
+            "restSeconds": 45
+          },
+          {
+            "name": "站姿提踵",
+            "sets": 2,
+            "reps": 12,
+            "unit": "reps",
+            "restSeconds": 60
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "综合 B",
+        "focus": "单腿、拉力与核心",
+        "exercises": [
+          {
+            "name": "哑铃登阶",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "高位下拉",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "臀桥",
+            "sets": 2,
+            "reps": 10,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "侧平板支撑",
+            "sets": 2,
+            "reps": 25,
+            "unit": "seconds",
+            "restSeconds": 45
+          },
+          {
+            "name": "死虫式",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 45
+          }
+        ]
+      }
+    ],
+    "sport": "铁三"
+  },
+  {
+    "id": "cycling-strength",
+    "name": "自行车专项力量",
+    "subtitle": "蹬踏所需的下肢力量",
+    "description": "以深蹲、髋铰链和单腿动作为主，补充骑行训练中的力量练习。",
+    "category": "专项力量",
+    "level": "有基础",
+    "frequency": "每周 2 次，A / B 间隔至少一天；赛季忙时选择一个训练日。",
+    "equipment": [
+      "杠铃",
+      "哑铃",
+      "器械",
+      "稳固踏台"
+    ],
+    "guidance": [
+      "先热身，再用轻重量完成 1–2 组准备组；表中的组数为正式训练组。",
+      "重量选择以动作稳定、通常还能完成约 2 次为准；不要求力竭。",
+      "单侧动作按每侧完成；组间恢复不足时可延长休息。",
+      "这是专项辅助力量模板，跑步、骑行或游泳主课需另行安排。",
+      "高负荷力量日与长距离或高强度专项课分开；疲劳明显时减少力量组数。",
+      "临近比赛减少训练量，以恢复为主；不在比赛前尝试陌生动作。",
+      "长骑和高强度骑行前留出恢复时间；腿部疲劳明显时减少力量组数。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "力量 A",
+        "focus": "下肢基础力量",
+        "exercises": [
+          {
+            "name": "杠铃深蹲",
+            "sets": 4,
+            "reps": 5,
+            "unit": "reps",
+            "restSeconds": 180
+          },
+          {
+            "name": "罗马尼亚硬拉",
+            "sets": 3,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 120
+          },
+          {
+            "name": "站姿提踵",
+            "sets": 3,
+            "reps": 10,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "平板支撑",
+            "sets": 3,
+            "reps": 30,
+            "unit": "seconds",
+            "restSeconds": 60
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "力量 B",
+        "focus": "单腿与骨盆控制",
+        "exercises": [
+          {
+            "name": "腿举",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 120
+          },
+          {
+            "name": "哑铃登阶",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "哑铃单腿硬拉",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "臀桥",
+            "sets": 2,
+            "reps": 12,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "侧平板支撑",
+            "sets": 2,
+            "reps": 25,
+            "unit": "seconds",
+            "restSeconds": 45
+          }
+        ]
+      }
+    ],
+    "sport": "自行车"
+  },
+  {
+    "id": "hiking-strength",
+    "name": "登山专项力量",
+    "subtitle": "登阶与下坡控制",
+    "description": "围绕登阶、单腿支撑、后侧链和核心，练习山路所需的基础力量。",
+    "category": "专项力量",
+    "level": "有基础",
+    "frequency": "每周 2 次，A / B 间隔至少一天；赛季忙时选择一个训练日。",
+    "equipment": [
+      "哑铃",
+      "器械",
+      "稳固踏台"
+    ],
+    "guidance": [
+      "先热身，再用轻重量完成 1–2 组准备组；表中的组数为正式训练组。",
+      "重量选择以动作稳定、通常还能完成约 2 次为准；不要求力竭。",
+      "单侧动作按每侧完成；组间恢复不足时可延长休息。",
+      "这是专项辅助力量模板，跑步、骑行或游泳主课需另行安排。",
+      "高负荷力量日与长距离或高强度专项课分开；疲劳明显时减少力量组数。",
+      "临近比赛减少训练量，以恢复为主；不在比赛前尝试陌生动作。",
+      "踏台必须稳固，先用较低高度；登阶下放缓慢，整脚踩稳，不靠后脚蹬跳。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "登阶 A",
+        "focus": "上坡支撑与踝部",
+        "exercises": [
+          {
+            "name": "哑铃登阶",
+            "sets": 3,
+            "reps": 10,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "哑铃高脚杯深蹲",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "站姿提踵",
+            "sets": 3,
+            "reps": 15,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "平板支撑",
+            "sets": 2,
+            "reps": 35,
+            "unit": "seconds",
+            "restSeconds": 45
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "控制 B",
+        "focus": "单腿、髋与下放控制",
+        "exercises": [
+          {
+            "name": "保加利亚分腿蹲",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "哑铃罗马尼亚硬拉",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "侧弓步",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 75
+          },
+          {
+            "name": "侧平板支撑",
+            "sets": 2,
+            "reps": 30,
+            "unit": "seconds",
+            "restSeconds": 45
+          },
+          {
+            "name": "鸟狗式",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 45
+          }
+        ]
+      }
+    ],
+    "sport": "登山"
+  },
+  {
+    "id": "basketball-strength",
+    "name": "篮球专项力量",
+    "subtitle": "单腿与侧向稳定",
+    "description": "以腿部力量、侧向动作和躯干控制辅助篮球训练。",
+    "category": "专项力量",
+    "level": "有基础",
+    "frequency": "每周 2 次，A / B 间隔至少一天；赛季忙时选择一个训练日。",
+    "equipment": [
+      "杠铃",
+      "哑铃",
+      "器械",
+      "稳固踏台"
+    ],
+    "guidance": [
+      "先热身，再用轻重量完成 1–2 组准备组；表中的组数为正式训练组。",
+      "重量选择以动作稳定、通常还能完成约 2 次为准；不要求力竭。",
+      "单侧动作按每侧完成；组间恢复不足时可延长休息。",
+      "这是专项辅助力量模板，技术、速度和场地专项课需另行安排。",
+      "与比赛或高强度专项课协调安排，避免疲劳影响技术动作。",
+      "此模板不安排跳跃负荷；跳跃、落地和急停技术另在恢复充分时练习。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "基础 A",
+        "focus": "下肢与单腿力量",
+        "exercises": [
+          {
+            "name": "杠铃深蹲",
+            "sets": 3,
+            "reps": 5,
+            "unit": "reps",
+            "restSeconds": 150
+          },
+          {
+            "name": "保加利亚分腿蹲",
+            "sets": 3,
+            "reps": 6,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "站姿提踵",
+            "sets": 3,
+            "reps": 12,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "侧平板支撑",
+            "sets": 2,
+            "reps": 25,
+            "unit": "seconds",
+            "restSeconds": 45
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "侧向 B",
+        "focus": "侧向控制与全身补充",
+        "exercises": [
+          {
+            "name": "侧弓步",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "哑铃单腿硬拉",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "哑铃登阶",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "俯卧撑",
+            "sets": 3,
+            "reps": 10,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "死虫式",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 45
+          }
+        ]
+      }
+    ],
+    "sport": "篮球"
+  },
+  {
+    "id": "badminton-strength",
+    "name": "羽毛球专项力量",
+    "subtitle": "侧向、单腿与肩背",
+    "description": "用侧弓步、分腿动作和肩背力量辅助多方向移动。",
+    "category": "专项力量",
+    "level": "有基础",
+    "frequency": "每周 2 次，A / B 间隔至少一天；赛季忙时选择一个训练日。",
+    "equipment": [
+      "哑铃",
+      "器械",
+      "绳索",
+      "训练凳"
+    ],
+    "guidance": [
+      "先热身，再用轻重量完成 1–2 组准备组；表中的组数为正式训练组。",
+      "重量选择以动作稳定、通常还能完成约 2 次为准；不要求力竭。",
+      "单侧动作按每侧完成；组间恢复不足时可延长休息。",
+      "这是专项辅助力量模板，技术、速度和场地专项课需另行安排。",
+      "与比赛或高强度专项课协调安排，避免疲劳影响技术动作。",
+      "肩推只做舒适范围；不要在大量挥拍后继续堆积肩部负荷。"
+    ],
+    "days": [
+      {
+        "id": "a",
+        "name": "下肢 A",
+        "focus": "侧向与单腿控制",
+        "exercises": [
+          {
+            "name": "侧弓步",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "保加利亚分腿蹲",
+            "sets": 3,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "哑铃单腿硬拉",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "站姿提踵",
+            "sets": 3,
+            "reps": 12,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "侧平板支撑",
+            "sets": 2,
+            "reps": 25,
+            "unit": "seconds",
+            "restSeconds": 45
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "肩背 B",
+        "focus": "肩背与躯干稳定",
+        "exercises": [
+          {
+            "name": "单臂哑铃划船",
+            "sets": 3,
+            "reps": 10,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "哑铃高脚杯深蹲",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "面拉",
+            "sets": 2,
+            "reps": 12,
+            "unit": "reps",
+            "restSeconds": 60
+          },
+          {
+            "name": "哑铃肩推",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 90
+          },
+          {
+            "name": "鸟狗式",
+            "sets": 2,
+            "reps": 8,
+            "unit": "reps",
+            "restSeconds": 45
+          }
+        ]
+      }
+    ],
+    "sport": "羽毛球"
   }
 ]

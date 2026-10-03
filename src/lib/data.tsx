@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import { importPlanTemplate } from './import-plan-template';
+import { defaultUnit } from './training-target';
+import { appendWorkoutSet, startWorkoutFromPlan } from './workout-storage';
 import { id, type BodyEntry, type Exercise, type FoodEntry, type Plan, type PlanDraftItem, type PlanItem, type Workout, type WorkoutSet } from './types';
 
 type Data = {
@@ -87,7 +89,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         }
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
-          await db.runAsync('INSERT INTO plan_items VALUES (?, ?, ?, ?, ?, ?, ?)', id(), nextId, item.exerciseId, i, item.sets, item.reps, item.weight);
+          await db.runAsync('INSERT INTO plan_items (id, planId, exerciseId, sortOrder, sets, reps, weight, unit, restSeconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', id(), nextId, item.exerciseId, i, item.sets, item.reps, item.weight, item.unit ?? 'reps', item.restSeconds ?? 90);
         }
       });
       await refresh();
@@ -104,33 +106,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return nextId;
     },
     async startWorkout(planId) {
-      const active = await db.getFirstAsync<Workout>('SELECT * FROM workouts WHERE endedAt IS NULL LIMIT 1');
-      if (active) return active.id;
-      const plan = plans.find(item => item.id === planId);
-      const nextId = id();
-      await db.withTransactionAsync(async () => {
-        await db.runAsync('INSERT INTO workouts VALUES (?, ?, ?, ?, NULL, ?)', nextId, planId ?? null, plan?.name ?? '自由训练', new Date().toISOString(), '');
-        if (planId) {
-          const items = planItems.filter(item => item.planId === planId);
-          for (const item of items) {
-            for (let n = 1; n <= item.sets; n++) {
-              await db.runAsync('INSERT INTO workout_sets VALUES (?, ?, ?, ?, ?, ?, ?, 0)', id(), nextId, item.exerciseId, item.sortOrder, n, item.weight, item.reps);
-            }
-          }
-        }
-      });
+      const nextId = await startWorkoutFromPlan(db, planId);
       await refresh();
       return nextId;
     },
     async addWorkoutExercise(workoutId, exerciseId) {
       const nextOrder = (await db.getFirstAsync<{ n: number }>('SELECT COALESCE(MAX(sortOrder), -1) + 1 AS n FROM workout_sets WHERE workoutId = ?', workoutId))?.n ?? 0;
-      await db.runAsync('INSERT INTO workout_sets VALUES (?, ?, ?, ?, 1, 0, 10, 0)', id(), workoutId, exerciseId, nextOrder);
+      const unit = defaultUnit(exercises.find(item => item.id === exerciseId));
+      await db.runAsync('INSERT INTO workout_sets (id, workoutId, exerciseId, sortOrder, setNumber, weight, reps, completed, unit) VALUES (?, ?, ?, ?, 1, 0, ?, 0, ?)', id(), workoutId, exerciseId, nextOrder, unit === 'seconds' ? 30 : 10, unit);
       await refresh();
     },
     async addSet(workoutId, exerciseId) {
-      const previous = await db.getFirstAsync<WorkoutSet>('SELECT * FROM workout_sets WHERE workoutId = ? AND exerciseId = ? ORDER BY setNumber DESC LIMIT 1', workoutId, exerciseId);
-      if (!previous) return;
-      await db.runAsync('INSERT INTO workout_sets VALUES (?, ?, ?, ?, ?, ?, ?, 0)', id(), workoutId, exerciseId, previous.sortOrder, previous.setNumber + 1, previous.weight, previous.reps);
+      await appendWorkoutSet(db, workoutId, exerciseId);
       await refresh();
     },
     async updateSet(setId, patch) {

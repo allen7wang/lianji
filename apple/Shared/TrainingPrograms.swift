@@ -4,6 +4,12 @@ struct ProgramExercise: Codable, Hashable {
     var name: String
     var sets: Int
     var reps: Int
+    var unit: TrainingUnit?
+    var restSeconds: Int?
+    var targetLabel: String {
+        let actualUnit = unit ?? (name == "平板支撑" ? .seconds : .reps)
+        return "\(reps) \(actualUnit == .seconds ? "秒" : "次")"
+    }
 }
 
 struct ProgramDay: Identifiable, Codable, Hashable {
@@ -23,11 +29,17 @@ struct TrainingProgram: Identifiable, Codable, Hashable {
     var frequency: String
     var equipment: [String]
     var guidance: [String]
+    var sport: String?
     var days: [ProgramDay]
 
     static var categories: [String] {
         ["全部"] + catalog.reduce(into: [String]()) { result, program in
             if !result.contains(program.category) { result.append(program.category) }
+        }
+    }
+    static var sports: [String] {
+        ["全部项目"] + catalog.reduce(into: [String]()) { result, program in
+            if let sport = program.sport, !result.contains(sport) { result.append(sport) }
         }
     }
 
@@ -49,10 +61,10 @@ struct TrainingProgram: Identifiable, Codable, Hashable {
                 guard let exercise = exercises.first(where: { !$0.isCustom && $0.name == item.name }) else {
                     throw ProgramImportError.missingExercise(item.name)
                 }
-                return PlanItem(exerciseId: exercise.id, sets: item.sets, reps: item.reps, weight: 0)
+                return PlanItem(exerciseId: exercise.id, sets: item.sets, reps: item.reps, weight: 0, unit: item.unit ?? exercise.defaultUnit, restSeconds: item.restSeconds ?? 90)
             }
             return Plan(id: planId(day), name: "\(name) · \(day.name)",
-                        note: "\(day.focus)。\(frequency) \(guidance.last ?? "") 平板支撑按秒、单侧动作按每侧记次数。 重量请按实际填写。", items: items)
+                        note: "\(day.focus)。\(frequency) \(guidance.joined(separator: " ")) 单侧动作按每侧记录。重量请按实际填写。", items: items)
         }
     }
 }

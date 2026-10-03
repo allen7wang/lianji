@@ -9,11 +9,11 @@ final class TrainingStore: ObservableObject {
 
     private let fileURL: URL
 
-    init() {
+    init(fileURL override: URL? = nil) {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let directory = support.appendingPathComponent("Lianji", isDirectory: true)
+        let directory = override?.deletingLastPathComponent() ?? support.appendingPathComponent("Lianji", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        fileURL = directory.appendingPathComponent("training.json")
+        fileURL = override ?? directory.appendingPathComponent("training.json")
         if let data = try? Data(contentsOf: fileURL), let decoded = try? JSONDecoder().decode(AppState.self, from: data) {
             state = decoded
         } else {
@@ -66,22 +66,23 @@ final class TrainingStore: ObservableObject {
         let plan = state.plans.first { $0.id == planId }
         let sets = plan?.items.flatMap { item in
             (1...max(1, item.sets)).map { number in
-                TrainingSet(exerciseId: item.exerciseId, setNumber: number, weight: item.weight, reps: item.reps)
+                TrainingSet(exerciseId: item.exerciseId, setNumber: number, weight: item.weight, reps: item.reps, unit: item.unit, restSeconds: item.restSeconds)
             }
         } ?? []
         var next = state
-        next.workouts.append(Workout(planId: planId, name: plan?.name ?? "自由训练", sets: sets))
+        next.workouts.append(Workout(planId: planId, name: plan?.name ?? "自由训练", note: plan?.note ?? "", sets: sets))
         state = next
     }
 
     func addWorkoutExercise(_ exerciseId: String) {
         guard let active = activeWorkout, !active.sets.contains(where: { $0.exerciseId == exerciseId }) else { return }
-        mutateActive { $0.sets.append(TrainingSet(exerciseId: exerciseId, setNumber: 1, weight: 0, reps: 10)) }
+        let unit = exercise(exerciseId)?.defaultUnit ?? .reps
+        mutateActive { $0.sets.append(TrainingSet(exerciseId: exerciseId, setNumber: 1, weight: 0, reps: unit == .seconds ? 30 : 10, unit: unit, restSeconds: 90)) }
     }
 
     func addSet(for exerciseId: String) {
         guard let previous = activeWorkout?.sets.last(where: { $0.exerciseId == exerciseId }) else { return }
-        mutateActive { $0.sets.append(TrainingSet(exerciseId: exerciseId, setNumber: previous.setNumber + 1, weight: previous.weight, reps: previous.reps)) }
+        mutateActive { $0.sets.append(TrainingSet(exerciseId: exerciseId, setNumber: previous.setNumber + 1, weight: previous.weight, reps: previous.reps, unit: previous.unit, restSeconds: previous.restSeconds)) }
     }
 
     func updateSet(_ id: String, weight: Double? = nil, reps: Int? = nil, completed: Bool? = nil) {

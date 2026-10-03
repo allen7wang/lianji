@@ -6,6 +6,9 @@ export type Exercise = {
   isCustom: number;
 };
 
+export type TrainingUnit = 'reps' | 'seconds';
+export const targetLabel = (value: number, unit?: TrainingUnit) => `${value} ${unit === 'seconds' ? '秒' : '次'}`;
+
 export type Plan = {
   id: string;
   name: string;
@@ -21,6 +24,8 @@ export type PlanItem = {
   sets: number;
   reps: number;
   weight: number;
+  unit?: TrainingUnit;
+  restSeconds?: number;
 };
 
 export type Workout = {
@@ -41,6 +46,8 @@ export type WorkoutSet = {
   weight: number;
   reps: number;
   completed: number;
+  unit?: TrainingUnit;
+  restSeconds?: number;
 };
 
 export type BodyEntry = {
@@ -62,12 +69,12 @@ export type FoodEntry = {
   fat: number;
 };
 
-export type PlanDraftItem = Pick<PlanItem, 'exerciseId' | 'sets' | 'reps' | 'weight'>;
+export type PlanDraftItem = Pick<PlanItem, 'exerciseId' | 'sets' | 'reps' | 'weight' | 'unit' | 'restSeconds'>;
 
 export const id = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 export const volumeOf = (sets: WorkoutSet[]) =>
-  sets.reduce((sum, set) => sum + (set.completed ? set.weight * set.reps : 0), 0);
+  sets.reduce((sum, set) => sum + (set.completed && set.unit !== 'seconds' ? set.weight * set.reps : 0), 0);
 
 export const dateLabel = (iso: string) => {
   const date = new Date(iso);

@@ -321,5 +321,122 @@
     "source": "ExerciseDB / AscendAPI",
     "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
     "caption": "人体模型动作演示"
+  },
+  {
+    "id": "jumping_jack",
+    "name": "开合跳",
+    "asset": "jumping_jack.gif",
+    "source": "练迹原创动作简图",
+    "caption": "简图动作演示，低速练习并在需要时换侧"
+  },
+  {
+    "id": "mountain_climber",
+    "name": "登山跑",
+    "mediaId": "RJgzwny",
+    "gifUrl": "https://static.exercisedb.dev/media/RJgzwny.gif",
+    "source": "ExerciseDB / AscendAPI",
+    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
+    "caption": "人体模型动作演示"
+  },
+  {
+    "id": "burpee",
+    "name": "波比",
+    "mediaId": "dK9394r",
+    "gifUrl": "https://static.exercisedb.dev/media/dK9394r.gif",
+    "source": "ExerciseDB / AscendAPI",
+    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
+    "caption": "人体模型动作演示"
+  },
+  {
+    "id": "bear_crawl",
+    "name": "熊爬",
+    "mediaId": "0Yz8WdV",
+    "gifUrl": "https://static.exercisedb.dev/media/0Yz8WdV.gif",
+    "source": "ExerciseDB / AscendAPI",
+    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
+    "caption": "人体模型动作演示"
+  },
+  {
+    "id": "dead_bug",
+    "name": "死虫式",
+    "mediaId": "iny3m5y",
+    "gifUrl": "https://static.exercisedb.dev/media/iny3m5y.gif",
+    "source": "ExerciseDB / AscendAPI",
+    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
+    "caption": "人体模型动作演示"
+  },
+  {
+    "id": "dumbbell_step_up",
+    "name": "哑铃登阶",
+    "mediaId": "aXtJhlg",
+    "gifUrl": "https://static.exercisedb.dev/media/aXtJhlg.gif",
+    "source": "ExerciseDB / AscendAPI",
+    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
+    "caption": "人体模型动作演示"
+  },
+  {
+    "id": "single_leg_rdl",
+    "name": "哑铃单腿硬拉",
+    "mediaId": "gKozT8X",
+    "gifUrl": "https://static.exercisedb.dev/media/gKozT8X.gif",
+    "source": "ExerciseDB / AscendAPI",
+    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
+    "caption": "人体模型动作演示"
+  },
+  {
+    "id": "crab_walk",
+    "name": "蟹行",
+    "asset": "crab_walk.gif",
+    "source": "练迹原创动作简图",
+    "caption": "简图动作演示，低速练习并在需要时换侧"
+  },
+  {
+    "id": "beast_hold",
+    "name": "兽式支撑",
+    "asset": "beast_hold.gif",
+    "source": "练迹原创动作简图",
+    "caption": "静态姿势配合呼吸提示"
+  },
+  {
+    "id": "crab_hold",
+    "name": "蟹式支撑",
+    "asset": "crab_hold.gif",
+    "source": "练迹原创动作简图",
+    "caption": "静态姿势配合呼吸提示"
+  },
+  {
+    "id": "ape_hold",
+    "name": "猿式深蹲",
+    "asset": "ape_hold.gif",
+    "source": "练迹原创动作简图",
+    "caption": "静态姿势配合呼吸提示"
+  },
+  {
+    "id": "side_plank",
+    "name": "侧平板支撑",
+    "asset": "side_plank.gif",
+    "source": "练迹原创动作简图",
+    "caption": "静态姿势配合呼吸提示"
+  },
+  {
+    "id": "bird_dog",
+    "name": "鸟狗式",
+    "asset": "bird_dog.gif",
+    "source": "练迹原创动作简图",
+    "caption": "简图动作演示，低速练习并在需要时换侧"
+  },
+  {
+    "id": "cat_cow",
+    "name": "猫牛式",
+    "asset": "cat_cow.gif",
+    "source": "练迹原创动作简图",
+    "caption": "简图动作演示，低速练习并在需要时换侧"
+  },
+  {
+    "id": "lateral_lunge",
+    "name": "侧弓步",
+    "asset": "lateral_lunge.gif",
+    "source": "练迹原创动作简图",
+    "caption": "简图动作演示，低速练习并在需要时换侧"
   }
 ]

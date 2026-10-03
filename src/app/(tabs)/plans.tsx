@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useData } from '@/lib/data';
 import { Badge, Button, Card, Header, IconButton, Page } from '@/ui/components';
-import { programCategories, templatePlanId, trainingPrograms, type TrainingProgram } from '@/lib/plan-templates';
+import { programCategories, programSports, templatePlanId, trainingPrograms, type TrainingProgram } from '@/lib/plan-templates';
+import { targetLabel } from '@/lib/types';
 import { PlanTemplatePreview } from '@/ui/plan-template-preview';
 import { C } from '@/ui/theme';
 
@@ -13,6 +14,7 @@ export default function Plans() {
   const [tab, setTab] = useState<'my' | 'templates'>('my');
   const [preview, setPreview] = useState<TrainingProgram | null>(null);
   const [category, setCategory] = useState('全部');
+  const [sport, setSport] = useState('全部项目');
   async function begin(planId: string) {
     await startWorkout(planId);
     router.push('/workout');
@@ -27,8 +29,9 @@ export default function Plans() {
     <Header eyebrow="YOUR PROGRAMS" title="训练计划" right={<IconButton icon="add" onPress={() => router.push('/plan-editor')} />} />
     <View style={{ flexDirection: 'row', gap: 10 }}><Badge label={`我的计划 ${plans.length}`} active={tab === 'my'} onPress={() => setTab('my')} /><Badge label={`计划模板 · ${trainingPrograms.length} 套`} active={tab === 'templates'} onPress={() => setTab('templates')} /></View>
     <Text style={styles.intro}>{tab === 'my' ? '按自己的节奏安排动作与组数，也可以从模板添加整套计划。' : '按场景挑选计划，查看器材、频率和动作，再添加到我的计划。'}</Text>
-    {tab === 'templates' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{programCategories.map(value => <Badge key={value} label={value} active={category === value} onPress={() => setCategory(value)} />)}</View> : null}
-    {tab === 'templates' ? trainingPrograms.filter(program => category === '全部' || program.category === category).map(program => {
+    {tab === 'templates' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{programCategories.map(value => <Badge key={value} label={value} active={category === value} onPress={() => { setCategory(value); setSport('全部项目'); }} />)}</View> : null}
+    {tab === 'templates' && category === '专项力量' ? <View style={{ gap: 8 }}><Text style={styles.note}>选择运动项目</Text><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{programSports.map(value => <Badge key={value} label={value} active={sport === value} onPress={() => setSport(value)} />)}</View></View> : null}
+    {tab === 'templates' ? trainingPrograms.filter(program => (category === '全部' || program.category === category) && (category !== '专项力量' || sport === '全部项目' || program.sport === sport)).map(program => {
       const added = program.days.filter(day => plans.some(plan => plan.id === templatePlanId(program.id, day.id))).length;
       return <Card key={program.id} style={{ gap: 14 }}>
         <View style={styles.top}><View style={styles.index}><Text style={styles.indexText}>{program.days.length}</Text></View><View style={{ flex: 1 }}><Text style={styles.name}>{program.name} · {program.subtitle}</Text><Text style={styles.note}>一轮 {program.days.length} 个训练日{added ? ` · 已添加 ${added}/${program.days.length}` : ''}</Text></View></View>
@@ -41,9 +44,9 @@ export default function Plans() {
     }) : plans.map((plan, index) => {
       const items = planItems.filter(item => item.planId === plan.id);
       return <Card key={plan.id} style={{ gap: 16 }}>
-        <View style={styles.top}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.name}>{plan.name}</Text><Text style={styles.note}>{plan.note || `${items.length} 个动作`}</Text></View><Pressable onPress={() => router.push({ pathname: '/plan-editor', params: { id: plan.id } })} hitSlop={10}><Ionicons name="create-outline" color={C.muted} size={21} /></Pressable></View>
+        <View style={styles.top}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.name}>{plan.name}</Text><Text style={styles.note}>{plan.note || `${items.length} 个动作`}</Text></View><Pressable accessibilityLabel={`编辑${plan.name}`} onPress={() => router.push({ pathname: '/plan-editor', params: { id: plan.id } })} hitSlop={10}><Ionicons name="create-outline" color={C.muted} size={21} /></Pressable></View>
         <View style={styles.divider} />
-        <View style={{ gap: 10 }}>{items.slice(0, 5).map((item, i) => <View key={item.id} style={styles.exerciseRow}><Text style={styles.exerciseNumber}>{i + 1}</Text><Text style={styles.exerciseName}>{exercises.find(ex => ex.id === item.exerciseId)?.name ?? '未知动作'}</Text><Text style={styles.exerciseSets}>{item.sets} × {item.reps}</Text></View>)}{items.length > 5 ? <Text style={styles.more}>还有 {items.length - 5} 个动作</Text> : null}</View>
+        <View style={{ gap: 10 }}>{items.slice(0, 5).map((item, i) => <View key={item.id} style={styles.exerciseRow}><Text style={styles.exerciseNumber}>{i + 1}</Text><Text style={styles.exerciseName}>{exercises.find(ex => ex.id === item.exerciseId)?.name ?? '未知动作'}</Text><Text style={styles.exerciseSets}>{item.sets} × {targetLabel(item.reps, item.unit)}</Text></View>)}{items.length > 5 ? <Text style={styles.more}>还有 {items.length - 5} 个动作</Text> : null}</View>
         <View style={styles.actions}><Button label="开始训练" icon="play" onPress={() => begin(plan.id)} style={{ flex: 1 }} /><IconButton icon="trash-outline" color={C.faint} onPress={() => confirmDelete(plan.id, plan.name)} /></View>
       </Card>;
     })}

@@ -58,6 +58,15 @@ export async function migrate(db: SQLiteDatabase) {
 
   const count = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM exercises');
   await db.withTransactionAsync(async () => {
+    for (const table of ['plan_items', 'workout_sets']) {
+      const columns = await db.getAllAsync<{ name: string }>(`PRAGMA table_info(${table})`);
+      if (!columns.some(column => column.name === 'unit')) {
+        await db.execAsync(`ALTER TABLE ${table} ADD COLUMN unit TEXT NOT NULL DEFAULT 'reps'`);
+      }
+      if (!columns.some(column => column.name === 'restSeconds')) {
+        await db.execAsync(`ALTER TABLE ${table} ADD COLUMN restSeconds INTEGER NOT NULL DEFAULT 90`);
+      }
+    }
     for (const exercise of extraExercises) {
       const existing = await db.getFirstAsync<{ id: string }>('SELECT id FROM exercises WHERE name = ? AND isCustom = 0', exercise.name);
       if (!existing) await db.runAsync('INSERT INTO exercises VALUES (?, ?, ?, ?, 0)', `builtin:${exercise.id}`, exercise.name, exercise.muscle, exercise.equipment);
@@ -76,7 +85,7 @@ export async function migrate(db: SQLiteDatabase) {
       await db.runAsync('INSERT INTO plans VALUES (?, ?, ?, ?)', planId, name, note, new Date().toISOString());
       for (let i = 0; i < names.length; i++) {
         const exercise = await db.getFirstAsync<{ id: string }>('SELECT id FROM exercises WHERE name = ?', names[i]);
-        if (exercise) await db.runAsync('INSERT INTO plan_items VALUES (?, ?, ?, ?, ?, ?, ?)', id(), planId, exercise.id, i, 3, 10, 0);
+        if (exercise) await db.runAsync('INSERT INTO plan_items (id, planId, exerciseId, sortOrder, sets, reps, weight, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', id(), planId, exercise.id, i, 3, 10, 0, names[i] === '平板支撑' ? 'seconds' : 'reps');
       }
     }
   });

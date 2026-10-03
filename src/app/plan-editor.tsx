@@ -5,7 +5,8 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useData } from '@/lib/data';
 import type { PlanDraftItem } from '@/lib/types';
-import { Button, Card, ExercisePicker, Field, IconButton } from '@/ui/components';
+import { defaultUnit } from '@/lib/training-target';
+import { Badge, Button, Card, ExercisePicker, Field, IconButton } from '@/ui/components';
 import { C } from '@/ui/theme';
 
 function NumberField({ value, onChange, suffix }: { value: number; onChange: (value: number) => void; suffix: string }) {
@@ -22,7 +23,7 @@ export default function PlanEditor() {
   const { ready, plans, planItems } = useData();
   const existing = plans.find(item => item.id === routeId);
   if (!ready) return <SafeAreaView style={styles.screen} edges={['top']} />;
-  return <PlanEditorContent key={routeId ?? 'new'} routeId={routeId} initialName={existing?.name ?? ''} initialNote={existing?.note ?? ''} initialItems={planItems.filter(item => item.planId === routeId).map(item => ({ exerciseId: item.exerciseId, sets: item.sets, reps: item.reps, weight: item.weight }))} />;
+  return <PlanEditorContent key={routeId ?? 'new'} routeId={routeId} initialName={existing?.name ?? ''} initialNote={existing?.note ?? ''} initialItems={planItems.filter(item => item.planId === routeId).map(item => ({ exerciseId: item.exerciseId, sets: item.sets, reps: item.reps, weight: item.weight, unit: item.unit, restSeconds: item.restSeconds }))} />;
 }
 
 function PlanEditorContent({ routeId, initialName, initialNote, initialItems }: { routeId?: string; initialName: string; initialNote: string; initialItems: PlanDraftItem[] }) {
@@ -37,7 +38,7 @@ function PlanEditorContent({ routeId, initialName, initialNote, initialItems }: 
   async function save() {
     if (!name.trim()) return Alert.alert('请输入计划名称');
     if (!items.length) return Alert.alert('请至少添加一个动作');
-    if (items.some(item => !Number.isInteger(item.sets) || item.sets < 1 || item.sets > 20 || !Number.isInteger(item.reps) || item.reps < 1 || item.reps > 1000)) return Alert.alert('组数与次数需为有效整数');
+    if (items.some(item => !Number.isInteger(item.sets) || item.sets < 1 || item.sets > 20 || !Number.isInteger(item.reps) || item.reps < 1 || item.reps > 1000 || !Number.isInteger(item.restSeconds ?? 90) || (item.restSeconds ?? 90) < 0 || (item.restSeconds ?? 90) > 600)) return Alert.alert('组数、次数或秒数及休息时间需为有效整数', '组数 1–20，次数或秒数 1–1000，休息 0–600 秒。');
     setSaving(true);
     try { await savePlan(name, note, items, routeId); router.back(); }
     catch (error) { Alert.alert('保存失败', String(error)); }
@@ -52,13 +53,17 @@ function PlanEditorContent({ routeId, initialName, initialNote, initialItems }: 
       <View style={styles.section}><Text style={styles.sectionTitle}>训练动作</Text><Text style={styles.sectionCount}>{items.length} 个动作</Text></View>
       {items.map((item, index) => {
         const exercise = exercises.find(ex => ex.id === item.exerciseId);
-        return <Card key={item.exerciseId} style={{ gap: 15 }}><View style={styles.exerciseHeader}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta}>{exercise?.muscle} · {exercise?.equipment}</Text></View><Pressable onPress={() => setItems(current => current.filter((_, i) => i !== index))} hitSlop={12}><Ionicons name="close-circle-outline" size={22} color={C.faint} /></Pressable></View><View style={styles.fields}><View style={styles.field}><Text style={styles.fieldLabel}>组数</Text><NumberField value={item.sets} suffix="组" onChange={sets => change(index, { sets })} /></View><View style={styles.field}><Text style={styles.fieldLabel}>次数</Text><NumberField value={item.reps} suffix="次" onChange={reps => change(index, { reps })} /></View><View style={styles.field}><Text style={styles.fieldLabel}>目标重量</Text><NumberField value={item.weight} suffix="kg" onChange={weight => change(index, { weight })} /></View></View></Card>;
+        return <Card key={item.exerciseId} style={{ gap: 15 }}><View style={styles.exerciseHeader}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta}>{exercise?.muscle} · {exercise?.equipment}</Text></View><Pressable onPress={() => setItems(current => current.filter((_, i) => i !== index))} hitSlop={12}><Ionicons name="close-circle-outline" size={22} color={C.faint} /></Pressable></View>
+          <View style={{ flexDirection: 'row', gap: 8 }}><Badge label="按次数" active={item.unit !== 'seconds'} onPress={() => change(index, { unit: 'reps' })} /><Badge label="按秒" active={item.unit === 'seconds'} onPress={() => change(index, { unit: 'seconds' })} /></View>
+          <View style={styles.fields}><View style={styles.field}><Text style={styles.fieldLabel}>组数</Text><NumberField value={item.sets} suffix="组" onChange={sets => change(index, { sets })} /></View><View style={styles.field}><Text style={styles.fieldLabel}>{item.unit === 'seconds' ? '时长' : '次数'}</Text><NumberField value={item.reps} suffix={item.unit === 'seconds' ? '秒' : '次'} onChange={reps => change(index, { reps })} /></View><View style={styles.field}><Text style={styles.fieldLabel}>目标重量</Text><NumberField value={item.weight} suffix="kg" onChange={weight => change(index, { weight })} /></View></View>
+          <View style={{ gap: 6 }}><Text style={styles.fieldLabel}>每组结束后的休息</Text><NumberField value={item.restSeconds ?? 90} suffix="秒" onChange={restSeconds => change(index, { restSeconds })} /></View>
+        </Card>;
       })}
       <Button label="添加动作" icon="add-circle-outline" variant="secondary" onPress={() => setPicker(true)} />
       <Text style={styles.hint}>目标重量可填 0，正式训练时可以按实际情况修改。</Text>
     </ScrollView>
     <View style={styles.footer}><Button label={saving ? '保存中…' : '保存计划'} onPress={save} disabled={saving} /></View>
-    <ExercisePicker visible={picker} onClose={() => setPicker(false)} excluded={items.map(item => item.exerciseId)} onSelect={exercise => setItems(current => [...current, { exerciseId: exercise.id, sets: 3, reps: 10, weight: 0 }])} />
+    <ExercisePicker visible={picker} onClose={() => setPicker(false)} excluded={items.map(item => item.exerciseId)} onSelect={exercise => setItems(current => [...current, { exerciseId: exercise.id, sets: 3, reps: defaultUnit(exercise) === 'seconds' ? 30 : 10, weight: 0, unit: defaultUnit(exercise), restSeconds: 90 }])} />
   </SafeAreaView>;
 }
 

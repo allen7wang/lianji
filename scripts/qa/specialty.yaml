@@ -1,0 +1,204 @@
+# This flow clears data only on the isolated CI emulator, never on a user device.
+appId: com.allenwang.lianji
+---
+- launchApp:
+    clearState: true
+- tapOn: "计划"
+- tapOn: "计划模板 · 28 套"
+- tapOn: "间歇训练"
+- scrollUntilVisible:
+    element:
+      text: ".*查看HIIT 全身模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看HIIT 全身模板.*"
+- assertVisible: "4 组 × 20 秒"
+- assertVisible: "休息 40 秒"
+- takeScreenshot: hiit-preview
+- tapOn: ".*添加整套计划 · 2 个训练日.*"
+- assertVisible: "我的计划 5"
+- tapOn: "编辑HIIT 全身 · 全身 A"
+- assertVisible: "编辑计划"
+- takeScreenshot: timed-plan-editor
+- tapOn: ".*保存计划.*"
+- assertVisible: "我的计划 5"
+- scrollUntilVisible:
+    element:
+      text: ".*开始训练.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    text: ".*开始训练.*"
+    index: 0
+- assertVisible: "时长 · 秒"
+- tapOn:
+    text: ".*计时 20 秒.*"
+    index: 0
+- assertVisible: "动作计时.*"
+- takeScreenshot: hiit-work-timer
+- tapOn:
+    text: "完成第 1 组"
+    index: 0
+- assertVisible: "组间休息.*"
+- takeScreenshot: hiit-rest-timer
+- tapOn: ".*结束训练.*"
+- tapOn: "完成"
+- assertVisible: "HIIT 全身 · 全身 A"
+- stopApp
+- launchApp
+- tapOn: "计划"
+- assertVisible: "我的计划 5"
+- tapOn: "计划模板 · 28 套"
+- tapOn: "地面流动"
+- scrollUntilVisible:
+    element:
+      text: ".*查看动物流基础模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看动物流基础模板.*"
+- assertVisible: "兽式支撑"
+- assertVisible: "蟹式支撑"
+- takeScreenshot: animal-flow-preview
+- tapOn: ".*添加整套计划 · 2 个训练日.*"
+- assertVisible: "我的计划 7"
+- stopApp
+- launchApp
+- tapOn: "计划"
+- assertVisible: "我的计划 7"
+- tapOn: "计划模板 · 28 套"
+- tapOn: "专项力量"
+- scrollUntilVisible:
+    element:
+      text: "短跑"
+    direction: UP
+    timeout: 30000
+- tapOn: "短跑"
+- scrollUntilVisible:
+    element:
+      text: ".*查看短跑专项力量模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看短跑专项力量模板.*"
+- assertVisible: ".*添加整套计划 · 2 个训练日.*"
+- takeScreenshot: sport-sprint
+- back
+- scrollUntilVisible:
+    element:
+      text: "半马"
+    direction: UP
+    timeout: 30000
+- tapOn: "半马"
+- scrollUntilVisible:
+    element:
+      text: ".*查看半马专项力量模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看半马专项力量模板.*"
+- assertVisible: ".*添加整套计划 · 2 个训练日.*"
+- takeScreenshot: sport-half-marathon
+- back
+- scrollUntilVisible:
+    element:
+      text: "全马"
+    direction: UP
+    timeout: 30000
+- tapOn: "全马"
+- scrollUntilVisible:
+    element:
+      text: ".*查看全马专项力量模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看全马专项力量模板.*"
+- assertVisible: ".*添加整套计划 · 2 个训练日.*"
+- takeScreenshot: sport-marathon
+- back
+- scrollUntilVisible:
+    element:
+      text: "游泳"
+    direction: UP
+    timeout: 30000
+- tapOn: "游泳"
+- scrollUntilVisible:
+    element:
+      text: ".*查看游泳专项力量模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看游泳专项力量模板.*"
+- assertVisible: ".*添加整套计划 · 2 个训练日.*"
+- takeScreenshot: sport-swim
+- back
+- scrollUntilVisible:
+    element:
+      text: "铁三"
+    direction: UP
+    timeout: 30000
+- tapOn: "铁三"
+- scrollUntilVisible:
+    element:
+      text: ".*查看铁三专项力量模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看铁三专项力量模板.*"
+- assertVisible: ".*添加整套计划 · 2 个训练日.*"
+- takeScreenshot: sport-triathlon
+- back
+- scrollUntilVisible:
+    element:
+      text: "自行车"
+    direction: UP
+    timeout: 30000
+- tapOn: "自行车"
+- scrollUntilVisible:
+    element:
+      text: ".*查看自行车专项力量模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看自行车专项力量模板.*"
+- assertVisible: ".*添加整套计划 · 2 个训练日.*"
+- takeScreenshot: sport-cycling
+- back
+- scrollUntilVisible:
+    element:
+      text: "登山"
+    direction: UP
+    timeout: 30000
+- tapOn: "登山"
+- scrollUntilVisible:
+    element:
+      text: ".*查看登山专项力量模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看登山专项力量模板.*"
+- assertVisible: ".*添加整套计划 · 2 个训练日.*"
+- takeScreenshot: sport-hiking
+- back
+- scrollUntilVisible:
+    element:
+      text: "篮球"
+    direction: UP
+    timeout: 30000
+- tapOn: "篮球"
+- scrollUntilVisible:
+    element:
+      text: ".*查看篮球专项力量模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看篮球专项力量模板.*"
+- assertVisible: ".*添加整套计划 · 2 个训练日.*"
+- takeScreenshot: sport-basketball
+- back
+- scrollUntilVisible:
+    element:
+      text: "羽毛球"
+    direction: UP
+    timeout: 30000
+- tapOn: "羽毛球"
+- scrollUntilVisible:
+    element:
+      text: ".*查看羽毛球专项力量模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看羽毛球专项力量模板.*"
+- assertVisible: ".*添加整套计划 · 2 个训练日.*"
+- takeScreenshot: sport-badminton
+- back

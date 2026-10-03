@@ -8,18 +8,33 @@
 
 /* Begin PBXBuildFile section */
 		017C34D894EF08F81D0150F7 /* ExerciseDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F8EBC3FB208CEAD7E562CF /* ExerciseDemo.swift */; };
+		0B49E860F74E9A61C02EDFF6 /* ape_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3CCDEE40F79E7692D2B0FED0 /* ape_hold.gif */; };
+		11DE7A70F1C711D1E3D70DC1 /* side_plank.gif in Resources */ = {isa = PBXBuildFile; fileRef = A71DC399637DEC1B6DF6B207 /* side_plank.gif */; };
+		1C1F4CCFFAF09C0955CC8EC7 /* crab_walk.gif in Resources */ = {isa = PBXBuildFile; fileRef = 0EA1506748F77E8725B6084F /* crab_walk.gif */; };
+		241646FF9D1A7629EF0551C3 /* jumping_jack.gif in Resources */ = {isa = PBXBuildFile; fileRef = 596346EBA87DC0A1D930ED8A /* jumping_jack.gif */; };
 		28A1CA4219248C990421634D /* LianjiMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0E45B890F14444818175D0 /* LianjiMacApp.swift */; };
+		2C680BE104A451C3CD0DDE3E /* beast_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 89630D6A29FFE3F51D50524F /* beast_hold.gif */; };
 		32FAD4B0877E6396704F244F /* extra-exercises.json in Resources */ = {isa = PBXBuildFile; fileRef = 935B1BDD641EB16407948FE4 /* extra-exercises.json */; };
 		3974DFC02809FD8C6B27DED9 /* ExerciseDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F8EBC3FB208CEAD7E562CF /* ExerciseDemo.swift */; };
 		3AA90D432C788FE7E0C39409 /* training-programs.json in Resources */ = {isa = PBXBuildFile; fileRef = 11612D6026F5B76C63E66DE1 /* training-programs.json */; };
 		3FCB5205C7E3EE619936D26C /* plank.gif in Resources */ = {isa = PBXBuildFile; fileRef = 64607564DA60D6BE8097A832 /* plank.gif */; };
+		461A82F4227BA1DDA1811454 /* lateral_lunge.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5A19C945F6016F0E571BEA2E /* lateral_lunge.gif */; };
 		48599EFD0FF72AAB997EF8C1 /* LianjiWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6794DD7DF7C6EF5B78D87ECF /* LianjiWatchApp.swift */; };
+		50038BA0764981120E535C5D /* crab_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 94F272396F1D7160AB43E5CD /* crab_hold.gif */; };
+		538CC45551FA3E73244FD06C /* jumping_jack.gif in Resources */ = {isa = PBXBuildFile; fileRef = 596346EBA87DC0A1D930ED8A /* jumping_jack.gif */; };
+		6CDDCFC41960E2D338392346 /* ape_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3CCDEE40F79E7692D2B0FED0 /* ape_hold.gif */; };
 		7156568FB8E33F00D02A4254 /* TrainingPrograms.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD50B4EDA4214FFFC7890005 /* TrainingPrograms.swift */; };
 		82F0560BAC117C0658118400 /* face_pull.gif in Resources */ = {isa = PBXBuildFile; fileRef = 92D68B8015DBFCFD356C80DF /* face_pull.gif */; };
+		84E109622C8769DE598109E8 /* crab_walk.gif in Resources */ = {isa = PBXBuildFile; fileRef = 0EA1506748F77E8725B6084F /* crab_walk.gif */; };
 		862AF505B0C557B8BDB90BD5 /* face_pull.gif in Resources */ = {isa = PBXBuildFile; fileRef = 92D68B8015DBFCFD356C80DF /* face_pull.gif */; };
+		8754386656EFFA19A2EFE92F /* side_plank.gif in Resources */ = {isa = PBXBuildFile; fileRef = A71DC399637DEC1B6DF6B207 /* side_plank.gif */; };
 		879DB03802562CDD02F4A0EC /* WatchViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 279B6664F737DFAFB6DB856C /* WatchViews.swift */; };
 		87E6CFEDDF141D1A0A29ABD2 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 94B8D678678EDAAA5AD64EA6 /* README.md */; };
+		8C9057FB977E64A83C096596 /* bird_dog.gif in Resources */ = {isa = PBXBuildFile; fileRef = 9ADBE8BC0B2F4AA0E981B189 /* bird_dog.gif */; };
 		8E20829A843E5763AB42505D /* MacViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502A6D58B5A0B27BA21D34C6 /* MacViews.swift */; };
+		9F839D9C21BCF9B5A5D3ED57 /* lateral_lunge.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5A19C945F6016F0E571BEA2E /* lateral_lunge.gif */; };
+		A39A897B854202C829CEBDD3 /* cat_cow.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3AC23BE8F59825529D7CA60A /* cat_cow.gif */; };
+		A3F01712348D887307EDAE89 /* bird_dog.gif in Resources */ = {isa = PBXBuildFile; fileRef = 9ADBE8BC0B2F4AA0E981B189 /* bird_dog.gif */; };
 		A8A825472882BD7391A1122F /* TrainingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352C1F134477A0F087710F1 /* TrainingStore.swift */; };
 		B0EDE424E48EB5CC0248EADA /* plank.gif in Resources */ = {isa = PBXBuildFile; fileRef = 64607564DA60D6BE8097A832 /* plank.gif */; };
 		C6F636AFA4847DA6841C4B86 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ADC71A24848B83E7819EBAA /* Models.swift */; };
@@ -29,24 +44,36 @@
 		EBA95AB0937E4A707B6EA689 /* extra-exercises.json in Resources */ = {isa = PBXBuildFile; fileRef = 935B1BDD641EB16407948FE4 /* extra-exercises.json */; };
 		ED593677E35A9934FE578AF5 /* exercise-demos.json in Resources */ = {isa = PBXBuildFile; fileRef = 856BBA4F261D927E5C73A1DD /* exercise-demos.json */; };
 		EE010584B3C4842777DE44BA /* training-programs.json in Resources */ = {isa = PBXBuildFile; fileRef = 11612D6026F5B76C63E66DE1 /* training-programs.json */; };
+		F4A3472F62A8ADE0538837E8 /* beast_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 89630D6A29FFE3F51D50524F /* beast_hold.gif */; };
+		F79A92B86EA7FD4015F90550 /* cat_cow.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3AC23BE8F59825529D7CA60A /* cat_cow.gif */; };
+		F866216742AC0D6361FC9798 /* crab_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 94F272396F1D7160AB43E5CD /* crab_hold.gif */; };
 		FB10BBE0BCD6BF804329B1EB /* exercise-demos.json in Resources */ = {isa = PBXBuildFile; fileRef = 856BBA4F261D927E5C73A1DD /* exercise-demos.json */; };
 		FB12AE743590081D5137DD7E /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 94B8D678678EDAAA5AD64EA6 /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0EA1506748F77E8725B6084F /* crab_walk.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = crab_walk.gif; sourceTree = "<group>"; };
 		11612D6026F5B76C63E66DE1 /* training-programs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "training-programs.json"; sourceTree = "<group>"; };
 		279B6664F737DFAFB6DB856C /* WatchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchViews.swift; sourceTree = "<group>"; };
 		2E595F5949AD6D56B96A9E08 /* LianjiWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LianjiWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3AC23BE8F59825529D7CA60A /* cat_cow.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = cat_cow.gif; sourceTree = "<group>"; };
 		3ADC71A24848B83E7819EBAA /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		3CCDEE40F79E7692D2B0FED0 /* ape_hold.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = ape_hold.gif; sourceTree = "<group>"; };
 		502A6D58B5A0B27BA21D34C6 /* MacViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacViews.swift; sourceTree = "<group>"; };
+		596346EBA87DC0A1D930ED8A /* jumping_jack.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = jumping_jack.gif; sourceTree = "<group>"; };
+		5A19C945F6016F0E571BEA2E /* lateral_lunge.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = lateral_lunge.gif; sourceTree = "<group>"; };
 		64607564DA60D6BE8097A832 /* plank.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = plank.gif; sourceTree = "<group>"; };
 		6794DD7DF7C6EF5B78D87ECF /* LianjiWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LianjiWatchApp.swift; sourceTree = "<group>"; };
 		856BBA4F261D927E5C73A1DD /* exercise-demos.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "exercise-demos.json"; sourceTree = "<group>"; };
+		89630D6A29FFE3F51D50524F /* beast_hold.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = beast_hold.gif; sourceTree = "<group>"; };
 		90F8EBC3FB208CEAD7E562CF /* ExerciseDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDemo.swift; sourceTree = "<group>"; };
 		92D68B8015DBFCFD356C80DF /* face_pull.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = face_pull.gif; sourceTree = "<group>"; };
 		935B1BDD641EB16407948FE4 /* extra-exercises.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "extra-exercises.json"; sourceTree = "<group>"; };
 		94B8D678678EDAAA5AD64EA6 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		94F272396F1D7160AB43E5CD /* crab_hold.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = crab_hold.gif; sourceTree = "<group>"; };
+		9ADBE8BC0B2F4AA0E981B189 /* bird_dog.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = bird_dog.gif; sourceTree = "<group>"; };
 		9E0E45B890F14444818175D0 /* LianjiMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LianjiMacApp.swift; sourceTree = "<group>"; };
+		A71DC399637DEC1B6DF6B207 /* side_plank.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = side_plank.gif; sourceTree = "<group>"; };
 		BD50B4EDA4214FFFC7890005 /* TrainingPrograms.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPrograms.swift; sourceTree = "<group>"; };
 		D352C1F134477A0F087710F1 /* TrainingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingStore.swift; sourceTree = "<group>"; };
 		E9E75F6DB8051B73D4194999 /* LianjiMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LianjiMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -83,11 +110,20 @@
 		6719A6C312D91DE2D7784E8E /* exercises */ = {
 			isa = PBXGroup;
 			children = (
+				3CCDEE40F79E7692D2B0FED0 /* ape_hold.gif */,
+				89630D6A29FFE3F51D50524F /* beast_hold.gif */,
+				9ADBE8BC0B2F4AA0E981B189 /* bird_dog.gif */,
+				3AC23BE8F59825529D7CA60A /* cat_cow.gif */,
+				94F272396F1D7160AB43E5CD /* crab_hold.gif */,
+				0EA1506748F77E8725B6084F /* crab_walk.gif */,
 				856BBA4F261D927E5C73A1DD /* exercise-demos.json */,
 				935B1BDD641EB16407948FE4 /* extra-exercises.json */,
 				92D68B8015DBFCFD356C80DF /* face_pull.gif */,
+				596346EBA87DC0A1D930ED8A /* jumping_jack.gif */,
+				5A19C945F6016F0E571BEA2E /* lateral_lunge.gif */,
 				64607564DA60D6BE8097A832 /* plank.gif */,
 				94B8D678678EDAAA5AD64EA6 /* README.md */,
+				A71DC399637DEC1B6DF6B207 /* side_plank.gif */,
 			);
 			name = exercises;
 			path = ../assets/exercises;
@@ -207,10 +243,19 @@
 			buildActionMask = 2147483647;
 			files = (
 				FB12AE743590081D5137DD7E /* README.md in Resources */,
+				0B49E860F74E9A61C02EDFF6 /* ape_hold.gif in Resources */,
+				F4A3472F62A8ADE0538837E8 /* beast_hold.gif in Resources */,
+				A3F01712348D887307EDAE89 /* bird_dog.gif in Resources */,
+				A39A897B854202C829CEBDD3 /* cat_cow.gif in Resources */,
+				F866216742AC0D6361FC9798 /* crab_hold.gif in Resources */,
+				1C1F4CCFFAF09C0955CC8EC7 /* crab_walk.gif in Resources */,
 				FB10BBE0BCD6BF804329B1EB /* exercise-demos.json in Resources */,
 				32FAD4B0877E6396704F244F /* extra-exercises.json in Resources */,
 				82F0560BAC117C0658118400 /* face_pull.gif in Resources */,
+				241646FF9D1A7629EF0551C3 /* jumping_jack.gif in Resources */,
+				461A82F4227BA1DDA1811454 /* lateral_lunge.gif in Resources */,
 				3FCB5205C7E3EE619936D26C /* plank.gif in Resources */,
+				11DE7A70F1C711D1E3D70DC1 /* side_plank.gif in Resources */,
 				3AA90D432C788FE7E0C39409 /* training-programs.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -220,10 +265,19 @@
 			buildActionMask = 2147483647;
 			files = (
 				87E6CFEDDF141D1A0A29ABD2 /* README.md in Resources */,
+				6CDDCFC41960E2D338392346 /* ape_hold.gif in Resources */,
+				2C680BE104A451C3CD0DDE3E /* beast_hold.gif in Resources */,
+				8C9057FB977E64A83C096596 /* bird_dog.gif in Resources */,
+				F79A92B86EA7FD4015F90550 /* cat_cow.gif in Resources */,
+				50038BA0764981120E535C5D /* crab_hold.gif in Resources */,
+				84E109622C8769DE598109E8 /* crab_walk.gif in Resources */,
 				ED593677E35A9934FE578AF5 /* exercise-demos.json in Resources */,
 				EBA95AB0937E4A707B6EA689 /* extra-exercises.json in Resources */,
 				862AF505B0C557B8BDB90BD5 /* face_pull.gif in Resources */,
+				538CC45551FA3E73244FD06C /* jumping_jack.gif in Resources */,
+				9F839D9C21BCF9B5A5D3ED57 /* lateral_lunge.gif in Resources */,
 				B0EDE424E48EB5CC0248EADA /* plank.gif in Resources */,
+				8754386656EFFA19A2EFE92F /* side_plank.gif in Resources */,
 				EE010584B3C4842777DE44BA /* training-programs.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -294,7 +348,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -307,7 +361,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -352,7 +406,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -371,7 +425,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

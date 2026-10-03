@@ -1,10 +1,11 @@
 # Run only on the isolated APK QA emulator, immediately after a fresh installation.
 appId: com.allenwang.lianji
 ---
-- launchApp
+- launchApp:
+    clearState: true
 - tapOn: "计划"
 - assertVisible: "训练计划"
-- tapOn: "计划模板 · 12 套"
+- tapOn: "计划模板 · 28 套"
 - tapOn: "居家训练"
 - assertVisible: "居家哑铃全身.*"
 - takeScreenshot: home-programs
@@ -30,7 +31,7 @@ appId: com.allenwang.lianji
 - tapOn: "计划"
 - assertVisible: "训练计划"
 - assertVisible: "我的计划 5"
-- tapOn: "计划模板 · 12 套"
+- tapOn: "计划模板 · 28 套"
 - tapOn: "居家训练"
 - scrollUntilVisible:
     element:

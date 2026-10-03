@@ -66,12 +66,18 @@ struct WatchHomeView: View {
 
 private struct WatchProgramLibrary: View {
     @State private var category = "全部"
+    @State private var sport = "全部项目"
     var body: some View {
         List {
             Picker("训练场景", selection: $category) {
                 ForEach(TrainingProgram.categories, id: \.self) { Text($0).tag($0) }
+            }.onChange(of: category) { sport = "全部项目" }
+            if category == "专项力量" {
+                Picker("运动项目", selection: $sport) {
+                    ForEach(TrainingProgram.sports, id: \.self) { Text($0).tag($0) }
+                }
             }
-            ForEach(TrainingProgram.catalog.filter { category == "全部" || $0.category == category }) { program in
+            ForEach(TrainingProgram.catalog.filter { (category == "全部" || $0.category == category) && (category != "专项力量" || sport == "全部项目" || $0.sport == sport) }) { program in
                 NavigationLink {
                     WatchProgramPreview(program: program)
                 } label: {
@@ -128,7 +134,8 @@ private struct WatchProgramDayPreview: View {
                 ForEach(day.exercises, id: \.name) { item in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(item.name).font(.caption.bold())
-                        Text("\(item.sets) 组 × \(item.reps) 次").font(.caption2).foregroundStyle(.secondary)
+                        Text("\(item.sets) 组 × \(item.targetLabel)").font(.caption2).foregroundStyle(.secondary)
+                        Text("休息 \(item.restSeconds ?? 90) 秒").font(.caption2).foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, alignment: .leading)
                     Divider()
                 }
@@ -189,6 +196,7 @@ private struct WatchExerciseView: View {
     @EnvironmentObject private var store: TrainingStore
     let exerciseId: String
     @State private var restUntil: Date?
+    @State private var timerLabel = "休息"
 
     var body: some View {
         ScrollView {
@@ -201,10 +209,11 @@ private struct WatchExerciseView: View {
                 if let restUntil {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         let remaining = max(0, Int(restUntil.timeIntervalSince(context.date)))
-                        Text(remaining > 0 ? "休息 \(remaining) 秒" : "可以开始下一组")
+                        Text(remaining > 0 ? "\(timerLabel) \(remaining) 秒" : "计时结束，请按实际情况记录")
                             .font(.caption.bold())
-                            .foregroundStyle(lime)
+                        .foregroundStyle(lime)
                     }
+                    Button("停止计时") { self.restUntil = nil }
                 }
                 ForEach(store.activeWorkout?.sets.filter { $0.exerciseId == exerciseId } ?? []) { set in
                     VStack(alignment: .leading, spacing: 7) {
@@ -212,12 +221,15 @@ private struct WatchExerciseView: View {
                         Stepper(value: Binding(get: { set.weight }, set: { store.updateSet(set.id, weight: $0) }), in: 0...500, step: 2.5) {
                             Text("\(set.weight.formatted()) kg")
                         }
-                        Stepper(value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), in: 0...100) {
-                            Text("\(set.reps) 次")
+                        Stepper(value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), in: 0...1000) {
+                            Text(set.targetLabel)
+                        }
+                        if set.unit == .seconds && !set.completed {
+                            Button("计时 \(set.reps) 秒") { timerLabel = "动作计时"; restUntil = .now.addingTimeInterval(Double(set.reps)) }
                         }
                         Button {
                             store.updateSet(set.id, completed: !set.completed)
-                            if !set.completed { restUntil = .now.addingTimeInterval(90) }
+                            if !set.completed { timerLabel = "休息"; restUntil = .now.addingTimeInterval(Double(set.restSeconds ?? 90)) }
                         } label: {
                             Label(set.completed ? "已完成" : "完成这组", systemImage: set.completed ? "checkmark.circle.fill" : "circle")
                         }

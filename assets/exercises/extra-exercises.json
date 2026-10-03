@@ -34,5 +34,110 @@
     "name": "哑铃肩推",
     "muscle": "肩",
     "equipment": "哑铃"
+  },
+  {
+    "id": "jumping_jack",
+    "name": "开合跳",
+    "muscle": "全身",
+    "equipment": "自重",
+    "recording": "seconds"
+  },
+  {
+    "id": "mountain_climber",
+    "name": "登山跑",
+    "muscle": "全身",
+    "equipment": "自重",
+    "recording": "seconds"
+  },
+  {
+    "id": "burpee",
+    "name": "波比",
+    "muscle": "全身",
+    "equipment": "自重",
+    "recording": "reps"
+  },
+  {
+    "id": "bear_crawl",
+    "name": "熊爬",
+    "muscle": "全身",
+    "equipment": "自重",
+    "recording": "seconds"
+  },
+  {
+    "id": "dead_bug",
+    "name": "死虫式",
+    "muscle": "核心",
+    "equipment": "自重",
+    "recording": "reps"
+  },
+  {
+    "id": "dumbbell_step_up",
+    "name": "哑铃登阶",
+    "muscle": "腿",
+    "equipment": "哑铃",
+    "recording": "reps"
+  },
+  {
+    "id": "single_leg_rdl",
+    "name": "哑铃单腿硬拉",
+    "muscle": "腿",
+    "equipment": "哑铃",
+    "recording": "reps"
+  },
+  {
+    "id": "crab_walk",
+    "name": "蟹行",
+    "muscle": "全身",
+    "equipment": "自重",
+    "recording": "seconds"
+  },
+  {
+    "id": "beast_hold",
+    "name": "兽式支撑",
+    "muscle": "核心",
+    "equipment": "自重",
+    "recording": "seconds"
+  },
+  {
+    "id": "crab_hold",
+    "name": "蟹式支撑",
+    "muscle": "全身",
+    "equipment": "自重",
+    "recording": "seconds"
+  },
+  {
+    "id": "ape_hold",
+    "name": "猿式深蹲",
+    "muscle": "腿",
+    "equipment": "自重",
+    "recording": "seconds"
+  },
+  {
+    "id": "side_plank",
+    "name": "侧平板支撑",
+    "muscle": "核心",
+    "equipment": "自重",
+    "recording": "seconds"
+  },
+  {
+    "id": "bird_dog",
+    "name": "鸟狗式",
+    "muscle": "核心",
+    "equipment": "自重",
+    "recording": "reps"
+  },
+  {
+    "id": "cat_cow",
+    "name": "猫牛式",
+    "muscle": "全身",
+    "equipment": "自重",
+    "recording": "reps"
+  },
+  {
+    "id": "lateral_lunge",
+    "name": "侧弓步",
+    "muscle": "腿",
+    "equipment": "自重",
+    "recording": "reps"
   }
 ]

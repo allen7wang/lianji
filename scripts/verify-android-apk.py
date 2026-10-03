@@ -66,7 +66,7 @@ try:
         "apkSha256": hashlib.sha256(APK.read_bytes()).hexdigest(),
         "package": PACKAGE,
         "androidApi": adb("shell", "getprop", "ro.build.version.sdk").stdout.decode().strip(),
-        "checks": ["signed APK installation", "home screen", "twelve program templates entry", "cold relaunch", "no app crash"],
+        "checks": ["signed APK installation", "home screen", "program templates entry", "cold relaunch", "no app crash"],
         "result": "passed",
     }
     (RESULTS / "verification.json").write_text(json.dumps(report, indent=2) + "\n")
