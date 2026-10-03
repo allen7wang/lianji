@@ -4,7 +4,9 @@
 
 ## 下载预览版
 
-[GitHub 发布页](https://github.com/allen7wang/lianji/releases/tag/v1.0.1)提供 macOS 通用预览包，以及 iPhone / Apple Watch 模拟器预览包。macOS 包尚未签名或公证；模拟器包不能安装到真实手机或手表。Android 当前提供源码，尚未提供 APK。
+[下载 Android APK · v1.0.1](https://github.com/allen7wang/lianji/releases/download/v1.0.1/Lianji-1.0.1-Android.apk)。在 Android 7.0+ 手机上下载后打开安装，按系统提示允许当前下载来源安装应用。安装后直接打开「练迹」，无需 Expo Go 或连接开发电脑。
+
+[GitHub 发布页](https://github.com/allen7wang/lianji/releases/tag/v1.0.1)还提供 macOS 通用预览包，以及 iPhone / Apple Watch 模拟器预览包。macOS 包尚未签名或公证；Apple 模拟器包不能安装到真实手机或手表。
 
 各平台的安装方式和验证范围见 [v1.0.1 发布说明](docs/release-v1.0.1.md)。这是公开预览版，尚未发布到 App Store 或 Google Play。
 
@@ -91,6 +93,16 @@ xcodebuild -project apple/LianjiApple.xcodeproj -scheme LianjiWatch -sdk watchsi
 计划模板验证脚本使用隔离的内存 SQLite 数据库运行实际迁移和导入逻辑，检查动作动图映射、旧计划保留、重复导入、编辑后补齐及出错时整套回滚，不会读写用户数据。
 
 GitHub Actions 会在提交和 Pull Request 后检查代码规范、类型、计划导入逻辑及 iOS / Android 资源打包。
+
+### Android APK 发布
+
+「Android APK」工作流可选择已发布的源码标签，由 Expo 生成 Android 原生工程并编译包含 JavaScript 和本地素材的 Release APK。工作流产物使用临时构建签名，发布前需使用单独保管的固定发布密钥重新签名；私钥和口令不进入源码仓库或工作流。
+
+下载工作流产物后，使用 `bash scripts/sign-android-apk.sh <构建产物.apk> <发布包.apk>` 完成签名与校验。需要配置 `ANDROID_HOME` 和可用的 Java；默认发布密钥保存在 Mac 的 `~/Library/Application Support/Lianji/Signing/Android/`，也可通过 `LIANJI_ANDROID_KEYSTORE`、`LIANJI_ANDROID_PASSWORD_FILE` 指定现有密钥和口令文件。脚本不会生成新密钥或覆盖已有发布包。
+
+「Android APK smoke test」工作流会校验发布包的 SHA-256，然后在 Android 模拟器安装最终签名的 APK，检查首页、四套计划入口和关闭后重新启动，并保存截图与运行日志。后续升级应保持 `com.allenwang.lianji` 和同一发布签名。
+
+`eas.json` 也提供生成 APK 的 `preview` 构建配置，使用 EAS 需要先登录 Expo 并配置相同的发布凭据。
 
 ## 许可
 

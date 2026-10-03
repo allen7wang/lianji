@@ -1,6 +1,6 @@
 # 练迹 v1.0.1 · 首个公开预览版
 
-练迹是一个无需注册的本地训练记录应用。本次发布 iOS / Android 的 Expo 源码、macOS / Apple Watch 的 SwiftUI 源码，以及 macOS 和 Apple 模拟器预览包。
+练迹是一个无需注册的本地训练记录应用。本次发布 Android APK、macOS 和 Apple 模拟器预览包，以及各端完整源码。
 
 ## 功能
 
@@ -15,11 +15,11 @@
 
 | 文件 / 平台 | 使用方式 |
 | --- | --- |
+| [`Lianji-1.0.1-Android.apk`](https://github.com/allen7wang/lianji/releases/download/v1.0.1/Lianji-1.0.1-Android.apk) | Android 7.0+ 独立安装包，支持 ARM64、ARMv7、x86 与 x86_64，下载后打开安装；如系统提示，允许当前下载来源安装应用。无需 Expo Go 或开发服务器。 |
 | `Lianji-1.0.1-macOS-universal.zip` | macOS 14+ 桌面预览，包含 Apple Silicon 与 Intel 架构。解压后得到 `LianjiMac.app`；尚未进行 Developer ID 签名或公证。 |
 | `Lianji-1.0.1-iOS-Simulator.zip` | 开发者用 iPhone 模拟器预览包，不能安装到真实 iPhone。 |
 | `Lianji-1.0.1-watchOS-Simulator.zip` | 开发者用 Apple Watch 模拟器预览包，不能安装到真实手表。 |
 | `SHA256SUMS.txt` | 下载文件的 SHA-256 校验值。 |
-| Android | 提供完整源码，按 README 编译运行；本次没有发布 APK。 |
 | 真实 iPhone / Apple Watch | 需要开发者签名后构建，当前没有提供 IPA、TestFlight 或商店版本。 |
 
 将模拟器包解压后，在 Xcode 中启动兼容的模拟器，再使用以下命令安装。iOS 预览包在 iPhone 17 Pro / iOS 26.5 上完成启动验证；手表预览包在发布前完成编译，尚未完成手表界面验收。
@@ -39,9 +39,11 @@ xcrun simctl launch <手表模拟器UDID> com.allenwang.lianji.watch
 ## 验证状态
 
 - 代码规范、TypeScript 类型、训练计划导入及回滚检查通过。
-- iOS 独立应用已编译并在模拟器启动，Android JavaScript / 资源打包通过。
+- iOS 独立应用已编译并在模拟器启动。
+- Android Release APK 编译、固定发布签名、16 KB 文件对齐和内置资源校验通过。
+- 最终签名的 Android APK 已在 Android 15 / API 35 模拟器完成安装、首页、四套计划入口、关闭后重新启动及崩溃日志检查，详见 [安装验证记录](https://github.com/allen7wang/lianji/actions/runs/37125182369)。发布页文件与被验证安装包的 SHA-256 一致。
 - macOS 与 Apple Watch 预览包编译通过。
-- 新增计划模板的模拟器点击验收尚未完成；Android 真机、手表运行及各端云同步均未验证。
+- 新增计划模板的界面点击验收、Android 真机与手表运行尚未完成；当前没有跨设备云同步。
 
 ## 当前范围
 
