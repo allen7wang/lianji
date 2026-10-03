@@ -18,7 +18,18 @@ struct TrainingProgram: Identifiable, Codable, Hashable {
     var name: String
     var subtitle: String
     var description: String
+    var category: String
+    var level: String
+    var frequency: String
+    var equipment: [String]
+    var guidance: [String]
     var days: [ProgramDay]
+
+    static var categories: [String] {
+        ["全部"] + catalog.reduce(into: [String]()) { result, program in
+            if !result.contains(program.category) { result.append(program.category) }
+        }
+    }
 
     static let catalog: [TrainingProgram] = {
         guard let url = Bundle.main.url(forResource: "training-programs", withExtension: "json"),
@@ -41,7 +52,7 @@ struct TrainingProgram: Identifiable, Codable, Hashable {
                 return PlanItem(exerciseId: exercise.id, sets: item.sets, reps: item.reps, weight: 0)
             }
             return Plan(id: planId(day), name: "\(name) · \(day.name)",
-                        note: "\(day.focus)。按顺序轮换训练日，按恢复情况安排休息；重量请按实际填写。", items: items)
+                        note: "\(day.focus)。\(frequency) \(guidance.last ?? "") 平板支撑按秒、单侧动作按每侧记次数。 重量请按实际填写。", items: items)
         }
     }
 }

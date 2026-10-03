@@ -5,7 +5,7 @@ on:
     inputs:
       release_tag:
         description: Release containing the signed Android APK
-        default: v1.0.1
+        default: v1.0.2
         required: true
       apk_sha256:
         description: Expected SHA-256 of the signed APK
@@ -44,6 +44,12 @@ jobs:
           files[0].rename('apk-qa/app.apk')
           print('Signed release APK checksum verified')
           PY
+      - name: Install pinned Maestro CLI
+        run: |
+          curl --fail --location --retry 3 https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.11.0/maestro.zip -o /tmp/maestro.zip
+          echo '5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a  /tmp/maestro.zip' | sha256sum --check
+          unzip -q /tmp/maestro.zip -d /tmp/maestro-cli
+          echo '/tmp/maestro-cli/maestro/bin' >> "$GITHUB_PATH"
       - name: Enable emulator acceleration
         run: sudo chown "$USER" /dev/kvm
       - name: Install and launch the published APK
@@ -54,7 +60,10 @@ jobs:
           arch: x86_64
           profile: pixel_7_pro
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -camera-back none
-          script: python3 scripts/verify-android-apk.py apk-qa/app.apk apk-qa/results
+          script: |
+            python3 scripts/verify-android-apk.py apk-qa/app.apk apk-qa/results
+            maestro test scripts/qa/plans.yaml --format JUNIT --output apk-qa/results/plans-report.xml --test-output-dir apk-qa/results/plans --debug-output apk-qa/results/maestro
+
       - uses: actions/upload-artifact@v7
         if: always()
         with:

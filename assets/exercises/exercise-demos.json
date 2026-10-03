@@ -267,5 +267,59 @@
     "asset": "plank.gif",
     "source": "练迹原创",
     "caption": "保持支撑姿势，呼吸环表示自然呼吸"
+  },
+  {
+    "id": "bodyweight_squat",
+    "name": "自重深蹲",
+    "mediaId": "75Bgtjy",
+    "gifUrl": "https://static.exercisedb.dev/media/75Bgtjy.gif",
+    "source": "ExerciseDB / AscendAPI",
+    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
+    "caption": "人体模型动作演示"
+  },
+  {
+    "id": "bodyweight_lunge",
+    "name": "徒手弓步蹲",
+    "mediaId": "kMzUs9Y",
+    "gifUrl": "https://static.exercisedb.dev/media/kMzUs9Y.gif",
+    "source": "ExerciseDB / AscendAPI",
+    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
+    "caption": "人体模型动作演示"
+  },
+  {
+    "id": "glute_bridge",
+    "name": "臀桥",
+    "mediaId": "u0cNiij",
+    "gifUrl": "https://static.exercisedb.dev/media/u0cNiij.gif",
+    "source": "ExerciseDB / AscendAPI",
+    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
+    "caption": "人体模型动作演示"
+  },
+  {
+    "id": "goblet_squat",
+    "name": "哑铃高脚杯深蹲",
+    "mediaId": "yn8yg1r",
+    "gifUrl": "https://static.exercisedb.dev/media/yn8yg1r.gif",
+    "source": "ExerciseDB / AscendAPI",
+    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
+    "caption": "人体模型动作演示"
+  },
+  {
+    "id": "dumbbell_rdl",
+    "name": "哑铃罗马尼亚硬拉",
+    "mediaId": "rR0LJzx",
+    "gifUrl": "https://static.exercisedb.dev/media/rR0LJzx.gif",
+    "source": "ExerciseDB / AscendAPI",
+    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
+    "caption": "人体模型动作演示"
+  },
+  {
+    "id": "dumbbell_shoulder_press",
+    "name": "哑铃肩推",
+    "mediaId": "A6wtbuL",
+    "gifUrl": "https://static.exercisedb.dev/media/A6wtbuL.gif",
+    "source": "ExerciseDB / AscendAPI",
+    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
+    "caption": "人体模型动作演示"
   }
 ]

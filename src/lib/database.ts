@@ -1,4 +1,5 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
+import extraExercises from '../../assets/exercises/extra-exercises.json';
 import { id } from './types';
 
 const defaultExercises: [string, string, string][] = [
@@ -56,8 +57,12 @@ export async function migrate(db: SQLiteDatabase) {
   `);
 
   const count = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM exercises');
-  if (count?.count) return;
   await db.withTransactionAsync(async () => {
+    for (const exercise of extraExercises) {
+      const existing = await db.getFirstAsync<{ id: string }>('SELECT id FROM exercises WHERE name = ? AND isCustom = 0', exercise.name);
+      if (!existing) await db.runAsync('INSERT INTO exercises VALUES (?, ?, ?, ?, 0)', `builtin:${exercise.id}`, exercise.name, exercise.muscle, exercise.equipment);
+    }
+    if (count?.count) return;
     for (const [name, muscle, equipment] of defaultExercises) {
       await db.runAsync('INSERT INTO exercises VALUES (?, ?, ?, ?, 0)', id(), name, muscle, equipment);
     }

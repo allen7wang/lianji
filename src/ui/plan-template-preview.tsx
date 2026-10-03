@@ -27,9 +27,10 @@ export function PlanTemplatePreview({ program, onClose, onImported }: {
   }
   return <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={close}>
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
-      <View style={styles.header}><View><Text style={styles.eyebrow}>计划模板</Text><Text style={styles.title}>{program.name} · {program.subtitle}</Text></View><IconButton icon="close" onPress={close} /></View>
+      <View style={styles.header}><View style={{ flex: 1 }}><Text style={styles.eyebrow}>计划模板</Text><Text style={styles.title}>{program.name} · {program.subtitle}</Text></View><IconButton icon="close" onPress={close} /></View>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.description}>{program.description}</Text>
+        <View style={{ gap: 6 }}><Text style={styles.hint}>{program.category} · {program.level}</Text><Text style={styles.hint}>器材：{program.equipment.join(' / ')}</Text><Text style={styles.hint}>{program.frequency}</Text></View>
         <Text style={styles.hint}>一轮包含 {program.days.length} 个训练日，可在训练日之间安排休息。添加后可修改动作、组数、次数和重量。</Text>
         {program.days.map((day, index) => <Card key={day.id} style={{ gap: 12 }}>
           <Text style={styles.day}>{index + 1} · {day.name}</Text><Text style={styles.focus}>{day.focus}</Text>
@@ -37,6 +38,7 @@ export function PlanTemplatePreview({ program, onClose, onImported }: {
           <Text style={styles.total}>{day.exercises.length} 个动作 · {day.exercises.reduce((sum, item) => sum + item.sets, 0)} 组</Text>
         </Card>)}
         <Text style={styles.hint}>目标重量初始为 0 kg，请在计划编辑或训练时填写实际重量。已添加的训练日会保留你的修改。</Text>
+        {program.guidance.map(tip => <Text key={tip} style={styles.hint}>• {tip}</Text>)}
       </ScrollView>
       <View style={styles.footer}><Button label={busy ? '正在添加…' : !missing ? '已添加到我的计划' : missing < program.days.length ? `补齐 ${missing} 个训练日` : `添加整套计划 · ${missing} 个训练日`} disabled={busy || !ready || !missing} icon="add-circle-outline" onPress={add} /></View>
     </SafeAreaView>

@@ -8,6 +8,20 @@ struct Exercise: Identifiable, Codable, Hashable {
     var isCustom: Bool = false
 }
 
+struct ExtraExercise: Decodable {
+    var id: String
+    var name: String
+    var muscle: String
+    var equipment: String
+
+    static let catalog: [ExtraExercise] = {
+        guard let url = Bundle.main.url(forResource: "extra-exercises", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let entries = try? JSONDecoder().decode([ExtraExercise].self, from: data) else { return [] }
+        return entries
+    }()
+}
+
 struct PlanItem: Identifiable, Codable, Hashable {
     var id: String = UUID().uuidString
     var exerciseId: String
@@ -76,6 +90,12 @@ struct AppState: Codable {
     var bodyEntries: [BodyEntry]
     var foodEntries: [FoodEntry]
 
+    mutating func addMissingExercises() {
+        for entry in ExtraExercise.catalog where !exercises.contains(where: { !$0.isCustom && $0.name == entry.name }) {
+            exercises.append(Exercise(id: "builtin:\(entry.id)", name: entry.name, muscle: entry.muscle, equipment: entry.equipment))
+        }
+    }
+
     static func starter() -> AppState {
         let entries: [(String, String, String, String)] = [
             ("barbell_bench", "杠铃卧推", "胸", "杠铃"),
@@ -118,6 +138,8 @@ struct AppState: Codable {
             Plan(id: "starter_pull", name: "拉日 · 背部二头", note: "适合上肢拉力训练", items: items(["pull_up", "barbell_row", "lat_pulldown", "face_pull", "barbell_curl"])),
             Plan(id: "starter_legs", name: "腿日 · 下肢核心", note: "适合下肢力量训练", items: items(["barbell_squat", "romanian_deadlift", "leg_press", "leg_curl", "plank"]))
         ]
-        return AppState(exercises: exercises, plans: plans, workouts: [], bodyEntries: [], foodEntries: [])
+        var state = AppState(exercises: exercises, plans: plans, workouts: [], bodyEntries: [], foodEntries: [])
+        state.addMissingExercises()
+        return state
     }
 }

@@ -150,6 +150,7 @@ private struct MacPlansView: View {
     @State private var editing: Plan?
     @State private var adding = false
     @State private var showTemplates = false
+    @State private var category = "全部"
     @State private var program: TrainingProgram?
 
     var body: some View {
@@ -162,14 +163,19 @@ private struct MacPlansView: View {
                 }
                 Picker("计划来源", selection: $showTemplates) {
                     Text("我的计划").tag(false)
-                    Text("计划模板 · 4 套").tag(true)
+                    Text("计划模板 · \(TrainingProgram.catalog.count) 套").tag(true)
                 }.pickerStyle(.segmented).frame(width: 320)
                 if showTemplates {
-                    ForEach(TrainingProgram.catalog) { template in
+                    Picker("训练场景", selection: $category) {
+                        ForEach(TrainingProgram.categories, id: \.self) { Text($0).tag($0) }
+                    }.frame(maxWidth: 360)
+                    ForEach(TrainingProgram.catalog.filter { category == "全部" || $0.category == category }) { template in
                         Surface {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("\(template.name) · \(template.subtitle)").font(.title3.bold())
                                 Text(template.description).foregroundStyle(Palette.muted)
+                                Text("\(template.level) · \(template.equipment.joined(separator: " / "))").font(.caption).foregroundStyle(Palette.muted)
+                                Text(template.frequency).font(.caption)
                                 Text("一轮 \(template.days.count) 个训练日 · \(template.days.map(\.name).joined(separator: " / "))").font(.caption)
                                 Button("查看模板") { program = template }
                             }
@@ -229,6 +235,9 @@ private struct MacProgramPreview: View {
             Text(program.description).foregroundStyle(.secondary)
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    Text("\(program.category) · \(program.level) · \(program.equipment.joined(separator: " / "))").font(.caption)
+                    Text(program.frequency).font(.subheadline)
+                    ForEach(program.guidance, id: \.self) { Text("• \($0)").font(.caption).foregroundStyle(.secondary) }
                     ForEach(Array(program.days.enumerated()), id: \.element.id) { index, day in
                         GroupBox("\(index + 1) · \(day.name)") {
                             VStack(alignment: .leading, spacing: 10) {

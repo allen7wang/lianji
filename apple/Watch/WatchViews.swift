@@ -65,14 +65,20 @@ struct WatchHomeView: View {
 }
 
 private struct WatchProgramLibrary: View {
+    @State private var category = "全部"
     var body: some View {
-        List(TrainingProgram.catalog) { program in
-            NavigationLink {
-                WatchProgramPreview(program: program)
-            } label: {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(program.name).font(.headline)
-                    Text("\(program.days.count) 个训练日 · \(program.subtitle)").font(.caption2).foregroundStyle(.secondary)
+        List {
+            Picker("训练场景", selection: $category) {
+                ForEach(TrainingProgram.categories, id: \.self) { Text($0).tag($0) }
+            }
+            ForEach(TrainingProgram.catalog.filter { category == "全部" || $0.category == category }) { program in
+                NavigationLink {
+                    WatchProgramPreview(program: program)
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(program.name).font(.headline)
+                        Text("\(program.days.count) 个训练日 · \(program.level)").font(.caption2).foregroundStyle(.secondary)
+                    }
                 }
             }
         }.navigationTitle("计划模板")
@@ -89,6 +95,9 @@ private struct WatchProgramPreview: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text(program.description).font(.caption)
+                Text("\(program.level) · \(program.equipment.joined(separator: " / "))").font(.caption2).foregroundStyle(.secondary)
+                Text(program.frequency).font(.caption2)
+                ForEach(program.guidance, id: \.self) { Text($0).font(.caption2).foregroundStyle(.secondary) }
                 ForEach(program.days) { day in
                     NavigationLink {
                         WatchProgramDayPreview(day: day)

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useData } from '@/lib/data';
 import { Badge, Button, Card, Header, IconButton, Page } from '@/ui/components';
-import { templatePlanId, trainingPrograms, type TrainingProgram } from '@/lib/plan-templates';
+import { programCategories, templatePlanId, trainingPrograms, type TrainingProgram } from '@/lib/plan-templates';
 import { PlanTemplatePreview } from '@/ui/plan-template-preview';
 import { C } from '@/ui/theme';
 
@@ -12,6 +12,7 @@ export default function Plans() {
   const { plans, planItems, exercises, startWorkout, deletePlan } = useData();
   const [tab, setTab] = useState<'my' | 'templates'>('my');
   const [preview, setPreview] = useState<TrainingProgram | null>(null);
+  const [category, setCategory] = useState('全部');
   async function begin(planId: string) {
     await startWorkout(planId);
     router.push('/workout');
@@ -24,13 +25,16 @@ export default function Plans() {
   }
   return <Page key={tab}>
     <Header eyebrow="YOUR PROGRAMS" title="训练计划" right={<IconButton icon="add" onPress={() => router.push('/plan-editor')} />} />
-    <View style={{ flexDirection: 'row', gap: 10 }}><Badge label={`我的计划 ${plans.length}`} active={tab === 'my'} onPress={() => setTab('my')} /><Badge label="计划模板 · 4 套" active={tab === 'templates'} onPress={() => setTab('templates')} /></View>
-    <Text style={styles.intro}>{tab === 'my' ? '按自己的节奏安排动作与组数，也可以从模板添加整套分化计划。' : '选择一种分化方式，查看每个训练日的动作，再添加到我的计划。'}</Text>
-    {tab === 'templates' ? trainingPrograms.map(program => {
+    <View style={{ flexDirection: 'row', gap: 10 }}><Badge label={`我的计划 ${plans.length}`} active={tab === 'my'} onPress={() => setTab('my')} /><Badge label={`计划模板 · ${trainingPrograms.length} 套`} active={tab === 'templates'} onPress={() => setTab('templates')} /></View>
+    <Text style={styles.intro}>{tab === 'my' ? '按自己的节奏安排动作与组数，也可以从模板添加整套计划。' : '按场景挑选计划，查看器材、频率和动作，再添加到我的计划。'}</Text>
+    {tab === 'templates' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{programCategories.map(value => <Badge key={value} label={value} active={category === value} onPress={() => setCategory(value)} />)}</View> : null}
+    {tab === 'templates' ? trainingPrograms.filter(program => category === '全部' || program.category === category).map(program => {
       const added = program.days.filter(day => plans.some(plan => plan.id === templatePlanId(program.id, day.id))).length;
       return <Card key={program.id} style={{ gap: 14 }}>
         <View style={styles.top}><View style={styles.index}><Text style={styles.indexText}>{program.days.length}</Text></View><View style={{ flex: 1 }}><Text style={styles.name}>{program.name} · {program.subtitle}</Text><Text style={styles.note}>一轮 {program.days.length} 个训练日{added ? ` · 已添加 ${added}/${program.days.length}` : ''}</Text></View></View>
         <Text style={styles.note}>{program.description}</Text>
+        <Text style={styles.note}>{program.level} · {program.equipment.join(' / ')}</Text>
+        <Text style={styles.note}>{program.frequency}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{program.days.map(day => <Badge key={day.id} label={day.name} />)}</View>
         <Button label={`查看${program.name}模板`} icon="list-outline" variant="secondary" onPress={() => setPreview(program)} />
       </Card>;

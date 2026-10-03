@@ -54,7 +54,7 @@ try:
     adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/.MainActivity")
     screen("home", ["今天练什么？", "开始自由训练"])
     adb("shell", "am", "start", "-W", "-a", "android.intent.action.VIEW", "-d", "lianji://plans", PACKAGE)
-    screen("plans", ["训练计划", "计划模板 · 4 套"])
+    screen("plans", ["训练计划", f"计划模板 · {len(json.loads(Path("assets/plans/training-programs.json").read_text()))} 套"])
     adb("shell", "am", "force-stop", PACKAGE)
     adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/.MainActivity", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER")
     screen("relaunch", ["今天练什么？", "开始自由训练"])
@@ -65,7 +65,7 @@ try:
         "apkSha256": hashlib.sha256(APK.read_bytes()).hexdigest(),
         "package": PACKAGE,
         "androidApi": adb("shell", "getprop", "ro.build.version.sdk").stdout.decode().strip(),
-        "checks": ["signed APK installation", "home screen", "four program templates", "cold relaunch", "no app crash"],
+        "checks": ["signed APK installation", "home screen", "twelve program templates entry", "cold relaunch", "no app crash"],
         "result": "passed",
     }
     (RESULTS / "verification.json").write_text(json.dumps(report, indent=2) + "\n")

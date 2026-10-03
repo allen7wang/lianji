@@ -3,18 +3,18 @@
     "name": "练迹",
     "slug": "lianji",
     "scheme": "lianji",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.allenwang.lianji",
-      "buildNumber": "2"
+      "buildNumber": "3"
     },
     "android": {
       "package": "com.allenwang.lianji",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#0C1014",
         "foregroundImage": "./assets/android-icon-foreground.png",

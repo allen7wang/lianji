@@ -52,11 +52,13 @@ const { migrate } = loadSource(path.join(root, 'src/lib/database.ts'));
 const { trainingPrograms, templatePlanId } = loadSource(path.join(root, 'src/lib/plan-templates.ts'));
 const { importPlanTemplate } = loadSource(path.join(root, 'src/lib/import-plan-template.ts'));
 const media = loadSource(path.join(root, 'assets/exercises/exercise-demos.json'));
-assert.equal(trainingPrograms.length, 4);
-assert.equal(trainingPrograms.reduce((total, program) => total + program.days.length, 0), 12);
+assert.equal(trainingPrograms.length, 12);
+assert.equal(trainingPrograms.reduce((total, program) => total + program.days.length, 0), 34);
 const dayIds = trainingPrograms.flatMap(program => program.days.map(day => templatePlanId(program.id, day.id)));
-assert.equal(new Set(dayIds).size, 12);
+assert.equal(new Set(dayIds).size, 34);
 for (const program of trainingPrograms) {
+  for (const field of ['category', 'level', 'frequency', 'description']) assert.ok(program[field]?.trim());
+  assert.ok(program.equipment.length && program.guidance.length);
   for (const day of program.days) {
     assert.ok(day.exercises.length > 0);
     for (const exercise of day.exercises) {
@@ -76,7 +78,7 @@ assert.equal(originals.plans.length, 3);
 for (const program of trainingPrograms) {
   assert.equal(await importPlanTemplate(db, program.id), program.days.length);
 }
-assert.equal(plans().length, 15);
+assert.equal(plans().length, 37);
 for (const original of originals.plans) assert.deepEqual(plans().find(plan => plan.id === original.id), original);
 for (const original of originals.items) assert.deepEqual(items().find(item => item.id === original.id), original);
 const totalItems = items().length;
@@ -93,7 +95,7 @@ native.prepare('DELETE FROM plans WHERE id = ?').run(removedId);
 assert.equal(await importPlanTemplate(db, ppl.id), 1);
 assert.equal(plans().find(plan => plan.id === editedId).name, '我的推日');
 assert.deepEqual(items().filter(item => item.planId === editedId), editedItems);
-assert.equal(plans().length, 15);
+assert.equal(plans().length, 37);
 await assert.rejects(importPlanTemplate(db, 'unknown'), /没有找到/);
 native.close();
 
@@ -113,4 +115,31 @@ await assert.rejects(importPlanTemplate(failure.db, 'full-body'), /动作库缺�
 assert.equal(failure.native.prepare('SELECT COUNT(*) AS count FROM plans').get().count, 3);
 assert.equal(failure.native.prepare('SELECT COUNT(*) AS count FROM plan_items').get().count, before);
 failure.native.close();
-console.log('Passed: 4 programs / 12 days; animations mapped; original plans preserved; repeat import, edited plans, refill and atomic rollback.');
+// Upgrade a legacy database without touching plans, workouts or same-name custom exercises.
+const legacy = database();
+await migrate(legacy.db);
+legacy.native.exec("DELETE FROM exercises WHERE id LIKE 'builtin:%'");
+legacy.native.prepare('INSERT INTO exercises VALUES (?, ?, ?, ?, 1)').run('custom-squat', '自重深蹲', '腿', '自定义');
+legacy.native.prepare('UPDATE plans SET name = ? WHERE rowid = (SELECT MIN(rowid) FROM plans)').run('已编辑计划');
+legacy.native.prepare('INSERT INTO workouts VALUES (?, NULL, ?, ?, ?, ?)').run('saved-workout', '保留训练', '2026-10-01', '2026-10-01', '我的笔记');
+const savedPlans = legacy.native.prepare('SELECT * FROM plans ORDER BY id').all();
+const savedItems = legacy.native.prepare('SELECT * FROM plan_items ORDER BY id').all();
+const savedWorkouts = legacy.native.prepare('SELECT * FROM workouts ORDER BY id').all();
+await migrate(legacy.db);
+await migrate(legacy.db);
+assert.equal(legacy.native.prepare('SELECT COUNT(*) AS count FROM exercises WHERE isCustom = 0').get().count, 36);
+assert.equal(legacy.native.prepare('SELECT COUNT(*) AS count FROM exercises WHERE isCustom = 1').get().count, 1);
+assert.deepEqual(legacy.native.prepare('SELECT * FROM plans ORDER BY id').all(), savedPlans);
+assert.deepEqual(legacy.native.prepare('SELECT * FROM plan_items ORDER BY id').all(), savedItems);
+assert.deepEqual(legacy.native.prepare('SELECT * FROM workouts ORDER BY id').all(), savedWorkouts);
+for (const id of ['home-dumbbell', 'home-bodyweight']) {
+  const program = trainingPrograms.find(p => p.id === id);
+  for (const day of program.days) for (const item of day.exercises) {
+    const exercise = legacy.native.prepare('SELECT * FROM exercises WHERE name = ? AND isCustom = 0').get(item.name);
+    assert.ok(id === 'home-bodyweight' ? exercise.equipment === '自重' : ['自重', '哑铃'].includes(exercise.equipment));
+  }
+  assert.equal(await importPlanTemplate(legacy.db, id), 2);
+}
+assert.ok(legacy.native.prepare("SELECT e.isCustom FROM plan_items i JOIN exercises e ON e.id = i.exerciseId WHERE i.planId = 'template:home-bodyweight:a' AND e.name = '自重深蹲'").get().isCustom === 0);
+legacy.native.close();
+console.log('Passed: 12 programs / 34 days; animations mapped; original plans preserved; repeat import, edited plans, refill and atomic rollback.');

@@ -1,8 +1,8 @@
 # 动作演示素材
 
-`exercise-demos.json` 是四端共用的素材目录，共 30 项。通过内置动作的名称匹配素材，不改变已有动作 ID、训练计划或训练记录。自定义动作不会按同名内置动作套用素材。
+`exercise-demos.json` 是四端共用的素材目录，共 36 项。通过内置动作的名称匹配素材，不改变已有动作 ID、训练计划或训练记录。自定义动作不会按同名内置动作套用素材。
 
-## 在线人体模型 GIF（28 项）
+## 在线人体模型 GIF（34 项）
 
 - 来源：[ExerciseDB / AscendAPI 官方免费接口说明](https://docs.ascendapi.com/products/edb-v1/overview)。官方免费接口提供 180p GIF，无需认证。
 - 应用仅保存公开的媒体链接，首次查看从 `static.exercisedb.dev` 获取，成功后缓存；未将这些在线 GIF 打包或重新分发。

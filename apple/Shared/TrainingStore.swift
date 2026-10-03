@@ -19,6 +19,8 @@ final class TrainingStore: ObservableObject {
         } else {
             state = .starter()
         }
+        state.addMissingExercises()
+        save()
     }
 
     var activeWorkout: Workout? { state.workouts.first { $0.endedAt == nil } }

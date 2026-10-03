@@ -1,0 +1,38 @@
+[
+  {
+    "id": "bodyweight_squat",
+    "name": "自重深蹲",
+    "muscle": "腿",
+    "equipment": "自重"
+  },
+  {
+    "id": "bodyweight_lunge",
+    "name": "徒手弓步蹲",
+    "muscle": "腿",
+    "equipment": "自重"
+  },
+  {
+    "id": "glute_bridge",
+    "name": "臀桥",
+    "muscle": "腿",
+    "equipment": "自重"
+  },
+  {
+    "id": "goblet_squat",
+    "name": "哑铃高脚杯深蹲",
+    "muscle": "腿",
+    "equipment": "哑铃"
+  },
+  {
+    "id": "dumbbell_rdl",
+    "name": "哑铃罗马尼亚硬拉",
+    "muscle": "腿",
+    "equipment": "哑铃"
+  },
+  {
+    "id": "dumbbell_shoulder_press",
+    "name": "哑铃肩推",
+    "muscle": "肩",
+    "equipment": "哑铃"
+  }
+]
