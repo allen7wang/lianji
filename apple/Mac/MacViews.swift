@@ -256,7 +256,7 @@ private struct MacProgramPreview: View {
                     }
                 }
             }
-            Text("训练日之间可安排休息。添加后可编辑；目标重量初始为 0 kg，请按实际填写。").font(.caption).foregroundStyle(.secondary)
+            Text(program.category == "呼吸训练" ? "呼吸练习按秒记录。添加后可调整秒数，重复添加会保留修改。" : "训练日之间可安排休息。添加后可编辑；目标重量初始为 0 kg，请按实际填写。").font(.caption).foregroundStyle(.secondary)
             if let error { Text(error).foregroundStyle(.red) }
             Button(missing == 0 ? "已添加到我的计划" : "添加到我的计划 · \(missing) 个训练日") {
                 do { try store.importTemplate(program); onAdded(); dismiss() }
@@ -307,7 +307,7 @@ private struct MacPlanEditor: View {
                         }.frame(width: 90)
                         Stepper(item.targetLabel, value: $item.reps, in: 1...1000).frame(width: 110)
                         Stepper("休息 \(item.restSeconds ?? 90) 秒", value: Binding(get: { item.restSeconds ?? 90 }, set: { item.restSeconds = $0 }), in: 0...600, step: 5).frame(width: 160)
-                        TextField("kg", value: $item.weight, format: .number).frame(width: 60)
+                        if BreathingProfile.find(store.exercise(item.exerciseId)) == nil { TextField("kg", value: $item.weight, format: .number).frame(width: 60) }
                         Button(role: .destructive) { draft.items.removeAll { $0.id == item.id } } label: {
                             Image(systemName: "trash")
                         }
@@ -391,6 +391,7 @@ private struct MacActiveWorkout: View {
     @State private var restUntil: Date?
     @State private var timerLabel = "组间休息"
     @State private var demoExercise: Exercise?
+    @State private var breathGuide: BreathGuideRequest?
 
     var body: some View {
         if let workout = store.activeWorkout {
@@ -429,14 +430,19 @@ private struct MacActiveWorkout: View {
                             ForEach(workout.sets.filter { $0.exerciseId == exerciseId }) { set in
                                 HStack(spacing: 12) {
                                     Text("第 \(set.setNumber) 组").foregroundStyle(Palette.muted).frame(width: 75, alignment: .leading)
-                                    TextField("重量", value: Binding(get: { set.weight }, set: { store.updateSet(set.id, weight: $0) }), format: .number)
-                                        .frame(width: 70)
-                                    Text("kg")
+                                    if BreathingProfile.find(store.exercise(exerciseId)) == nil {
+                                        TextField("重量", value: Binding(get: { set.weight }, set: { store.updateSet(set.id, weight: $0) }), format: .number).frame(width: 70)
+                                        Text("kg")
+                                    }
                                     TextField(set.unit == .seconds ? "秒数" : "次数", value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), format: .number)
                                         .frame(width: 70)
                                     Text(set.unit == .seconds ? "秒" : "次")
                                     if set.unit == .seconds && !set.completed {
-                                        Button("计时") { timerLabel = "动作计时"; restUntil = .now.addingTimeInterval(Double(set.reps)) }
+                                        Button(BreathingProfile.find(store.exercise(exerciseId)) == nil ? "计时" : "呼吸引导") {
+                                            if let profile = BreathingProfile.find(store.exercise(exerciseId)) {
+                                                restUntil = nil; breathGuide = BreathGuideRequest(profile: profile, seconds: set.reps)
+                                            } else { timerLabel = "动作计时"; restUntil = .now.addingTimeInterval(Double(set.reps)) }
+                                        }
                                     }
                                     Toggle("完成", isOn: Binding(get: { set.completed }, set: {
                                         store.updateSet(set.id, completed: $0)
@@ -464,6 +470,7 @@ private struct MacActiveWorkout: View {
                 }
             }
             .sheet(item: $demoExercise) { MacExerciseDemoSheet(exercise: $0) }
+            .sheet(item: $breathGuide) { MacBreathingGuideSheet(request: $0) }
         }
     }
 }

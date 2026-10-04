@@ -54,10 +54,38 @@ const { importPlanTemplate } = loadSource(path.join(root, 'src/lib/import-plan-t
 const { startWorkoutFromPlan, appendWorkoutSet } = loadSource(path.join(root, 'src/lib/workout-storage.ts'));
 const { volumeOf } = loadSource(path.join(root, 'src/lib/types.ts'));
 const media = loadSource(path.join(root, 'assets/exercises/exercise-demos.json'));
-assert.equal(trainingPrograms.length, 28);
-assert.equal(trainingPrograms.reduce((total, program) => total + program.days.length, 0), 63);
+const { breathingProfiles, breathingProfileFor, breathingPhases, breathingPhaseAt, newBreathingSession, breathingElapsedMs, pauseBreathingSession, resumeBreathingSession } = loadSource(path.join(root, 'src/lib/breathing.ts'));
+assert.equal(breathingProfiles.length, 4);
+for (const profile of breathingProfiles) {
+  assert.ok(profile.inhaleSeconds > 0 && profile.exhaleSeconds > 0);
+  assert.ok([profile.inhaleSeconds, profile.holdInSeconds, profile.exhaleSeconds, profile.holdOutSeconds].every(value => Number.isInteger(value) && value >= 0 && value <= 10));
+  const cycle = breathingPhases(profile).reduce((sum, phase) => sum + phase.seconds, 0);
+  assert.equal(breathingPhaseAt(profile, cycle).label, '吸气');
+  assert.equal(breathingPhaseAt(profile, cycle).completedCycles, 1);
+  assert.equal(breathingProfileFor({ name: profile.name, isCustom: 1 }), undefined);
+  assert.equal(breathingProfileFor({ name: profile.name, isCustom: 0 }).id, profile.id);
+}
+const box = breathingProfiles.find(profile => profile.id === 'box_breathing');
+assert.deepEqual([0, 4, 8, 12, 16].map(second => breathingPhaseAt(box, second).label), ['吸气', '吸后停留', '呼气', '呼后停留', '吸气']);
+assert.equal(breathingPhaseAt(box, 64).completedCycles, 4);
+const gentle = breathingProfiles.find(profile => profile.id === 'diaphragmatic_breathing');
+assert.equal(breathingPhases(gentle).length, 2);
+assert.equal(breathingPhaseAt(gentle, 4).label, '呼气');
+assert.equal(breathingPhaseAt(gentle, 8).scale, 0.6);
+assert.equal(breathingPhaseAt(gentle, -1).label, '吸气');
+let session = resumeBreathingSession(newBreathingSession(), 1000);
+session = pauseBreathingSession(session, 4000);
+assert.equal(breathingElapsedMs(session, 100000), 3000, 'Background and pause time must not count');
+session = resumeBreathingSession(session, 110000);
+assert.equal(breathingElapsedMs(session, 112000), 5000, 'Resume preserves prior active progress');
+assert.equal(breathingElapsedMs(newBreathingSession(), 112000), 0, 'Restart resets progress');
+const breathPrograms = trainingPrograms.filter(program => program.category === '呼吸训练');
+assert.equal(breathPrograms.length, 6);
+assert.ok(breathPrograms.flatMap(program => program.days.flatMap(day => day.exercises)).every(item => breathingProfileFor({ name: item.name, isCustom: 0 }) && item.unit === 'seconds' && item.restSeconds === 0));
+assert.equal(trainingPrograms.length, 34);
+assert.equal(trainingPrograms.reduce((total, program) => total + program.days.length, 0), 69);
 const dayIds = trainingPrograms.flatMap(program => program.days.map(day => templatePlanId(program.id, day.id)));
-assert.equal(new Set(dayIds).size, 63);
+assert.equal(new Set(dayIds).size, 69);
 for (const program of trainingPrograms) {
   for (const field of ['category', 'level', 'frequency', 'description']) assert.ok(program[field]?.trim());
   assert.ok(program.equipment.length && program.guidance.length);
@@ -73,14 +101,14 @@ for (const program of trainingPrograms) {
   }
 }
 
-assert.equal(new Set(trainingPrograms.map(program => program.id)).size, 28);
+assert.equal(new Set(trainingPrograms.map(program => program.id)).size, 34);
 for (const sport of ['短跑', '半马', '全马', '游泳', '铁三', '自行车', '登山', '篮球', '羽毛球']) {
   const program = trainingPrograms.find(program => program.sport === sport);
   assert.ok(program && program.category === '专项力量' && program.days.length === 2, sport);
 }
 assert.ok(trainingPrograms.find(program => program.id === 'hiit-full-body').days.every(day => day.exercises.every(item => item.unit === 'seconds' && item.restSeconds === 40)));
 assert.ok(trainingPrograms.find(program => program.id === 'interval-20-10').days.every(day => day.exercises.every(item => item.sets === 8 && item.reps === 20 && item.restSeconds === 10)));
-assert.equal(media.length, 51);
+assert.equal(media.length, 55);
 for (const demo of media) if (demo.asset) {
   const bytes = fs.readFileSync(path.join(root, 'assets/exercises', demo.asset));
   assert.ok(['GIF87a','GIF89a'].includes(bytes.subarray(0, 6).toString()), demo.asset);
@@ -95,7 +123,7 @@ assert.equal(originals.plans.length, 3);
 for (const program of trainingPrograms) {
   assert.equal(await importPlanTemplate(db, program.id), program.days.length);
 }
-assert.equal(plans().length, 66);
+assert.equal(plans().length, 72);
 for (const original of originals.plans) assert.deepEqual(plans().find(plan => plan.id === original.id), original);
 for (const original of originals.items) assert.deepEqual(items().find(item => item.id === original.id), original);
 const hiitId = 'template:hiit-full-body:a';
@@ -116,6 +144,13 @@ native.prepare('UPDATE workouts SET endedAt = ? WHERE id = ?').run('2026-10-03',
 await assert.rejects(startWorkoutFromPlan(db, 'missing-plan'), /没有找到/);
 const sprintWorkout = await startWorkoutFromPlan(db, 'template:sprint-strength:a');
 assert.ok(native.prepare('SELECT * FROM workout_sets WHERE workoutId = ?').all(sprintWorkout).some(set => set.unit === 'reps' && set.restSeconds === 180));
+native.prepare('UPDATE workouts SET endedAt = ? WHERE id = ?').run('2026-10-04', sprintWorkout);
+const breathWorkout = await startWorkoutFromPlan(db, 'template:breathing-beginner:practice');
+const breathSet = native.prepare('SELECT * FROM workout_sets WHERE workoutId = ?').get(breathWorkout);
+assert.equal(breathSet.reps, 120);
+assert.equal(breathSet.unit, 'seconds');
+assert.equal(breathSet.restSeconds, 0);
+assert.doesNotMatch(native.prepare('SELECT note FROM workouts WHERE id = ?').get(breathWorkout).note, /单侧|重量请/);
 const totalItems = items().length;
 for (const program of trainingPrograms) assert.equal(await importPlanTemplate(db, program.id), 0);
 assert.equal(items().length, totalItems);
@@ -130,7 +165,7 @@ native.prepare('DELETE FROM plans WHERE id = ?').run(removedId);
 assert.equal(await importPlanTemplate(db, ppl.id), 1);
 assert.equal(plans().find(plan => plan.id === editedId).name, '我的推日');
 assert.deepEqual(items().filter(item => item.planId === editedId), editedItems);
-assert.equal(plans().length, 66);
+assert.equal(plans().length, 72);
 await assert.rejects(importPlanTemplate(db, 'unknown'), /没有找到/);
 native.close();
 
@@ -169,7 +204,7 @@ const savedItems = legacy.native.prepare('SELECT * FROM plan_items ORDER BY id')
 const savedWorkouts = legacy.native.prepare('SELECT * FROM workouts ORDER BY id').all();
 await migrate(legacy.db);
 await migrate(legacy.db);
-assert.equal(legacy.native.prepare('SELECT COUNT(*) AS count FROM exercises WHERE isCustom = 0').get().count, 51);
+assert.equal(legacy.native.prepare('SELECT COUNT(*) AS count FROM exercises WHERE isCustom = 0').get().count, 55);
 assert.equal(legacy.native.prepare('SELECT COUNT(*) AS count FROM exercises WHERE isCustom = 1').get().count, 1);
 assert.deepEqual(legacy.native.prepare('SELECT * FROM plans ORDER BY id').all(), savedPlans);
 const legacyItems = legacy.native.prepare('SELECT * FROM plan_items ORDER BY id').all();
@@ -189,4 +224,4 @@ for (const id of ['home-dumbbell', 'home-bodyweight']) {
 }
 assert.ok(legacy.native.prepare("SELECT e.isCustom FROM plan_items i JOIN exercises e ON e.id = i.exerciseId WHERE i.planId = 'template:home-bodyweight:a' AND e.name = '自重深蹲'").get().isCustom === 0);
 legacy.native.close();
-console.log('Passed: 28 programs / 63 days / 51 demos; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import and workout storage.');
+console.log('Passed: 34 programs / 69 days / 55 demos; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import and workout storage.');

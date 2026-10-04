@@ -8,7 +8,7 @@ appId: com.allenwang.lianji
     text: "计划"
     retryTapIfNoChange: true
 - assertVisible: "训练计划"
-- tapOn: "计划模板 · 28 套"
+- tapOn: "计划模板 · 34 套"
 - tapOn: "间歇训练"
 - scrollUntilVisible:
     element:
@@ -66,7 +66,7 @@ appId: com.allenwang.lianji
     retryTapIfNoChange: true
 - assertVisible: "训练计划"
 - assertVisible: "我的计划 5"
-- tapOn: "计划模板 · 28 套"
+- tapOn: "计划模板 · 34 套"
 - tapOn: "地面流动"
 - scrollUntilVisible:
     element:
@@ -87,7 +87,7 @@ appId: com.allenwang.lianji
     retryTapIfNoChange: true
 - assertVisible: "训练计划"
 - assertVisible: "我的计划 7"
-- tapOn: "计划模板 · 28 套"
+- tapOn: "计划模板 · 34 套"
 - tapOn: "专项力量"
 - scrollUntilVisible:
     element:

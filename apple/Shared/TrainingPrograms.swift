@@ -64,7 +64,7 @@ struct TrainingProgram: Identifiable, Codable, Hashable {
                 return PlanItem(exerciseId: exercise.id, sets: item.sets, reps: item.reps, weight: 0, unit: item.unit ?? exercise.defaultUnit, restSeconds: item.restSeconds ?? 90)
             }
             return Plan(id: planId(day), name: "\(name) · \(day.name)",
-                        note: "\(day.focus)。\(frequency) \(guidance.joined(separator: " ")) 单侧动作按每侧记录。重量请按实际填写。", items: items)
+                        note: "\(day.focus)。\(frequency) \(guidance.joined(separator: " "))" + (category == "呼吸训练" ? "" : " 单侧动作按每侧记录。重量请按实际填写。"), items: items)
         }
     }
 }

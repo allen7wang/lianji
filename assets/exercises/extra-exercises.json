@@ -139,5 +139,33 @@
     "muscle": "腿",
     "equipment": "自重",
     "recording": "reps"
+  },
+  {
+    "id": "diaphragmatic_breathing",
+    "name": "腹式呼吸",
+    "muscle": "呼吸",
+    "equipment": "无器械",
+    "recording": "seconds"
+  },
+  {
+    "id": "balanced_breathing",
+    "name": "等长呼吸",
+    "muscle": "呼吸",
+    "equipment": "无器械",
+    "recording": "seconds"
+  },
+  {
+    "id": "long_exhale_breathing",
+    "name": "延长呼气",
+    "muscle": "呼吸",
+    "equipment": "无器械",
+    "recording": "seconds"
+  },
+  {
+    "id": "box_breathing",
+    "name": "方块呼吸",
+    "muscle": "呼吸",
+    "equipment": "无器械",
+    "recording": "seconds"
   }
 ]

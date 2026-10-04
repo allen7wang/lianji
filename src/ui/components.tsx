@@ -57,7 +57,7 @@ export function ExercisePicker({ visible, onClose, onSelect, excluded = [] }: { 
   const { exercises } = useData();
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState('全部');
-  const muscles = ['全部', '胸', '背', '腿', '肩', '手臂', '核心', '全身'];
+  const muscles = ['全部', '胸', '背', '腿', '肩', '手臂', '核心', '全身', '呼吸'];
   const filtered = exercises.filter(exercise => !excluded.includes(exercise.id) && (muscle === '全部' || exercise.muscle === muscle) && (exercise.name.includes(query.trim()) || exercise.equipment.includes(query.trim())));
   return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
     <SafeAreaView style={styles.modal} edges={['top', 'bottom']}>

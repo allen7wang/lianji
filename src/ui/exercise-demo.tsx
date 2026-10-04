@@ -6,6 +6,8 @@ import { demoFor, demoSource, type ExerciseDemo } from '@/lib/exercise-demos';
 import type { Exercise } from '@/lib/types';
 import { Button, Empty, IconButton } from './components';
 import { C } from './theme';
+import { breathingProfileFor } from '@/lib/breathing';
+import { BreathingGuide } from './breathing-guide';
 
 export function ExerciseDemoModal({ exercise, onClose }: { exercise: Exercise | null; onClose: () => void }) {
   return <Modal visible={exercise !== null} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -15,12 +17,13 @@ export function ExerciseDemoModal({ exercise, onClose }: { exercise: Exercise | 
 
 function DemoContent({ exercise, onClose }: { exercise: Exercise; onClose: () => void }) {
   const demo = demoFor(exercise);
+  const breathing = breathingProfileFor(exercise);
   return <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
     <View style={styles.header}><Text style={styles.eyebrow}>动作演示</Text><IconButton icon="close" onPress={onClose} /></View>
     <ScrollView contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{exercise.name}</Text>
+      {!breathing ? <Text style={styles.title}>{exercise.name}</Text> : null}
       <Text style={styles.meta}>{exercise.muscle} · {exercise.equipment}</Text>
-      {demo ? <DemoPlayer demo={demo} /> : <Empty icon="videocam-outline" title="暂无动作动图" subtitle="自定义动作还没有配置演示素材" />}
+      {breathing ? <BreathingGuide profile={breathing} seconds={breathing.id === 'box_breathing' ? 64 : 60} /> : demo ? <DemoPlayer demo={demo} /> : <Empty icon="videocam-outline" title="暂无动作动图" subtitle="自定义动作还没有配置演示素材" />}
     </ScrollView>
   </SafeAreaView>;
 }

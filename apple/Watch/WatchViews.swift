@@ -114,7 +114,7 @@ private struct WatchProgramPreview: View {
                         }
                     }
                 }
-                Text("训练日间可休息，重量在训练时按实际填写。").font(.caption2).foregroundStyle(.secondary)
+                Text(program.category == "呼吸训练" ? "按舒适节奏练习，可调整练习秒数。" : "训练日间可休息，重量在训练时按实际填写。").font(.caption2).foregroundStyle(.secondary)
                 if let error { Text(error).font(.caption2).foregroundStyle(.red) }
                 Button(missing == 0 ? "已添加" : "添加 \(missing) 个训练日") {
                     do { try store.importTemplate(program) }
@@ -218,14 +218,23 @@ private struct WatchExerciseView: View {
                 ForEach(store.activeWorkout?.sets.filter { $0.exerciseId == exerciseId } ?? []) { set in
                     VStack(alignment: .leading, spacing: 7) {
                         Text("第 \(set.setNumber) 组").font(.caption.bold()).foregroundStyle(lime)
-                        Stepper(value: Binding(get: { set.weight }, set: { store.updateSet(set.id, weight: $0) }), in: 0...500, step: 2.5) {
-                            Text("\(set.weight.formatted()) kg")
+                        if BreathingProfile.find(store.exercise(exerciseId)) == nil {
+                            Stepper(value: Binding(get: { set.weight }, set: { store.updateSet(set.id, weight: $0) }), in: 0...500, step: 2.5) {
+                                Text("\(set.weight.formatted()) kg")
+                            }
                         }
                         Stepper(value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), in: 0...1000) {
                             Text(set.targetLabel)
                         }
                         if set.unit == .seconds && !set.completed {
-                            Button("计时 \(set.reps) 秒") { timerLabel = "动作计时"; restUntil = .now.addingTimeInterval(Double(set.reps)) }
+                            if let profile = BreathingProfile.find(store.exercise(exerciseId)) {
+                                NavigationLink("呼吸引导 \(set.reps) 秒") {
+                                    ScrollView { BreathingGuideView(profile: profile, seconds: set.reps).padding(.horizontal, 4) }
+                                        .navigationTitle("呼吸引导")
+                                }
+                            } else {
+                                Button("计时 \(set.reps) 秒") { timerLabel = "动作计时"; restUntil = .now.addingTimeInterval(Double(set.reps)) }
+                            }
                         }
                         Button {
                             store.updateSet(set.id, completed: !set.completed)

@@ -127,7 +127,9 @@ struct ExerciseDemoView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(exercise.name).font(.title3.bold())
                 Text("\(exercise.muscle) · \(exercise.equipment)").font(.caption).foregroundStyle(.secondary)
-                if let demo {
+                if let breathing = BreathingProfile.find(exercise) {
+                    BreathingGuideView(profile: breathing, seconds: breathing.id == "box_breathing" ? 64 : 60)
+                } else if let demo {
                     if let frames {
                         TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: !playing || !visible || scenePhase != .active)) { context in
                             Image(decorative: frames.image(at: playing ? max(0, context.date.timeIntervalSince(startedAt)) : pausedTime), scale: 1)
@@ -161,7 +163,7 @@ struct ExerciseDemoView: View {
         .onAppear { visible = true; playing = !reduceMotion }
         .onDisappear { visible = false }
         .task(id: attempt) {
-            guard let demo else { return }
+            guard BreathingProfile.find(exercise) == nil, let demo else { return }
             failed = false
             do {
                 let loaded = try await DemoLoader.load(demo)

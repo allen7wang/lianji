@@ -5,7 +5,7 @@ on:
     inputs:
       release_tag:
         description: Release containing the signed Android APK
-        default: v1.1.0
+        default: v1.2.0
         required: true
       apk_sha256:
         description: Expected SHA-256 of the signed APK

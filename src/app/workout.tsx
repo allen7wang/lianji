@@ -9,8 +9,10 @@ import { Button, Card, ExercisePicker, IconButton, Metric } from '@/ui/component
 import { C } from '@/ui/theme';
 import { demoFor } from '@/lib/exercise-demos';
 import { ExerciseDemoModal } from '@/ui/exercise-demo';
+import { breathingProfileFor } from '@/lib/breathing';
+import { BreathingGuideModal, type BreathGuideRequest } from '@/ui/breathing-guide';
 
-function SetRow({ item, onUpdate, onDelete, onComplete, onTimer }: { item: WorkoutSet; onUpdate: (setId: string, patch: Partial<WorkoutSet>) => void; onDelete: (setId: string) => void; onComplete: (setId: string) => void; onTimer: (seconds: number) => void }) {
+function SetRow({ item, breathing, onUpdate, onDelete, onComplete, onTimer }: { item: WorkoutSet; breathing: boolean; onUpdate: (setId: string, patch: Partial<WorkoutSet>) => void; onDelete: (setId: string) => void; onComplete: (setId: string, now: number) => void; onTimer: (seconds: number, now: number) => void }) {
   const [weight, setWeight] = useState(String(item.weight));
   const [reps, setReps] = useState(String(item.reps));
   const commitWeight = () => {
@@ -25,12 +27,11 @@ function SetRow({ item, onUpdate, onDelete, onComplete, onTimer }: { item: Worko
   };
   return <View style={{ gap: 5 }}><View style={[styles.setRow, item.completed ? styles.setDone : null]}>
     <Pressable onLongPress={() => onDelete(item.id)} style={styles.setNumber}><Text style={styles.setNumberText}>{item.setNumber}</Text></Pressable>
-    <TextInput value={weight} onChangeText={setWeight} onBlur={commitWeight} keyboardType="decimal-pad" selectTextOnFocus style={styles.setInput} />
-    <Text style={styles.unit}>kg</Text>
+    {!breathing ? <><TextInput value={weight} onChangeText={setWeight} onBlur={commitWeight} keyboardType="decimal-pad" selectTextOnFocus style={styles.setInput} /><Text style={styles.unit}>kg</Text></> : null}
     <TextInput value={reps} onChangeText={setReps} onBlur={commitReps} keyboardType="number-pad" selectTextOnFocus style={styles.setInput} />
     <Text style={styles.unit}>{item.unit === 'seconds' ? '秒' : '次'}</Text>
-    <Pressable accessibilityLabel={`完成第 ${item.setNumber} 组`} onPress={() => onComplete(item.id)} style={[styles.check, item.completed ? styles.checked : null]}><Ionicons name="checkmark" size={20} color={item.completed ? C.bg : C.faint} /></Pressable>
-  </View>{item.unit === 'seconds' && !item.completed ? <Button label={`计时 ${item.reps} 秒`} icon="timer-outline" variant="ghost" onPress={() => onTimer(item.reps)} /> : null}</View>;
+    <Pressable accessibilityLabel={`完成第 ${item.setNumber} 组`} onPress={() => onComplete(item.id, Date.now())} style={[styles.check, item.completed ? styles.checked : null]}><Ionicons name="checkmark" size={20} color={item.completed ? C.bg : C.faint} /></Pressable>
+  </View>{item.unit === 'seconds' && !item.completed ? <Button label={`${breathing ? '呼吸引导' : '计时'} ${item.reps} 秒`} icon="timer-outline" variant="ghost" onPress={() => onTimer(item.reps, Date.now())} /> : null}</View>;
 }
 
 export default function WorkoutScreen() {
@@ -46,13 +47,13 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
   const completed = sets.filter(item => item.completed).length;
   const [picker, setPicker] = useState(false);
   const [demoExercise, setDemoExercise] = useState<Exercise | null>(null);
+  const [breathGuide, setBreathGuide] = useState<BreathGuideRequest | null>(null);
   const [note, setNote] = useState(workout.note);
   const [timer, setTimer] = useState<{ label: string; deadline: number } | null>(null);
   const [clock, setClock] = useState(0);
   useEffect(() => { const interval = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(interval); }, []);
   const seconds = timer ? Math.max(0, Math.ceil((timer.deadline - clock) / 1000)) : 0;
-  const startTimer = (duration: number, label: string) => {
-    const now = Date.now();
+  const startTimer = (duration: number, label: string, now: number) => {
     setClock(now);
     setTimer(duration > 0 ? { label, deadline: now + duration * 1000 } : null);
   };
@@ -62,12 +63,12 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
   }, [sets, exercises]);
 
   const update = (setId: string, patch: Partial<WorkoutSet>) => { updateSet(setId, patch).catch(console.error); };
-  const toggle = (setId: string) => {
+  const toggle = (setId: string, now: number) => {
     const set = sets.find(item => item.id === setId);
     if (!set) return;
     if (!set.completed && !set.reps) return Alert.alert(set.unit === 'seconds' ? '先填写秒数' : '先填写次数');
     update(setId, { completed: set.completed ? 0 : 1 });
-    if (!set.completed) startTimer(set.restSeconds ?? 90, '组间休息');
+    if (!set.completed) startTimer(set.restSeconds ?? 90, '组间休息', now);
   };
   const finish = () => {
     if (!workout) return;
@@ -93,8 +94,12 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
       {groups.map((group, index) => <Card key={group.exerciseId} style={{ gap: 14 }}>
         <View style={styles.exerciseHeader}><View style={styles.exerciseIndex}><Text style={styles.exerciseIndexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{group.exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta}>{group.exercise?.muscle} · {group.exercise?.equipment}</Text></View><Text style={styles.exerciseCount}>{group.sets.filter(set => set.completed).length}/{group.sets.length}</Text></View>
         {group.exercise && demoFor(group.exercise) ? <Button label="查看动图" icon="play-circle-outline" variant="ghost" onPress={() => setDemoExercise(group.exercise!)} /> : null}
-        <View style={styles.tableHead}><Text style={styles.headNumber}>组</Text><Text style={styles.headCell}>重量</Text><Text style={styles.headCell}>{group.sets[0]?.unit === 'seconds' ? '时长 · 秒' : '次数'}</Text><Text style={styles.headCheck}>完成</Text></View>
-        {group.sets.map(item => <SetRow key={item.id} item={item} onUpdate={update} onDelete={setId => Alert.alert('删除组数', '确定删除这一组？', [{ text: '取消', style: 'cancel' }, { text: '删除', style: 'destructive', onPress: () => deleteSet(setId) }])} onComplete={toggle} onTimer={duration => startTimer(duration, '动作计时')} />)}
+        <View style={styles.tableHead}><Text style={styles.headNumber}>组</Text>{!breathingProfileFor(group.exercise) ? <Text style={styles.headCell}>重量</Text> : null}<Text style={styles.headCell}>{group.sets[0]?.unit === 'seconds' ? '时长 · 秒' : '次数'}</Text><Text style={styles.headCheck}>完成</Text></View>
+        {group.sets.map(item => <SetRow key={item.id} item={item} breathing={!!breathingProfileFor(group.exercise)} onUpdate={update} onDelete={setId => Alert.alert('删除组数', '确定删除这一组？', [{ text: '取消', style: 'cancel' }, { text: '删除', style: 'destructive', onPress: () => deleteSet(setId) }])} onComplete={toggle} onTimer={(duration, now) => {
+          const profile = breathingProfileFor(group.exercise);
+          if (profile) { setTimer(null); setBreathGuide({ profile, seconds: duration }); }
+          else startTimer(duration, '动作计时', now);
+        }} />)}
         <Text style={styles.hint}>完成一组后休息 {group.sets[0]?.restSeconds ?? 90} 秒。按秒记录的组不计入重量 × 次数的容量。</Text>
         <Button label="添加一组" icon="add" variant="secondary" onPress={() => addSet(workout.id, group.exerciseId)} />
       </Card>)}
@@ -105,6 +110,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
     <View style={styles.footer}><Button label="结束训练" icon="checkmark-circle-outline" onPress={finish} /></View>
     <ExercisePicker visible={picker} onClose={() => setPicker(false)} onSelect={exercise => addWorkoutExercise(workout.id, exercise.id)} excluded={groups.map(item => item.exerciseId)} />
     <ExerciseDemoModal exercise={demoExercise} onClose={() => setDemoExercise(null)} />
+    <BreathingGuideModal request={breathGuide} onClose={() => setBreathGuide(null)} />
   </SafeAreaView>;
 }
 

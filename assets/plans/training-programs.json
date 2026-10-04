@@ -2742,5 +2742,218 @@
       }
     ],
     "sport": "羽毛球"
+  },
+  {
+    "id": "breathing-beginner",
+    "name": "腹式呼吸入门",
+    "subtitle": "2 分钟 · 4 秒吸 / 4 秒呼",
+    "description": "观察腹部自然起伏，用两分钟熟悉轻柔呼吸，不屏息。",
+    "category": "呼吸训练",
+    "level": "新手",
+    "frequency": "按需要练习，建议从较短时长开始。",
+    "equipment": [
+      "无器械",
+      "椅子或垫子（可选）"
+    ],
+    "guidance": [
+      "在舒适的坐姿或卧姿中练习，呼吸轻柔，不追求最大吸气量。",
+      "若头晕或胸闷，停止引导并恢复自然呼吸。",
+      "引导结束后按实际完成情况记录；可以在计划编辑页调整秒数。"
+    ],
+    "days": [
+      {
+        "id": "practice",
+        "name": "呼吸练习",
+        "focus": "2 分钟 · 4 秒吸 / 4 秒呼",
+        "exercises": [
+          {
+            "name": "腹式呼吸",
+            "sets": 1,
+            "reps": 120,
+            "unit": "seconds",
+            "restSeconds": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "breathing-balanced",
+    "name": "等长呼吸练习",
+    "subtitle": "3 分钟 · 4 秒吸 / 4 秒呼",
+    "description": "跟随等长节奏做轻柔的吸气与呼气，不屏息。",
+    "category": "呼吸训练",
+    "level": "新手",
+    "frequency": "按需要练习，建议从较短时长开始。",
+    "equipment": [
+      "无器械",
+      "椅子或垫子（可选）"
+    ],
+    "guidance": [
+      "在舒适的坐姿或卧姿中练习，呼吸轻柔，不追求最大吸气量。",
+      "若头晕或胸闷，停止引导并恢复自然呼吸。",
+      "引导结束后按实际完成情况记录；可以在计划编辑页调整秒数。"
+    ],
+    "days": [
+      {
+        "id": "practice",
+        "name": "呼吸练习",
+        "focus": "3 分钟 · 4 秒吸 / 4 秒呼",
+        "exercises": [
+          {
+            "name": "等长呼吸",
+            "sets": 1,
+            "reps": 180,
+            "unit": "seconds",
+            "restSeconds": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "breathing-long-exhale",
+    "name": "延长呼气练习",
+    "subtitle": "3 分钟 · 4 秒吸 / 6 秒呼",
+    "description": "在舒适范围内让呼气稍长，不强迫排空肺部。",
+    "category": "呼吸训练",
+    "level": "新手",
+    "frequency": "按需要练习，建议从较短时长开始。",
+    "equipment": [
+      "无器械",
+      "椅子或垫子（可选）"
+    ],
+    "guidance": [
+      "在舒适的坐姿或卧姿中练习，呼吸轻柔，不追求最大吸气量。",
+      "若头晕或胸闷，停止引导并恢复自然呼吸。",
+      "引导结束后按实际完成情况记录；可以在计划编辑页调整秒数。"
+    ],
+    "days": [
+      {
+        "id": "practice",
+        "name": "呼吸练习",
+        "focus": "3 分钟 · 4 秒吸 / 6 秒呼",
+        "exercises": [
+          {
+            "name": "延长呼气",
+            "sets": 1,
+            "reps": 180,
+            "unit": "seconds",
+            "restSeconds": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "breathing-box",
+    "name": "方块呼吸练习",
+    "subtitle": "4 个循环 · 4 / 4 / 4 / 4 秒",
+    "description": "吸气、吸后停留、呼气和呼后停留，四段各四秒。含屏息环节。",
+    "category": "呼吸训练",
+    "level": "有舒适呼吸基础",
+    "frequency": "按需要练习，建议从较短时长开始。",
+    "equipment": [
+      "无器械",
+      "椅子或垫子（可选）"
+    ],
+    "guidance": [
+      "在舒适的坐姿或卧姿中练习，呼吸轻柔，不追求最大吸气量。",
+      "若头晕或胸闷，停止引导并恢复自然呼吸。",
+      "引导结束后按实际完成情况记录；可以在计划编辑页调整秒数。",
+      "屏息不舒服时，请改选腹式或等长呼吸；无需追求更长屏息。"
+    ],
+    "days": [
+      {
+        "id": "practice",
+        "name": "呼吸练习",
+        "focus": "4 个循环 · 4 / 4 / 4 / 4 秒",
+        "exercises": [
+          {
+            "name": "方块呼吸",
+            "sets": 1,
+            "reps": 64,
+            "unit": "seconds",
+            "restSeconds": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "breathing-after-training",
+    "name": "训练后呼吸整理",
+    "subtitle": "3 分钟 · 腹式与延长呼气",
+    "description": "先等呼吸自然稳定，再做轻柔的腹式呼吸和延长呼气。",
+    "category": "呼吸训练",
+    "level": "新手",
+    "frequency": "按需要练习，建议从较短时长开始。",
+    "equipment": [
+      "无器械",
+      "椅子或垫子（可选）"
+    ],
+    "guidance": [
+      "在舒适的坐姿或卧姿中练习，呼吸轻柔，不追求最大吸气量。",
+      "若头晕或胸闷，停止引导并恢复自然呼吸。",
+      "引导结束后按实际完成情况记录；可以在计划编辑页调整秒数。",
+      "剧烈运动后仍在喘气时，先自然呼吸，不急着跟节拍。"
+    ],
+    "days": [
+      {
+        "id": "practice",
+        "name": "呼吸练习",
+        "focus": "3 分钟 · 腹式与延长呼气",
+        "exercises": [
+          {
+            "name": "腹式呼吸",
+            "sets": 1,
+            "reps": 60,
+            "unit": "seconds",
+            "restSeconds": 0
+          },
+          {
+            "name": "延长呼气",
+            "sets": 1,
+            "reps": 120,
+            "unit": "seconds",
+            "restSeconds": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "breathing-evening",
+    "name": "睡前呼吸放松",
+    "subtitle": "5 分钟 · 无屏息等长节奏",
+    "description": "在休息前用轻柔的等长呼吸专注当下节奏。",
+    "category": "呼吸训练",
+    "level": "新手",
+    "frequency": "按需要练习，建议从较短时长开始。",
+    "equipment": [
+      "无器械",
+      "椅子或垫子（可选）"
+    ],
+    "guidance": [
+      "在舒适的坐姿或卧姿中练习，呼吸轻柔，不追求最大吸气量。",
+      "若头晕或胸闷，停止引导并恢复自然呼吸。",
+      "引导结束后按实际完成情况记录；可以在计划编辑页调整秒数。"
+    ],
+    "days": [
+      {
+        "id": "practice",
+        "name": "呼吸练习",
+        "focus": "5 分钟 · 无屏息等长节奏",
+        "exercises": [
+          {
+            "name": "等长呼吸",
+            "sets": 1,
+            "reps": 300,
+            "unit": "seconds",
+            "restSeconds": 0
+          }
+        ]
+      }
+    ]
   }
 ]

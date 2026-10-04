@@ -1,0 +1,113 @@
+# Only the isolated CI emulator is cleared; never a user's installation.
+appId: com.allenwang.lianji
+---
+- launchApp:
+    clearState: true
+- assertVisible: "今天练什么？"
+- tapOn:
+    text: "计划"
+    retryTapIfNoChange: true
+- assertVisible: "训练计划"
+- tapOn: "计划模板 · 34 套"
+- tapOn: "呼吸训练"
+- scrollUntilVisible:
+    element:
+      text: ".*查看腹式呼吸入门模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看腹式呼吸入门模板.*"
+- assertVisible: "1 组 × 120 秒"
+- assertVisible: "休息 0 秒"
+- takeScreenshot: breathing-template
+- tapOn: ".*添加整套计划 · 1 个训练日.*"
+- assertVisible: "我的计划 4"
+- scrollUntilVisible:
+    element:
+      text: "编辑腹式呼吸入门 · 呼吸练习"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "编辑腹式呼吸入门 · 呼吸练习"
+- assertVisible: "编辑计划"
+- assertVisible: "时长"
+- assertNotVisible: "目标重量"
+- takeScreenshot: breathing-editor
+- tapOn: ".*保存计划.*"
+- scrollUntilVisible:
+    element:
+      text: "我的计划 4"
+    direction: UP
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: ".*开始训练.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    text: ".*开始训练.*"
+    index: 0
+- assertVisible: "腹式呼吸入门 · 呼吸练习"
+- tapOn: ".*呼吸引导 120 秒.*"
+- assertVisible: "准备开始"
+- assertVisible: "吸气 4 秒 · 呼气 4 秒"
+- tapOn:
+    text: ".*开始引导.*"
+    waitToSettleTimeoutMs: 1000
+- assertVisible: "吸气|呼气"
+- tapOn:
+    text: ".*暂停引导.*"
+    waitToSettleTimeoutMs: 1000
+- assertVisible: "已暂停"
+- takeScreenshot: breathing-paused
+- tapOn:
+    text: ".*继续引导.*"
+    waitToSettleTimeoutMs: 1000
+- assertVisible: "吸气|呼气"
+- tapOn: ".*重新开始.*"
+- assertVisible: "准备开始"
+- assertVisible: "剩余 120 秒 · 已完成 0 个循环"
+- tapOn:
+    text: ".*开始引导.*"
+    waitToSettleTimeoutMs: 1000
+- takeScreenshot: breathing-active
+- extendedWaitUntil:
+    visible: "引导完成"
+    timeout: 160000
+- assertVisible: "剩余 0 秒 · 已完成 15 个循环"
+- takeScreenshot: breathing-completed
+- tapOn: ".*关闭引导.*"
+- tapOn: "完成第 1 组"
+- tapOn: ".*结束训练.*"
+- tapOn: "完成"
+- assertVisible: "腹式呼吸入门 · 呼吸练习"
+- takeScreenshot: breathing-history
+- stopApp
+- launchApp
+- assertVisible: "今天练什么？"
+- tapOn:
+    text: "计划"
+    retryTapIfNoChange: true
+- assertVisible: "我的计划 4"
+- tapOn: "计划模板 · 34 套"
+- tapOn: "呼吸训练"
+- scrollUntilVisible:
+    element:
+      text: ".*查看方块呼吸练习模板.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*查看方块呼吸练习模板.*"
+- assertVisible: "1 组 × 64 秒"
+- takeScreenshot: box-breathing-template
+- tapOn: ".*添加整套计划 · 1 个训练日.*"
+- assertVisible: "我的计划 5"
+- scrollUntilVisible:
+    element:
+      text: ".*开始训练.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    text: ".*开始训练.*"
+    index: 0
+- assertVisible: "方块呼吸练习 · 呼吸练习"
+- tapOn: ".*呼吸引导 64 秒.*"
+- assertVisible: "吸气 4 秒 · 吸后停留 4 秒 · 呼气 4 秒 · 呼后停留 4 秒"
+- takeScreenshot: box-breathing-guide

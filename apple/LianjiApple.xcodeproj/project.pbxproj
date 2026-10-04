@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		017C34D894EF08F81D0150F7 /* ExerciseDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F8EBC3FB208CEAD7E562CF /* ExerciseDemo.swift */; };
+		08F6E19E3507C83CD8DA26B0 /* breathing-profiles.json in Resources */ = {isa = PBXBuildFile; fileRef = 037A331FB6BC72B0C8DDCF46 /* breathing-profiles.json */; };
 		0B49E860F74E9A61C02EDFF6 /* ape_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3CCDEE40F79E7692D2B0FED0 /* ape_hold.gif */; };
 		11DE7A70F1C711D1E3D70DC1 /* side_plank.gif in Resources */ = {isa = PBXBuildFile; fileRef = A71DC399637DEC1B6DF6B207 /* side_plank.gif */; };
 		1C1F4CCFFAF09C0955CC8EC7 /* crab_walk.gif in Resources */ = {isa = PBXBuildFile; fileRef = 0EA1506748F77E8725B6084F /* crab_walk.gif */; };
@@ -15,11 +16,14 @@
 		28A1CA4219248C990421634D /* LianjiMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0E45B890F14444818175D0 /* LianjiMacApp.swift */; };
 		2C680BE104A451C3CD0DDE3E /* beast_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 89630D6A29FFE3F51D50524F /* beast_hold.gif */; };
 		32FAD4B0877E6396704F244F /* extra-exercises.json in Resources */ = {isa = PBXBuildFile; fileRef = 935B1BDD641EB16407948FE4 /* extra-exercises.json */; };
+		377FB02013B034D44C1A046A /* BreathingGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D144AA910D30A000FA90F41 /* BreathingGuide.swift */; };
 		3974DFC02809FD8C6B27DED9 /* ExerciseDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F8EBC3FB208CEAD7E562CF /* ExerciseDemo.swift */; };
 		3AA90D432C788FE7E0C39409 /* training-programs.json in Resources */ = {isa = PBXBuildFile; fileRef = 11612D6026F5B76C63E66DE1 /* training-programs.json */; };
 		3FCB5205C7E3EE619936D26C /* plank.gif in Resources */ = {isa = PBXBuildFile; fileRef = 64607564DA60D6BE8097A832 /* plank.gif */; };
+		42320BDFBD2006323448ED70 /* BreathingGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D144AA910D30A000FA90F41 /* BreathingGuide.swift */; };
 		461A82F4227BA1DDA1811454 /* lateral_lunge.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5A19C945F6016F0E571BEA2E /* lateral_lunge.gif */; };
 		48599EFD0FF72AAB997EF8C1 /* LianjiWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6794DD7DF7C6EF5B78D87ECF /* LianjiWatchApp.swift */; };
+		4F79B15259D98C44AA2B0B3C /* breathing-profiles.json in Resources */ = {isa = PBXBuildFile; fileRef = 037A331FB6BC72B0C8DDCF46 /* breathing-profiles.json */; };
 		50038BA0764981120E535C5D /* crab_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 94F272396F1D7160AB43E5CD /* crab_hold.gif */; };
 		538CC45551FA3E73244FD06C /* jumping_jack.gif in Resources */ = {isa = PBXBuildFile; fileRef = 596346EBA87DC0A1D930ED8A /* jumping_jack.gif */; };
 		6CDDCFC41960E2D338392346 /* ape_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3CCDEE40F79E7692D2B0FED0 /* ape_hold.gif */; };
@@ -33,10 +37,12 @@
 		8C9057FB977E64A83C096596 /* bird_dog.gif in Resources */ = {isa = PBXBuildFile; fileRef = 9ADBE8BC0B2F4AA0E981B189 /* bird_dog.gif */; };
 		8E20829A843E5763AB42505D /* MacViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502A6D58B5A0B27BA21D34C6 /* MacViews.swift */; };
 		9F839D9C21BCF9B5A5D3ED57 /* lateral_lunge.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5A19C945F6016F0E571BEA2E /* lateral_lunge.gif */; };
+		A1710BCCA4CB26055BA9E030 /* Breathing.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2CD8D5B45C9BB8116681A5 /* Breathing.swift */; };
 		A39A897B854202C829CEBDD3 /* cat_cow.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3AC23BE8F59825529D7CA60A /* cat_cow.gif */; };
 		A3F01712348D887307EDAE89 /* bird_dog.gif in Resources */ = {isa = PBXBuildFile; fileRef = 9ADBE8BC0B2F4AA0E981B189 /* bird_dog.gif */; };
 		A8A825472882BD7391A1122F /* TrainingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352C1F134477A0F087710F1 /* TrainingStore.swift */; };
 		B0EDE424E48EB5CC0248EADA /* plank.gif in Resources */ = {isa = PBXBuildFile; fileRef = 64607564DA60D6BE8097A832 /* plank.gif */; };
+		C45392955FFF523F54C6869E /* Breathing.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2CD8D5B45C9BB8116681A5 /* Breathing.swift */; };
 		C6F636AFA4847DA6841C4B86 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ADC71A24848B83E7819EBAA /* Models.swift */; };
 		C7B9B8A5B2C725400C56E697 /* TrainingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352C1F134477A0F087710F1 /* TrainingStore.swift */; };
 		D395FE80936B36273E43D668 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ADC71A24848B83E7819EBAA /* Models.swift */; };
@@ -52,6 +58,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		037A331FB6BC72B0C8DDCF46 /* breathing-profiles.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "breathing-profiles.json"; sourceTree = "<group>"; };
 		0EA1506748F77E8725B6084F /* crab_walk.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = crab_walk.gif; sourceTree = "<group>"; };
 		11612D6026F5B76C63E66DE1 /* training-programs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "training-programs.json"; sourceTree = "<group>"; };
 		279B6664F737DFAFB6DB856C /* WatchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchViews.swift; sourceTree = "<group>"; };
@@ -72,11 +79,13 @@
 		94B8D678678EDAAA5AD64EA6 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		94F272396F1D7160AB43E5CD /* crab_hold.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = crab_hold.gif; sourceTree = "<group>"; };
 		9ADBE8BC0B2F4AA0E981B189 /* bird_dog.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = bird_dog.gif; sourceTree = "<group>"; };
+		9D144AA910D30A000FA90F41 /* BreathingGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreathingGuide.swift; sourceTree = "<group>"; };
 		9E0E45B890F14444818175D0 /* LianjiMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LianjiMacApp.swift; sourceTree = "<group>"; };
 		A71DC399637DEC1B6DF6B207 /* side_plank.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = side_plank.gif; sourceTree = "<group>"; };
 		BD50B4EDA4214FFFC7890005 /* TrainingPrograms.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPrograms.swift; sourceTree = "<group>"; };
 		D352C1F134477A0F087710F1 /* TrainingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingStore.swift; sourceTree = "<group>"; };
 		E9E75F6DB8051B73D4194999 /* LianjiMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LianjiMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC2CD8D5B45C9BB8116681A5 /* Breathing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Breathing.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -113,6 +122,7 @@
 				3CCDEE40F79E7692D2B0FED0 /* ape_hold.gif */,
 				89630D6A29FFE3F51D50524F /* beast_hold.gif */,
 				9ADBE8BC0B2F4AA0E981B189 /* bird_dog.gif */,
+				037A331FB6BC72B0C8DDCF46 /* breathing-profiles.json */,
 				3AC23BE8F59825529D7CA60A /* cat_cow.gif */,
 				94F272396F1D7160AB43E5CD /* crab_hold.gif */,
 				0EA1506748F77E8725B6084F /* crab_walk.gif */,
@@ -153,6 +163,8 @@
 		FF338B9FCBF385F54F4A44D6 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				EC2CD8D5B45C9BB8116681A5 /* Breathing.swift */,
+				9D144AA910D30A000FA90F41 /* BreathingGuide.swift */,
 				90F8EBC3FB208CEAD7E562CF /* ExerciseDemo.swift */,
 				3ADC71A24848B83E7819EBAA /* Models.swift */,
 				BD50B4EDA4214FFFC7890005 /* TrainingPrograms.swift */,
@@ -246,6 +258,7 @@
 				0B49E860F74E9A61C02EDFF6 /* ape_hold.gif in Resources */,
 				F4A3472F62A8ADE0538837E8 /* beast_hold.gif in Resources */,
 				A3F01712348D887307EDAE89 /* bird_dog.gif in Resources */,
+				4F79B15259D98C44AA2B0B3C /* breathing-profiles.json in Resources */,
 				A39A897B854202C829CEBDD3 /* cat_cow.gif in Resources */,
 				F866216742AC0D6361FC9798 /* crab_hold.gif in Resources */,
 				1C1F4CCFFAF09C0955CC8EC7 /* crab_walk.gif in Resources */,
@@ -268,6 +281,7 @@
 				6CDDCFC41960E2D338392346 /* ape_hold.gif in Resources */,
 				2C680BE104A451C3CD0DDE3E /* beast_hold.gif in Resources */,
 				8C9057FB977E64A83C096596 /* bird_dog.gif in Resources */,
+				08F6E19E3507C83CD8DA26B0 /* breathing-profiles.json in Resources */,
 				F79A92B86EA7FD4015F90550 /* cat_cow.gif in Resources */,
 				50038BA0764981120E535C5D /* crab_hold.gif in Resources */,
 				84E109622C8769DE598109E8 /* crab_walk.gif in Resources */,
@@ -289,6 +303,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1710BCCA4CB26055BA9E030 /* Breathing.swift in Sources */,
+				42320BDFBD2006323448ED70 /* BreathingGuide.swift in Sources */,
 				3974DFC02809FD8C6B27DED9 /* ExerciseDemo.swift in Sources */,
 				48599EFD0FF72AAB997EF8C1 /* LianjiWatchApp.swift in Sources */,
 				C6F636AFA4847DA6841C4B86 /* Models.swift in Sources */,
@@ -302,6 +318,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C45392955FFF523F54C6869E /* Breathing.swift in Sources */,
+				377FB02013B034D44C1A046A /* BreathingGuide.swift in Sources */,
 				017C34D894EF08F81D0150F7 /* ExerciseDemo.swift in Sources */,
 				28A1CA4219248C990421634D /* LianjiMacApp.swift in Sources */,
 				8E20829A843E5763AB42505D /* MacViews.swift in Sources */,
@@ -348,7 +366,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -361,7 +379,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.2.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -406,7 +424,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -425,7 +443,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

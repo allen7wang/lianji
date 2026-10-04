@@ -9,7 +9,7 @@ import { demoFor } from '@/lib/exercise-demos';
 import type { Exercise } from '@/lib/types';
 import { ExerciseDemoModal } from '@/ui/exercise-demo';
 
-const muscles = ['全部', '胸', '背', '腿', '肩', '手臂', '核心', '全身'];
+const muscles = ['全部', '胸', '背', '腿', '肩', '手臂', '核心', '全身', '呼吸'];
 
 export default function Exercises() {
   const { exercises, workoutSets, addExercise } = useData();

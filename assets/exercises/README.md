@@ -1,6 +1,6 @@
 # 动作演示素材
 
-`exercise-demos.json` 是四端共用的素材目录，共 51 项。通过内置动作的名称匹配素材，不改变已有动作 ID、训练计划或训练记录。自定义动作不会按同名内置动作套用素材。
+`exercise-demos.json` 是四端共用的素材目录，共 55 项（51 项 GIF 与 4 项离线呼吸节奏动画）。通过内置动作的名称匹配素材，不改变已有动作 ID、训练计划或训练记录。自定义动作不会按同名内置动作套用素材。
 
 ## 在线人体模型 GIF（40 项）
 
@@ -29,3 +29,9 @@
 ## 播放与资源
 
 手机端使用 Expo SDK 57 的 `expo-image` 播放和缓存 GIF，离开演示页或进入后台时停止播放。Mac / Apple Watch 使用 ImageIO 解码及 SwiftUI 定时刷新；手表限制解码尺寸和帧数，离开页面、进入后台后停止刷新。缓存可由操作系统清理，在线素材的可用性取决于提供方。
+
+## 离线呼吸节奏动画（4 项）
+
+腹式呼吸、等长呼吸、延长呼气和方块呼吸采用练迹原创程序动画，并非网络 GIF。四端从 `breathing-profiles.json` 读取相同的阶段时长，依据实际经过时间显示圆环变化与文字计数；不需要额外素材下载。呼吸目录按名称只匹配内置动作，自定义同名动作不自动套用节奏。
+
+原有 40 项在线 GIF 和 11 项本地 GIF 不变。轻柔呼吸说明参考 [NHS](https://www.nhs.uk/mental-health/self-help/guides-tools-and-activities/breathing-exercises-for-stress/)；方块节奏参考 [Cleveland Clinic](https://health.clevelandclinic.org/box-breathing-benefits)。示意界面和计划为独立编写，未复制来源图片，也未获得机构背书。

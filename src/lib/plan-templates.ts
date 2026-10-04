@@ -31,7 +31,7 @@ export function templateDrafts(program: TrainingProgram, exercises: Exercise[]) 
   return program.days.map(day => ({
     id: templatePlanId(program.id, day.id),
     name: `${program.name} · ${day.name}`,
-    note: `${day.focus}。${program.frequency} ${program.guidance.join(' ')} 单侧动作按每侧记录。重量请按实际填写。`,
+    note: `${day.focus}。${program.frequency} ${program.guidance.join(' ')}${program.category === '呼吸训练' ? '' : ' 单侧动作按每侧记录。重量请按实际填写。'}`,
     items: day.exercises.map(item => {
       const exercise = exercises.find(entry => !entry.isCustom && entry.name === item.name);
       if (!exercise) throw new Error(`动作库缺少“${item.name}”，未添加这套计划。`);

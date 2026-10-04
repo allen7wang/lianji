@@ -438,5 +438,53 @@
     "asset": "lateral_lunge.gif",
     "source": "练迹原创动作简图",
     "caption": "简图动作演示，低速练习并在需要时换侧"
+  },
+  {
+    "id": "diaphragmatic_breathing",
+    "name": "腹式呼吸",
+    "mediaId": "",
+    "gifUrl": "",
+    "asset": "",
+    "source": "练迹原创呼吸节奏动画",
+    "sourceUrl": "",
+    "license": "原创程序动画",
+    "licenseUrl": "",
+    "caption": "坐稳或仰卧，一手放在腹部。轻柔吸气时腹部自然起伏，呼气时放松，不要用力深吸。"
+  },
+  {
+    "id": "balanced_breathing",
+    "name": "等长呼吸",
+    "mediaId": "",
+    "gifUrl": "",
+    "asset": "",
+    "source": "练迹原创呼吸节奏动画",
+    "sourceUrl": "",
+    "license": "原创程序动画",
+    "licenseUrl": "",
+    "caption": "肩颈放松，以舒适的幅度吸气和呼气；两段节奏等长，无需屏息。"
+  },
+  {
+    "id": "long_exhale_breathing",
+    "name": "延长呼气",
+    "mediaId": "",
+    "gifUrl": "",
+    "asset": "",
+    "source": "练迹原创呼吸节奏动画",
+    "sourceUrl": "",
+    "license": "原创程序动画",
+    "licenseUrl": "",
+    "caption": "轻柔吸气后缓慢呼气，不用力排空。若呼气六秒吃力，可改选等长呼吸。"
+  },
+  {
+    "id": "box_breathing",
+    "name": "方块呼吸",
+    "mediaId": "",
+    "gifUrl": "",
+    "asset": "",
+    "source": "练迹原创呼吸节奏动画",
+    "sourceUrl": "",
+    "license": "原创程序动画",
+    "licenseUrl": "",
+    "caption": "按吸气、吸后停留、呼气、呼后停留的顺序练习。停留时不要用力憋气；不舒服时改用无屏息练习。"
   }
 ]
