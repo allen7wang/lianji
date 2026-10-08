@@ -28,6 +28,8 @@ jobs:
           "$RUNNER_TEMP/lianji-check/verify"
       - name: Build macOS universal
         run: xcodebuild -project apple/LianjiApple.xcodeproj -scheme LianjiMac -configuration Release -destination 'generic/platform=macOS' -derivedDataPath apple-build CODE_SIGNING_ALLOWED=NO 'ARCHS=arm64 x86_64' ONLY_ACTIVE_ARCH=NO
+      - name: Compile watchOS device SDK (unsigned, not installable)
+        run: xcodebuild -project apple/LianjiApple.xcodeproj -scheme LianjiWatch -configuration Release -sdk watchos -destination 'generic/platform=watchOS' -derivedDataPath watch-device-check CODE_SIGNING_ALLOWED=NO
       - name: Build watchOS simulator
         run: xcodebuild -project apple/LianjiApple.xcodeproj -scheme LianjiWatch -configuration Release -sdk watchsimulator -destination 'generic/platform=watchOS Simulator' -derivedDataPath apple-build CODE_SIGNING_ALLOWED=NO
       - name: Verify and package
@@ -72,6 +74,10 @@ jobs:
         run: npx expo prebuild --platform ios --no-install --no-clean
       - name: Install native dependencies
         run: pod install --project-directory=ios
+      - name: Compile iOS device SDK (unsigned, not installable)
+        run: |
+          export NODE_BINARY="$(command -v node)"
+          xcodebuild -workspace ios/app.xcworkspace -scheme app -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath ios-device-check CODE_SIGNING_ALLOWED=NO
       - name: Build standalone simulator app
         run: |
           export NODE_BINARY="$(command -v node)"
