@@ -24,8 +24,10 @@ else
   sdk=watchos
 fi
 # Release bundles JS for iOS and requires no Metro server. Do not override Bundle IDs.
+# Do not pass CODE_SIGNING_ALLOWED=YES: it overrides the Pods' NO + empty identity
+# and fails static library targets ("An empty code signing identity is not valid").
 xcodebuild "${project[@]}" -configuration Release -sdk "$sdk" \
   -destination "id=$LIANJI_DEVICE_UDID" -derivedDataPath "device-build/$platform" \
   -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
-  CODE_SIGN_STYLE=Automatic "DEVELOPMENT_TEAM=$LIANJI_TEAM_ID" CODE_SIGNING_ALLOWED=YES build
+  CODE_SIGN_STYLE=Automatic "DEVELOPMENT_TEAM=$LIANJI_TEAM_ID" build
 printf 'Signed build completed. Install/run through Xcode using the same Team and Bundle ID; see docs/apple-device-testing.md.\n'

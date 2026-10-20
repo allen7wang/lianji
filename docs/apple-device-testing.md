@@ -2,7 +2,7 @@
 
 ## 工程核查
 
-- iOS：Expo SDK 57，`app.json` 固定 `com.allenwang.lianji`，版本 1.2.0 / build 5；`ios/` 未提交，由 Expo prebuild 与配置插件生成。工作流预期 workspace `ios/app.xcworkspace`、scheme/target `app`。本地生成后须用 `xcodebuild -list -workspace ios/app.xcworkspace` 核实。
+- iOS：Expo SDK 57，`app.json` 固定 `com.allenwang.lianji`，版本 1.2.0 / build 5；`ios/` 未提交，由 Expo prebuild 与配置插件生成。工作流预期 workspace `ios/app.xcworkspace`、scheme/target `app`。本地生成后须用 `xcodebuild -list -workspace ios/app.xcworkspace` 核实。`app.json` 通过 `expo-build-properties` 启用 `ios.enableSceneSupport`：用 Xcode 27 / iOS 27 SDK 构建的应用必须采用 UIScene 生命周期，否则在 iOS 27 设备上启动即崩溃；重新 prebuild 后须确认该配置仍在。
 - 原生工程 `apple/LianjiApple.xcodeproj`：共享 scheme/target `LianjiMac`、`LianjiWatch`，Bundle ID 分别 `com.allenwang.lianji.mac`、`com.allenwang.lianji.watch`。watchOS 最低 10.0，macOS 最低 14.0。
 - Watch 设置 `WKWatchOnly=YES`、`WKRunsIndependentlyOfCompanionApp=YES`，为独立 watch-only app，不是 iPhone companion。没有 iOS target、Watch 嵌入阶段、WatchConnectivity 或 iCloud 同步；两端需分别安装，训练数据各自保存。
 - 原生 targets 使用 Automatic signing，但未配置 Development Team，未提供证书/描述文件。Watch 当前 `SKIP_INSTALL=YES`，本地 Run 不受影响；分发归档需覆盖为 NO 并检查 archive 确实包含应用。

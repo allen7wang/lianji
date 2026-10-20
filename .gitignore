@@ -56,3 +56,4 @@ apple/**/xcuserdata/
 # generated native folders
 /ios
 /android
+/device-build/
