@@ -1,13 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useData } from '@/lib/data';
 import { dateLabel, durationLabel, volumeOf } from '@/lib/types';
 import { Button, Card, Header, Metric, Page, SectionTitle } from '@/ui/components';
 import { C } from '@/ui/theme';
 
 export default function Today() {
-  const { ready, plans, planItems, exercises, workouts, workoutSets, startWorkout } = useData();
+  const { ready, plans, planItems, exercises, workouts, workoutSets, startWorkout, deleteWorkout } = useData();
   const active = workouts.find(item => !item.endedAt);
   const finished = workouts.filter(item => item.endedAt);
   const monday = new Date();
@@ -22,7 +22,16 @@ export default function Today() {
   });
   const now = new Date();
 
-  async function begin(planId?: string) {
+  async function begin(planId?: string, planName?: string) {
+    const conflict = planId ? workouts.find(item => !item.endedAt && item.planId !== planId) : null;
+    if (conflict) {
+      Alert.alert('有进行中的训练', `「${conflict.name}」尚未结束。开始「${planName}」需要先放弃它，其中已记录的组数不会保存。`, [
+        { text: '取消', style: 'cancel' },
+        { text: `继续「${conflict.name}」`, onPress: () => router.push('/workout') },
+        { text: '放弃并开始', style: 'destructive', onPress: () => { (async () => { await deleteWorkout(conflict.id); await startWorkout(planId); router.push('/workout'); })().catch(console.error); } },
+      ]);
+      return;
+    }
     await startWorkout(planId);
     router.push('/workout');
   }
@@ -45,7 +54,7 @@ export default function Today() {
     {plans.slice(0, 3).map((plan, index) => {
       const items = planItems.filter(item => item.planId === plan.id);
       const first = items.slice(0, 3).map(item => exercises.find(ex => ex.id === item.exerciseId)?.name).filter(Boolean).join(' · ');
-      return <Pressable key={plan.id} style={styles.plan} onPress={() => begin(plan.id)}><View style={styles.planNumber}><Text style={styles.planNumberText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.planTitle}>{plan.name}</Text><Text style={styles.planSub} numberOfLines={1}>{items.length} 个动作 · {first}</Text></View><Ionicons name="arrow-forward-circle" color={C.accent} size={26} /></Pressable>;
+      return <Pressable key={plan.id} style={styles.plan} onPress={() => begin(plan.id, plan.name)}><View style={styles.planNumber}><Text style={styles.planNumberText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.planTitle}>{plan.name}</Text><Text style={styles.planSub} numberOfLines={1}>{items.length} 个动作 · {first}</Text></View><Ionicons name="arrow-forward-circle" color={C.accent} size={26} /></Pressable>;
     })}
     {finished[0] ? <><SectionTitle title="上次训练" action="全部历史" onAction={() => router.push('/history')} /><Pressable onPress={() => router.push({ pathname: '/history/[id]', params: { id: finished[0].id } })}><Card style={styles.recent}><View><Text style={styles.recentTitle}>{finished[0].name}</Text><Text style={styles.recentSub}>{dateLabel(finished[0].startedAt)} · {durationLabel(finished[0].startedAt, finished[0].endedAt)}</Text></View><Ionicons name="chevron-forward" size={20} color={C.muted} /></Card></Pressable></> : null}
     {!ready ? <Text style={{ color: C.muted }}>正在加载训练数据…</Text> : null}

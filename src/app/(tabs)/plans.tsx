@@ -10,14 +10,23 @@ import { PlanTemplatePreview } from '@/ui/plan-template-preview';
 import { C } from '@/ui/theme';
 
 export default function Plans() {
-  const { plans, planItems, exercises, startWorkout, deletePlan } = useData();
+  const { plans, planItems, exercises, workouts, startWorkout, deleteWorkout, deletePlan } = useData();
   const [tab, setTab] = useState<'my' | 'templates'>('my');
   const [preview, setPreview] = useState<TrainingProgram | null>(null);
   const [category, setCategory] = useState('全部');
   const [sport, setSport] = useState('全部项目');
-  async function begin(planId: string) {
-    await startWorkout(planId);
-    router.push('/workout');
+  async function begin(planId: string, name: string) {
+    const conflict = workouts.find(item => !item.endedAt && item.planId !== planId);
+    if (!conflict) {
+      await startWorkout(planId);
+      router.push('/workout');
+      return;
+    }
+    Alert.alert('有进行中的训练', `「${conflict.name}」尚未结束。开始「${name}」需要先放弃它，其中已记录的组数不会保存。`, [
+      { text: '取消', style: 'cancel' },
+      { text: `继续「${conflict.name}」`, onPress: () => router.push('/workout') },
+      { text: '放弃并开始', style: 'destructive', onPress: () => { (async () => { await deleteWorkout(conflict.id); await startWorkout(planId); router.push('/workout'); })().catch(console.error); } },
+    ]);
   }
   function confirmDelete(planId: string, name: string) {
     Alert.alert('删除训练计划', `确定删除“${name}”？已完成的训练记录会保留。`, [
@@ -47,7 +56,7 @@ export default function Plans() {
         <View style={styles.top}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.name}>{plan.name}</Text><Text style={styles.note}>{plan.note || `${items.length} 个动作`}</Text></View><Pressable accessibilityLabel={`编辑${plan.name}`} onPress={() => router.push({ pathname: '/plan-editor', params: { id: plan.id } })} hitSlop={10}><Ionicons name="create-outline" color={C.muted} size={21} /></Pressable></View>
         <View style={styles.divider} />
         <View style={{ gap: 10 }}>{items.slice(0, 5).map((item, i) => <View key={item.id} style={styles.exerciseRow}><Text style={styles.exerciseNumber}>{i + 1}</Text><Text style={styles.exerciseName}>{exercises.find(ex => ex.id === item.exerciseId)?.name ?? '未知动作'}</Text><Text style={styles.exerciseSets}>{item.sets} × {targetLabel(item.reps, item.unit)}</Text></View>)}{items.length > 5 ? <Text style={styles.more}>还有 {items.length - 5} 个动作</Text> : null}</View>
-        <View style={styles.actions}><Button label="开始训练" icon="play" onPress={() => begin(plan.id)} style={{ flex: 1 }} /><IconButton icon="trash-outline" color={C.faint} onPress={() => confirmDelete(plan.id, plan.name)} /></View>
+        <View style={styles.actions}><Button label="开始训练" icon="play" onPress={() => begin(plan.id, plan.name)} style={{ flex: 1 }} /><IconButton icon="trash-outline" color={C.faint} onPress={() => confirmDelete(plan.id, plan.name)} /></View>
       </Card>;
     })}
     {tab === 'my' ? <Button label="创建新计划" icon="add" variant="secondary" onPress={() => router.push('/plan-editor')} /> : null}
