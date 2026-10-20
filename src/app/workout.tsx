@@ -42,7 +42,7 @@ export default function WorkoutScreen() {
 }
 
 function ActiveWorkout({ workout }: { workout: Workout }) {
-  const { workoutSets, exercises, addWorkoutExercise, addSet, updateSet, deleteSet, finishWorkout, deleteWorkout, updateWorkoutNote } = useData();
+  const { workoutSets, exercises, workouts, addWorkoutExercise, addSet, updateSet, deleteSet, finishWorkout, deleteWorkout, updateWorkoutNote } = useData();
   const sets = workoutSets.filter(item => item.workoutId === workout?.id);
   const completed = sets.filter(item => item.completed).length;
   const [picker, setPicker] = useState(false);
@@ -52,6 +52,28 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
   const [timer, setTimer] = useState<{ label: string; deadline: number } | null>(null);
   const [clock, setClock] = useState(0);
   useEffect(() => { const interval = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(interval); }, []);
+  const lastPerformed = useMemo(() => {
+    const byWorkout = new Map<string, WorkoutSet[]>();
+    for (const set of workoutSets) {
+      const list = byWorkout.get(set.workoutId);
+      if (list) list.push(set); else byWorkout.set(set.workoutId, [set]);
+    }
+    const ended = workouts.filter(item => item.endedAt).sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+    const latest = new Map<string, WorkoutSet>();
+    const settled = new Set<string>();
+    for (const endedWorkout of ended) {
+      for (const set of byWorkout.get(endedWorkout.id) ?? []) {
+        if (set.completed && !settled.has(set.exerciseId)) latest.set(set.exerciseId, set);
+      }
+      for (const exerciseId of latest.keys()) settled.add(exerciseId);
+    }
+    return latest;
+  }, [workouts, workoutSets]);
+  const lastLabel = (exerciseId: string) => {
+    const set = lastPerformed.get(exerciseId);
+    if (!set) return '';
+    return set.unit === 'seconds' ? ` · 上次 ${set.reps} 秒` : ` · 上次 ${set.weight} kg × ${set.reps}`;
+  };
   const seconds = timer ? Math.max(0, Math.ceil((timer.deadline - clock) / 1000)) : 0;
   const startTimer = (duration: number, label: string, now: number) => {
     setClock(now);
@@ -92,7 +114,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
       <Card style={styles.summary}><Metric value={durationLabel(workout.startedAt, null)} label="训练时长" accent /><Metric value={`${completed}/${sets.length}`} label="已完成组" /><Metric value={`${Math.round(volumeOf(sets))}`} label="容量 · kg" /></Card>
       {timer ? <Pressable onPress={() => setTimer(null)} style={styles.timer}><Ionicons name="timer-outline" size={17} color={C.accent} /><Text style={styles.timerText}>{seconds > 0 ? `${timer.label} ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : timer.label === '动作计时' ? '动作计时结束，请按实际完成情况勾选' : '休息结束，可以开始下一组'}</Text><Text style={styles.timerSkip}>{seconds > 0 ? '停止' : '关闭'}</Text></Pressable> : null}
       {groups.map((group, index) => <Card key={group.exerciseId} style={{ gap: 14 }}>
-        <View style={styles.exerciseHeader}><View style={styles.exerciseIndex}><Text style={styles.exerciseIndexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{group.exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta}>{group.exercise?.muscle} · {group.exercise?.equipment}</Text></View><Text style={styles.exerciseCount}>{group.sets.filter(set => set.completed).length}/{group.sets.length}</Text></View>
+        <View style={styles.exerciseHeader}><View style={styles.exerciseIndex}><Text style={styles.exerciseIndexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{group.exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta} numberOfLines={1}>{group.exercise?.muscle} · {group.exercise?.equipment}{group.exercise ? lastLabel(group.exercise.id) : ''}</Text></View><Text style={styles.exerciseCount}>{group.sets.filter(set => set.completed).length}/{group.sets.length}</Text></View>
         {group.exercise && demoFor(group.exercise) ? <Button label="查看动图" icon="play-circle-outline" variant="ghost" onPress={() => setDemoExercise(group.exercise!)} /> : null}
         <View style={styles.tableHead}><Text style={styles.headNumber}>组</Text>{!breathingProfileFor(group.exercise) ? <Text style={styles.headCell}>重量</Text> : null}<Text style={styles.headCell}>{group.sets[0]?.unit === 'seconds' ? '时长 · 秒' : '次数'}</Text><Text style={styles.headCheck}>完成</Text></View>
         {group.sets.map(item => <SetRow key={item.id} item={item} breathing={!!breathingProfileFor(group.exercise)} onUpdate={update} onDelete={setId => Alert.alert('删除组数', '确定删除这一组？', [{ text: '取消', style: 'cancel' }, { text: '删除', style: 'destructive', onPress: () => deleteSet(setId) }])} onComplete={toggle} onTimer={(duration, now) => {

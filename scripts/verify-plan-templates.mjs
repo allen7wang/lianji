@@ -167,6 +167,38 @@ assert.equal(plans().find(plan => plan.id === editedId).name, '我的推日');
 assert.deepEqual(items().filter(item => item.planId === editedId), editedItems);
 assert.equal(plans().length, 72);
 await assert.rejects(importPlanTemplate(db, 'unknown'), /没有找到/);
+
+// Backup export/import: full round-trip fidelity, validation errors and atomic rollback.
+const { exportBackup, parseBackup, importBackup, BACKUP_VERSION } = loadSource(path.join(root, 'src/lib/backup.ts'));
+native.prepare('INSERT INTO body_entries VALUES (?, ?, ?, ?)').run('body-1', '2026-10-20', 72.5, 18);
+native.prepare('INSERT INTO food_entries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run('food-1', '2026-10-20', '午餐', '鸡胸肉', '150g', 248, 46, 0, 5);
+const backup = await exportBackup(db);
+assert.equal(backup.app, 'lianji');
+assert.equal(backup.version, BACKUP_VERSION);
+assert.equal(backup.tables.plans.length, 72);
+assert.equal(backup.tables.body_entries.length, 1);
+assert.equal(backup.tables.food_entries.length, 1);
+const backupText = JSON.stringify(backup);
+const restored = database();
+await migrate(restored.db);
+await importBackup(restored.db, parseBackup(backupText));
+for (const table of ['exercises', 'plans', 'plan_items', 'workouts', 'workout_sets', 'body_entries', 'food_entries']) {
+  assert.deepEqual(restored.native.prepare(`SELECT * FROM ${table} ORDER BY id`).all(), native.prepare(`SELECT * FROM ${table} ORDER BY id`).all(), `round-trip mismatch in ${table}`);
+}
+assert.throws(() => parseBackup('not json'), /JSON/);
+assert.throws(() => parseBackup(JSON.stringify({ app: 'other', version: 1, tables: {} })), /练迹/);
+assert.throws(() => parseBackup(JSON.stringify({ ...backup, version: BACKUP_VERSION + 1 })), /不兼容/);
+assert.throws(() => parseBackup(JSON.stringify({ ...backup, tables: { ...backup.tables, plans: null } })), /缺少/);
+assert.throws(() => parseBackup(JSON.stringify({ ...backup, tables: { ...backup.tables, plans: [{ name: '无 id' }] } })), /损坏/);
+restored.native.close();
+const rollback = database();
+await migrate(rollback.db);
+rollback.native.exec(`CREATE TRIGGER fail_backup_body BEFORE INSERT ON body_entries BEGIN SELECT RAISE(ABORT, 'forced failure'); END;`);
+await assert.rejects(importBackup(rollback.db, parseBackup(backupText)), /forced failure/);
+assert.equal(rollback.native.prepare('SELECT COUNT(*) AS count FROM plans').get().count, 3, 'failed import must roll back to the original data');
+assert.equal(rollback.native.prepare('SELECT COUNT(*) AS count FROM exercises').get().count, 55);
+assert.equal(rollback.native.prepare('SELECT COUNT(*) AS count FROM body_entries').get().count, 0);
+rollback.native.close();
 native.close();
 
 // A failure after the first day was inserted must roll back the complete program.
@@ -224,4 +256,4 @@ for (const id of ['home-dumbbell', 'home-bodyweight']) {
 }
 assert.ok(legacy.native.prepare("SELECT e.isCustom FROM plan_items i JOIN exercises e ON e.id = i.exerciseId WHERE i.planId = 'template:home-bodyweight:a' AND e.name = '自重深蹲'").get().isCustom === 0);
 legacy.native.close();
-console.log('Passed: 34 programs / 69 days / 55 demos; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import and workout storage.');
+console.log('Passed: 34 programs / 69 days / 55 demos; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import and workout storage; backup export/import round-trip, validation and rollback.');

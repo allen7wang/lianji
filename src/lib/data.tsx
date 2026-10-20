@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
+import { exportBackup, importBackup, type BackupFile } from './backup';
 import { importPlanTemplate } from './import-plan-template';
 import { defaultUnit } from './training-target';
 import { appendWorkoutSet, startWorkoutFromPlan } from './workout-storage';
@@ -31,6 +32,8 @@ type Data = {
   deleteBodyEntry: (entryId: string) => Promise<void>;
   addFoodEntry: (entry: Omit<FoodEntry, 'id' | 'loggedAt'>) => Promise<void>;
   deleteFoodEntry: (entryId: string) => Promise<void>;
+  exportBackupData: () => Promise<BackupFile>;
+  restoreBackup: (backup: BackupFile) => Promise<void>;
 };
 
 const DataContext = createContext<Data | null>(null);
@@ -156,6 +159,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     },
     async deleteFoodEntry(entryId) {
       await db.runAsync('DELETE FROM food_entries WHERE id = ?', entryId);
+      await refresh();
+    },
+    async exportBackupData() {
+      return exportBackup(db);
+    },
+    async restoreBackup(backup) {
+      await importBackup(db, backup);
       await refresh();
     },
   }), [ready, exercises, plans, planItems, workouts, workoutSets, bodyEntries, foodEntries, refresh, db]);
