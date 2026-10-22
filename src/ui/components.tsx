@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type KeyboardTypeOptions, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useData } from '@/lib/data';
+import { filterExercises } from '@/lib/exercise-library';
 import type { Exercise } from '@/lib/types';
 import { C, space } from './theme';
 
@@ -23,14 +24,14 @@ export function Card({ children, style }: { children: ReactNode; style?: StylePr
 }
 
 export function Button({ label, onPress, icon, variant = 'primary', disabled = false, style }: { label: string; onPress: () => void; icon?: IconName; variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; disabled?: boolean; style?: StyleProp<ViewStyle> }) {
-  return <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.button, variant === 'primary' ? styles.primary : variant === 'secondary' ? styles.secondary : variant === 'danger' ? styles.danger : styles.ghost, disabled && styles.disabled, pressed && styles.pressed, style]}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.button, variant === 'primary' ? styles.primary : variant === 'secondary' ? styles.secondary : variant === 'danger' ? styles.danger : styles.ghost, disabled && styles.disabled, pressed && styles.pressed, style]}>
     {icon ? <Ionicons name={icon} size={18} color={variant === 'primary' ? C.bg : variant === 'danger' ? C.danger : C.text} /> : null}
     <Text style={[styles.buttonText, variant === 'primary' && { color: C.bg }, variant === 'danger' && { color: C.danger }]}>{label}</Text>
   </Pressable>;
 }
 
-export function IconButton({ icon, onPress, color = C.text }: { icon: IconName; onPress: () => void; color?: string }) {
-  return <Pressable onPress={onPress} hitSlop={12} style={styles.iconButton}><Ionicons name={icon} size={21} color={color} /></Pressable>;
+export function IconButton({ icon, onPress, color = C.text, label }: { icon: IconName; onPress: () => void; color?: string; label?: string }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={12} style={styles.iconButton}><Ionicons name={icon} size={21} color={color} /></Pressable>;
 }
 
 export function SectionTitle({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
@@ -58,11 +59,11 @@ export function ExercisePicker({ visible, onClose, onSelect, excluded = [] }: { 
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState('全部');
   const muscles = ['全部', '胸', '背', '腿', '肩', '手臂', '核心', '全身', '呼吸'];
-  const filtered = exercises.filter(exercise => !excluded.includes(exercise.id) && (muscle === '全部' || exercise.muscle === muscle) && (exercise.name.includes(query.trim()) || exercise.equipment.includes(query.trim())));
+  const filtered = filterExercises(exercises, { query, muscle }).filter(exercise => !excluded.includes(exercise.id));
   return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
     <SafeAreaView style={styles.modal} edges={['top', 'bottom']}>
       <View style={styles.pickerHeader}><Text style={styles.pickerTitle}>选择动作</Text><IconButton icon="close" onPress={onClose} /></View>
-      <View style={{ paddingHorizontal: 20 }}><Field value={query} onChangeText={setQuery} placeholder="搜索动作或器械" /></View>
+      <View style={{ paddingHorizontal: 20 }}><Field value={query} onChangeText={setQuery} placeholder="搜索动作、器械或部位" /></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>{muscles.map(item => <Badge key={item} label={item} active={muscle === item} onPress={() => setMuscle(item)} />)}</ScrollView>
       <FlatList data={filtered} keyExtractor={item => item.id} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }} renderItem={({ item }) => <Pressable onPress={() => { onSelect(item); onClose(); setQuery(''); }} style={styles.pickerRow}><View><Text style={styles.pickerRowTitle}>{item.name}</Text><Text style={styles.pickerRowSub}>{item.muscle} · {item.equipment}</Text></View><Ionicons name="add-circle" size={24} color={C.accent} /></Pressable>} ListEmptyComponent={<Empty icon="search-outline" title="没有找到动作" subtitle="试试其他关键词，或在动作库创建自定义动作" />} />
     </SafeAreaView>
@@ -76,9 +77,9 @@ const styles = StyleSheet.create({
   eyebrow: { color: C.accent, fontSize: 11, fontWeight: '800', letterSpacing: 2, marginBottom: 7 },
   title: { color: C.text, fontSize: 31, fontWeight: '800', letterSpacing: -0.5 },
   card: { backgroundColor: C.surface, borderRadius: space.radius, borderWidth: 1, borderColor: C.line, padding: 18 },
-  button: { minHeight: 50, paddingHorizontal: 18, borderRadius: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  button: { minHeight: 50, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   primary: { backgroundColor: C.accent }, secondary: { backgroundColor: C.elevated, borderWidth: 1, borderColor: C.line }, ghost: { backgroundColor: 'transparent' }, danger: { backgroundColor: '#3A2528' },
-  disabled: { opacity: 0.4 }, pressed: { opacity: 0.75 }, buttonText: { color: C.text, fontSize: 15, fontWeight: '700' },
+  disabled: { opacity: 0.4 }, pressed: { opacity: 0.75 }, buttonText: { color: C.text, fontSize: 15, fontWeight: '700', flexShrink: 1, textAlign: 'center' },
   iconButton: { width: 39, height: 39, borderRadius: 12, backgroundColor: C.elevated, alignItems: 'center', justifyContent: 'center' },
   section: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, sectionTitle: { color: C.text, fontSize: 19, fontWeight: '700' }, sectionAction: { color: C.accent, fontSize: 13, fontWeight: '600' },
   metric: { flex: 1, gap: 7 }, metricValue: { color: C.text, fontSize: 24, fontWeight: '800' }, metricLabel: { color: C.muted, fontSize: 12 },

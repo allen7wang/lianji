@@ -14,6 +14,8 @@ const loaded = new Map();
 function loadSource(filename) {
   if (loaded.has(filename)) return loaded.get(filename).exports;
   if (filename.endsWith('.json')) return JSON.parse(fs.readFileSync(filename, 'utf8'));
+  // Native asset modules resolve to a bundler handle; use the existing path in this harness.
+  if (filename.endsWith('.gif')) { fs.accessSync(filename); return filename; }
   const module = { exports: {} };
   loaded.set(filename, module);
   const require = specifier => {
@@ -109,6 +111,63 @@ for (const sport of ['短跑', '半马', '全马', '游泳', '铁三', '自行�
 assert.ok(trainingPrograms.find(program => program.id === 'hiit-full-body').days.every(day => day.exercises.every(item => item.unit === 'seconds' && item.restSeconds === 40)));
 assert.ok(trainingPrograms.find(program => program.id === 'interval-20-10').days.every(day => day.exercises.every(item => item.sets === 8 && item.reps === 20 && item.restSeconds === 10)));
 assert.equal(media.length, 55);
+assert.equal(new Set(media.map(demo => demo.id)).size, media.length, 'Duplicate demo IDs');
+assert.equal(new Set(media.map(demo => demo.name)).size, media.length, 'Duplicate demo names');
+const { demoFor, demoSource, demoMediaLabel } = loadSource(path.join(root, 'src/lib/exercise-demos.ts'));
+for (const demo of media) {
+  for (const field of ['id', 'name', 'caption', 'source']) assert.ok(typeof demo[field] === 'string' && demo[field].trim(), `${demo.id}: invalid ${field}`);
+  for (const field of ['asset', 'gifUrl', 'mediaId', 'sourceUrl', 'license', 'licenseUrl']) {
+    assert.ok(demo[field] === undefined || typeof demo[field] === 'string', `${demo.id}: ${field} must decode as an optional Swift string`);
+  }
+  for (const field of ['gifUrl', 'sourceUrl', 'licenseUrl']) if (demo[field]) assert.match(demo[field], /^https:\/\//, `${demo.id}: invalid ${field}`);
+  const breathing = breathingProfiles.some(profile => profile.id === demo.id && profile.name === demo.name);
+  assert.equal(Number(!!demo.asset) + Number(!!demo.gifUrl), breathing ? 0 : 1, `${demo.id}: ambiguous or missing media source`);
+  assert.equal(demoFor({ name: demo.name, isCustom: 0 })?.id, demo.id);
+  assert.equal(demoFor({ name: demo.name, isCustom: 1 }), undefined, 'Same-name custom exercises must stay independent');
+  if (demo.asset) assert.equal(demoSource(demo), path.join(root, 'assets/exercises', demo.asset), `${demo.id}: RN asset registry mismatch`);
+  if (demo.gifUrl) {
+    assert.match(demo.gifUrl, /^https:\/\//);
+    assert.deepEqual(demoSource(demo), { uri: demo.gifUrl });
+  }
+}
+assert.equal(typeof demoMediaLabel, 'function', 'Demos must disclose whether they are offline or need a network');
+assert.equal(demoMediaLabel(media.find(demo => demo.id === 'barbell_bench')), '离线真人');
+assert.equal(demoMediaLabel(media.find(demo => demo.id === 'bird_dog')), '离线示意');
+assert.equal(demoMediaLabel(media.find(demo => demo.id === 'barbell_squat')), '联网动图');
+assert.equal(demoMediaLabel(media.find(demo => demo.id === 'box_breathing')), '离线呼吸');
+const guides = loadSource(path.join(root, 'assets/exercises/exercise-guides.json'));
+const { guideFor } = loadSource(path.join(root, 'src/lib/exercise-demos.ts'));
+assert.equal(typeof guideFor, 'function', 'Every built-in demonstration needs offline instruction lookup');
+assert.equal(guides.length, media.length, 'Teaching coverage must match the demo catalog');
+assert.deepEqual(new Set(guides.map(guide => guide.id)), new Set(media.map(demo => demo.id)));
+for (const demo of media) {
+  const guide = guideFor({ name: demo.name, isCustom: 0 });
+  assert.equal(guide?.id, demo.id);
+  for (const [field, count] of [['steps', 3], ['cues', 2], ['mistakes', 2]]) {
+    assert.equal(guide[field]?.length, count, `${demo.id}: incomplete ${field}`);
+    assert.ok(guide[field].every(line => typeof line === 'string' && line.trim().length > 0));
+  }
+  assert.equal(guideFor({ name: demo.name, isCustom: 1 }), undefined);
+}
+assert.equal(guideFor({ name: '不存在的动作', isCustom: 0 }), undefined);
+// Frequently used lifts must play on a fresh install without network access.
+const offlineLifts = ['barbell_bench', 'incline_dumbbell_press', 'dips', 'seated_row', 'dumbbell_rdl', 'leg_press', 'leg_curl', 'calf_raise', 'lateral_raise', 'reverse_fly', 'barbell_curl', 'hammer_curl', 'skull_crusher', 'pull_up', 'dumbbell_shoulder_press'];
+for (const demoId of offlineLifts) {
+  const demo = media.find(item => item.id === demoId);
+  assert.ok(demo?.asset, `Missing offline demonstration: ${demoId}`);
+  assert.equal(demo.license, 'CC BY-SA 4.0', `Missing media credit: ${demoId}`);
+  assert.match(demo.source, /Goulart/);
+}
+const sourceRecords = loadSource(path.join(root, 'assets/exercises/media-sources.json'));
+assert.deepEqual(new Set(sourceRecords.map(record => record.id)), new Set(offlineLifts), 'Reviewed source records must cover each new offline lift');
+for (const record of sourceRecords) {
+  const demo = media.find(item => item.id === record.id);
+  assert.equal(demo.asset, record.asset);
+  assert.equal(demo.sourceUrl, record.sourceUrl);
+  assert.equal(demo.licenseUrl, record.licenseUrl);
+  assert.match(record.sourceSha256, /^[a-f0-9]{64}$/);
+  assert.ok(record.durationSeconds > 0 && record.fps > 0 && record.width >= 180);
+}
 for (const demo of media) if (demo.asset) {
   const bytes = fs.readFileSync(path.join(root, 'assets/exercises', demo.asset));
   assert.ok(['GIF87a','GIF89a'].includes(bytes.subarray(0, 6).toString()), demo.asset);
@@ -118,6 +177,27 @@ const { native, db } = database();
 const plans = () => native.prepare('SELECT * FROM plans ORDER BY id').all();
 const items = () => native.prepare('SELECT * FROM plan_items ORDER BY id').all();
 await migrate(db);
+const seededExercises = native.prepare('SELECT * FROM exercises ORDER BY id').all();
+const { filterExercises, bestWeightsByExercise } = loadSource(path.join(root, 'src/lib/exercise-library.ts'));
+const allFilters = { query: '', muscle: '全部' };
+assert.equal(filterExercises(seededExercises, allFilters).length, seededExercises.length);
+const offlineExercises = filterExercises(seededExercises, { ...allFilters, offlineOnly: true });
+assert.deepEqual(new Set(offlineExercises.map(exercise => exercise.name)), new Set(media.filter(demo => !demo.gifUrl).map(demo => demo.name)), 'Offline filtering includes bundled GIFs and breathing, not remote sources');
+const customBench = { id: 'custom-bench', name: 'Bench Press', muscle: '胸', equipment: 'Dumbbell', isCustom: 1 };
+assert.deepEqual(filterExercises([customBench], { query: '  bench   DUMBBELL 胸  ', muscle: '全部' }), [customBench], 'Search is case-insensitive and combines spaced name/equipment/muscle terms');
+assert.equal(filterExercises([customBench], { ...allFilters, muscle: '腿' }).length, 0);
+const renamedCustom = { ...seededExercises[0], id: 'custom-same-name', isCustom: 1 };
+assert.equal(filterExercises([renamedCustom], { ...allFilters, offlineOnly: true }).length, 0, 'Custom exercises cannot inherit offline status from a built-in name');
+const sampleSet = { id: 'sample', workoutId: 'sample-workout', exerciseId: 'bench', sortOrder: 0, setNumber: 1, weight: 0, reps: 10, completed: 1 };
+assert.deepEqual(bestWeightsByExercise([
+  sampleSet,
+  { ...sampleSet, weight: 30 },
+  { ...sampleSet, weight: 25 },
+  { ...sampleSet, weight: 100, completed: 0 },
+  { ...sampleSet, weight: Number.NaN },
+  { ...sampleSet, weight: Number.POSITIVE_INFINITY },
+  { ...sampleSet, exerciseId: 'row', weight: 20 },
+]), new Map([['bench', 30], ['row', 20]]), 'Best-weight lookup uses only completed positive finite weights, without displaying a zero-weight record');
 const originals = { plans: plans(), items: items() };
 assert.equal(originals.plans.length, 3);
 for (const program of trainingPrograms) {
@@ -256,4 +336,4 @@ for (const id of ['home-dumbbell', 'home-bodyweight']) {
 }
 assert.ok(legacy.native.prepare("SELECT e.isCustom FROM plan_items i JOIN exercises e ON e.id = i.exerciseId WHERE i.planId = 'template:home-bodyweight:a' AND e.name = '自重深蹲'").get().isCustom === 0);
 legacy.native.close();
-console.log('Passed: 34 programs / 69 days / 55 demos; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import and workout storage; backup export/import round-trip, validation and rollback.');
+console.log('Passed: 34 programs / 69 days / 55 demos with offline teaching / 26 bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import and workout storage; backup export/import round-trip, validation and rollback.');

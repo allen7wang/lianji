@@ -2,29 +2,32 @@
   {
     "id": "barbell_bench",
     "name": "杠铃卧推",
-    "mediaId": "EIeI8Vf",
-    "gifUrl": "https://static.exercisedb.dev/media/EIeI8Vf.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "barbell_bench.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/73/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 平板杠铃卧推 · 视频转制 GIF"
   },
   {
     "id": "incline_dumbbell_press",
     "name": "上斜哑铃卧推",
-    "mediaId": "ns0SIbU",
-    "gifUrl": "https://static.exercisedb.dev/media/ns0SIbU.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "incline_dumbbell_press.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/537/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 上斜凳哑铃卧推 · 视频转制 GIF"
   },
   {
     "id": "dips",
     "name": "双杠臂屈伸",
-    "mediaId": "9WTm7dq",
-    "gifUrl": "https://static.exercisedb.dev/media/9WTm7dq.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "dips.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/194/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 双杠自重臂屈伸 · 视频转制 GIF"
   },
   {
     "id": "cable_fly",
@@ -47,11 +50,12 @@
   {
     "id": "pull_up",
     "name": "引体向上",
-    "mediaId": "lBDjFxJ",
-    "gifUrl": "https://static.exercisedb.dev/media/lBDjFxJ.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "pull_up.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/475/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 正握引体向上 · 视频转制 GIF"
   },
   {
     "id": "barbell_row",
@@ -74,11 +78,12 @@
   {
     "id": "seated_row",
     "name": "坐姿划船",
-    "mediaId": "fUBheHs",
-    "gifUrl": "https://static.exercisedb.dev/media/fUBheHs.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "seated_row.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/512/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 窄握坐姿绳索划船 · 视频转制 GIF"
   },
   {
     "id": "single_arm_row",
@@ -101,11 +106,12 @@
   {
     "id": "leg_press",
     "name": "腿举",
-    "mediaId": "10Z2DXU",
-    "gifUrl": "https://static.exercisedb.dev/media/10Z2DXU.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "leg_press.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/371/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 斜板器械腿举 · 视频转制 GIF"
   },
   {
     "id": "romanian_deadlift",
@@ -137,20 +143,22 @@
   {
     "id": "leg_curl",
     "name": "腿弯举",
-    "mediaId": "17lJ1kr",
-    "gifUrl": "https://static.exercisedb.dev/media/17lJ1kr.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "leg_curl.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/365/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 俯卧器械腿弯举 · 视频转制 GIF"
   },
   {
     "id": "calf_raise",
     "name": "站姿提踵",
-    "mediaId": "ykUOVze",
-    "gifUrl": "https://static.exercisedb.dev/media/ykUOVze.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "calf_raise.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/622/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 器械站姿提踵 · 视频转制 GIF"
   },
   {
     "id": "overhead_press",
@@ -164,38 +172,42 @@
   {
     "id": "lateral_raise",
     "name": "哑铃侧平举",
-    "mediaId": "DsgkuIt",
-    "gifUrl": "https://static.exercisedb.dev/media/DsgkuIt.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "lateral_raise.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/348/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 站姿哑铃侧平举 · 视频转制 GIF"
   },
   {
     "id": "reverse_fly",
     "name": "反向飞鸟",
-    "mediaId": "EAs3xL9",
-    "gifUrl": "https://static.exercisedb.dev/media/EAs3xL9.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "reverse_fly.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/82/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 坐姿俯身哑铃反向飞鸟 · 视频转制 GIF"
   },
   {
     "id": "barbell_curl",
     "name": "杠铃弯举",
-    "mediaId": "25GPyDY",
-    "gifUrl": "https://static.exercisedb.dev/media/25GPyDY.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "barbell_curl.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/91/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 站姿杠铃弯举 · 视频转制 GIF"
   },
   {
     "id": "hammer_curl",
     "name": "锤式弯举",
-    "mediaId": "slDvUAU",
-    "gifUrl": "https://static.exercisedb.dev/media/slDvUAU.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "hammer_curl.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/272/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 哑铃锤式弯举 · 视频转制 GIF"
   },
   {
     "id": "triceps_pushdown",
@@ -209,11 +221,12 @@
   {
     "id": "skull_crusher",
     "name": "仰卧臂屈伸",
-    "mediaId": "h8LFzo9",
-    "gifUrl": "https://static.exercisedb.dev/media/h8LFzo9.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "skull_crusher.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/246/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 曲杆仰卧臂屈伸 · 视频转制 GIF"
   },
   {
     "id": "crunch",
@@ -259,7 +272,7 @@
     "sourceUrl": "https://wger.de/en/exercise/222/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人动作演示"
+    "caption": "真人动作演示 · 视频转制 GIF"
   },
   {
     "id": "plank",
@@ -307,20 +320,22 @@
   {
     "id": "dumbbell_rdl",
     "name": "哑铃罗马尼亚硬拉",
-    "mediaId": "rR0LJzx",
-    "gifUrl": "https://static.exercisedb.dev/media/rR0LJzx.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "dumbbell_rdl.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/507/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 哑铃罗马尼亚硬拉 · 侧面 · 视频转制 GIF"
   },
   {
     "id": "dumbbell_shoulder_press",
     "name": "哑铃肩推",
-    "mediaId": "A6wtbuL",
-    "gifUrl": "https://static.exercisedb.dev/media/A6wtbuL.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "asset": "dumbbell_shoulder_press.gif",
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/567/view/",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "caption": "真人演示 · 坐姿哑铃肩推 · 视频转制 GIF"
   },
   {
     "id": "jumping_jack",

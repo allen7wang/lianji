@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { breathingElapsedMs, breathingPhaseAt, breathingRhythmLabel, newBreathingSession, pauseBreathingSession, resumeBreathingSession, type BreathingProfile } from '@/lib/breathing';
 import { Button, IconButton } from './components';
 import { C } from './theme';
+import { useReducedMotion } from '@/lib/use-reduced-motion';
 
 export type BreathGuideRequest = { profile: BreathingProfile; seconds: number };
 export function BreathingGuideModal({ request, onClose }: { request: BreathGuideRequest | null; onClose: () => void }) {
@@ -19,6 +20,7 @@ export function BreathingGuideModal({ request, onClose }: { request: BreathGuide
 }
 
 export function BreathingGuide({ profile, seconds }: BreathGuideRequest) {
+  const reducedMotion = useReducedMotion();
   const [session, setSession] = useState(newBreathingSession);
   const [clock, setClock] = useState(0);
   const elapsed = Math.min(seconds, breathingElapsedMs(session, clock) / 1000);
@@ -50,7 +52,7 @@ export function BreathingGuide({ profile, seconds }: BreathGuideRequest) {
     <Text style={styles.title}>{profile.name}</Text>
     <Text style={styles.rhythm}>{breathingRhythmLabel(profile)}</Text>
     <View style={styles.animation}>
-      <View accessible={false} style={[styles.circle, { transform: [{ scale: finished ? 0.6 : phase.scale }] }]} />
+      <View accessible={false} style={[styles.circle, { transform: [{ scale: reducedMotion !== false ? 0.8 : finished ? 0.6 : phase.scale }] }]} />
       <View style={styles.cue}><Text style={styles.phase}>{finished ? '引导完成' : running ? phase.label : session.elapsedMs > 0 ? '已暂停' : '准备开始'}</Text>
         <Text style={styles.count}>{finished ? '✓' : running ? phase.secondsRemaining : '—'}</Text></View>
     </View>

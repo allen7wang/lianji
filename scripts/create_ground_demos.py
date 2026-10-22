@@ -42,7 +42,14 @@ def render(name,title,caption):
             shoulder=(190,154 if name=='beast_hold' else 130);hip=(318,158 if name=='beast_hold' else 132)
             knee=(318,216 if name=='beast_hold' else 222)
             limb(d,[(200,shoulder[1]),(195,190),(195,225)],FAR)
-            limb(d,[(328,hip[1]),(328,knee[1]),(383,225)],FAR)
+            if name=='bird_dog':
+                # The near arm reaches with the opposite (far) leg; near leg supports.
+                reach=(1-math.cos(t))/2
+                far_knee=blend((328,220),(389,131),reach)
+                far_foot=blend((388,225),(456,134),reach)
+                limb(d,[(328,hip[1]),far_knee,far_foot],FAR)
+            else:
+                limb(d,[(328,hip[1]),(328,knee[1]),(383,225)],FAR)
             if name=='cat_cow':
                 curve=[]
                 for j in range(21):
@@ -59,8 +66,8 @@ def render(name,title,caption):
                 if name=='bird_dog':
                     reach=(1-math.cos(t))/2
                     elbow=blend((186,179),(132,127),reach);hand=blend((182,225),(74,126),reach)
-                    moving_knee=blend((318,220),(379,131),reach);foot=blend((378,225),(446,134),reach)
-                    limb(d,[shoulder,elbow,hand]);limb(d,[hip,moving_knee,foot])
+                    limb(d,[shoulder,elbow,hand])
+                    limb(d,[hip,knee,(378,225)])
                 else:
                     limb(d,[shoulder,(188,191),(186,225)]);limb(d,[hip,knee,(376,225)])
                     breathe(d,(254,157),t)
@@ -72,8 +79,9 @@ def render(name,title,caption):
                 offset=8 if far else 0;color=FAR if far else GREEN
                 step=math.sin(phase)*16 if name=='crab_walk' else 0
                 lift=max(0,math.cos(phase))*5 if name=='crab_walk' else 0
+                foot_lift=max(0,-math.cos(phase))*5 if name=='crab_walk' else 0
                 hand=(157+travel+step+offset,225-lift)
-                foot=(398+travel-step+offset,225-lift)
+                foot=(398+travel-step+offset,225-foot_lift)
                 limb(d,[(sh[0]+offset,sh[1]),(183+travel+step/2+offset,182),hand],color)
                 limb(d,[(hip[0]+offset,hip[1]),(363+travel-step/2+offset,174),foot],color)
             limb(d,[sh,hip],INK,17);limb(d,[sh,(209+travel,124)],INK,10);head(d,(209+travel,107))
@@ -117,10 +125,23 @@ DEMOS=[
  ('side_plank','侧平板支撑 · 原创简图','静态保持 / 肘在肩下 / 换侧练习'),
  ('lateral_lunge','侧弓步 · 原创简图','平稳侧移 / 脚掌踩稳 / 每侧记录'),
 ]
-ROOT.mkdir(parents=True,exist_ok=True)
-sheet=Image.new('RGB',(768,len(DEMOS)*160),'white')
-for row,(name,title,caption) in enumerate(DEMOS):
- for col,frame in enumerate(render(name,title,caption)):
-  sheet.paste(frame.resize((256,144)),(col*256,row*160))
-sheet.save('/tmp/lianji-110-original-demos.png')
-print('Created',len(DEMOS),'original movement diagrams')
+def main():
+    import argparse
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--only',choices=[demo[0] for demo in DEMOS])
+    parser.add_argument('--preview',type=Path,help='Optional contact sheet output path')
+    args=parser.parse_args()
+    demos=[demo for demo in DEMOS if not args.only or demo[0]==args.only]
+    ROOT.mkdir(parents=True,exist_ok=True)
+    sheet=Image.new('RGB',(768,len(demos)*160),'white') if args.preview else None
+    for row,(name,title,caption) in enumerate(demos):
+        for col,frame in enumerate(render(name,title,caption)):
+            if sheet is not None:sheet.paste(frame.resize((256,144)),(col*256,row*160))
+    if sheet is not None:
+        args.preview.parent.mkdir(parents=True,exist_ok=True)
+        sheet.save(args.preview)
+    print('Created',len(demos),'original movement diagrams')
+
+
+if __name__=='__main__':
+    main()
