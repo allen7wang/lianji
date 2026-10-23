@@ -8,11 +8,16 @@
 
 /* Begin PBXBuildFile section */
 		017C34D894EF08F81D0150F7 /* ExerciseDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F8EBC3FB208CEAD7E562CF /* ExerciseDemo.swift */; };
+		03ECB50B2795D1073C633656 /* single_arm_row.gif in Resources */ = {isa = PBXBuildFile; fileRef = 04ADAA270425E0E78534C91E /* single_arm_row.gif */; };
+		04F7B319DE69E0B4FE77A7E5 /* original-demos.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DA9478017DED8B389ABA882 /* original-demos.json */; };
 		056109F1131B91A93BEDCC3A /* pull_up.gif in Resources */ = {isa = PBXBuildFile; fileRef = 7E8DCD52E59814E4D1824036 /* pull_up.gif */; };
 		08F6E19E3507C83CD8DA26B0 /* breathing-profiles.json in Resources */ = {isa = PBXBuildFile; fileRef = 037A331FB6BC72B0C8DDCF46 /* breathing-profiles.json */; };
+		092B44440A33A1BAE5BFA0F5 /* leg_extension.gif in Resources */ = {isa = PBXBuildFile; fileRef = DAF3424BDD1540C9D1949420 /* leg_extension.gif */; };
 		0B49E860F74E9A61C02EDFF6 /* ape_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3CCDEE40F79E7692D2B0FED0 /* ape_hold.gif */; };
 		10B5BE5946903B0FE5C34011 /* media-sources.json in Resources */ = {isa = PBXBuildFile; fileRef = 1E213AA747191D45C4D32540 /* media-sources.json */; };
+		10DE128198291E28E54AB222 /* kettlebell_swing.gif in Resources */ = {isa = PBXBuildFile; fileRef = F96FA8E14B85B3821DC9DE0D /* kettlebell_swing.gif */; };
 		11DE7A70F1C711D1E3D70DC1 /* side_plank.gif in Resources */ = {isa = PBXBuildFile; fileRef = A71DC399637DEC1B6DF6B207 /* side_plank.gif */; };
+		1272CECDE63E330D5950EE3D /* lat_pulldown.gif in Resources */ = {isa = PBXBuildFile; fileRef = 30FD6C40B1F3A6CE480E5045 /* lat_pulldown.gif */; };
 		15165B2143EBCE6FEAF52D5E /* barbell_curl.gif in Resources */ = {isa = PBXBuildFile; fileRef = B12B3BFEDB35A299BFEBCCB6 /* barbell_curl.gif */; };
 		1A72F1324A0C83637D17A411 /* exercise-guides.json in Resources */ = {isa = PBXBuildFile; fileRef = 1ED08DCC8A5F494F5FA0F120 /* exercise-guides.json */; };
 		1C1F4CCFFAF09C0955CC8EC7 /* crab_walk.gif in Resources */ = {isa = PBXBuildFile; fileRef = 0EA1506748F77E8725B6084F /* crab_walk.gif */; };
@@ -22,30 +27,52 @@
 		241646FF9D1A7629EF0551C3 /* jumping_jack.gif in Resources */ = {isa = PBXBuildFile; fileRef = 596346EBA87DC0A1D930ED8A /* jumping_jack.gif */; };
 		2642EA0D26F08E09522D860E /* leg_curl.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3A7C789860C2F41BD7345530 /* leg_curl.gif */; };
 		28A1CA4219248C990421634D /* LianjiMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0E45B890F14444818175D0 /* LianjiMacApp.swift */; };
+		29E441C5F60813FEDFE9270C /* burpee.gif in Resources */ = {isa = PBXBuildFile; fileRef = 4D845994850EAA6803344059 /* burpee.gif */; };
+		2B8B7E46E9D5D780E9E5CC42 /* bodyweight_lunge.gif in Resources */ = {isa = PBXBuildFile; fileRef = 634DBF2D9B2E8E85F00B4118 /* bodyweight_lunge.gif */; };
 		2C680BE104A451C3CD0DDE3E /* beast_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 89630D6A29FFE3F51D50524F /* beast_hold.gif */; };
 		305AA8560974C994778BDE3E /* exercise-guides.json in Resources */ = {isa = PBXBuildFile; fileRef = 1ED08DCC8A5F494F5FA0F120 /* exercise-guides.json */; };
 		32FAD4B0877E6396704F244F /* extra-exercises.json in Resources */ = {isa = PBXBuildFile; fileRef = 935B1BDD641EB16407948FE4 /* extra-exercises.json */; };
+		3564A50BDBEA58589B536EF6 /* glute_bridge.gif in Resources */ = {isa = PBXBuildFile; fileRef = AA7C9BEB7C0A0DA241115387 /* glute_bridge.gif */; };
 		35B938640E297CE31FB649FD /* skull_crusher.gif in Resources */ = {isa = PBXBuildFile; fileRef = F6D32C5250ED4ED14CC3B00E /* skull_crusher.gif */; };
 		377FB02013B034D44C1A046A /* BreathingGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D144AA910D30A000FA90F41 /* BreathingGuide.swift */; };
+		39499ACD0E0B8A5C9E3AA294 /* bulgarian_split_squat.gif in Resources */ = {isa = PBXBuildFile; fileRef = F22D759DEEFED7FB19582A11 /* bulgarian_split_squat.gif */; };
 		3974DFC02809FD8C6B27DED9 /* ExerciseDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F8EBC3FB208CEAD7E562CF /* ExerciseDemo.swift */; };
 		3AA90D432C788FE7E0C39409 /* training-programs.json in Resources */ = {isa = PBXBuildFile; fileRef = 11612D6026F5B76C63E66DE1 /* training-programs.json */; };
+		3DE2942BB41EE80D31A7593B /* deadlift.gif in Resources */ = {isa = PBXBuildFile; fileRef = 722F536546B49D7452BACBB1 /* deadlift.gif */; };
 		3FCB5205C7E3EE619936D26C /* plank.gif in Resources */ = {isa = PBXBuildFile; fileRef = 64607564DA60D6BE8097A832 /* plank.gif */; };
 		42320BDFBD2006323448ED70 /* BreathingGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D144AA910D30A000FA90F41 /* BreathingGuide.swift */; };
 		438AE7DAE5F9E644DC9D63FA /* incline_dumbbell_press.gif in Resources */ = {isa = PBXBuildFile; fileRef = CD9FA528C8C25094F8DC6B79 /* incline_dumbbell_press.gif */; };
+		45BEA4CD5E7C7591E50CB426 /* bear_crawl.gif in Resources */ = {isa = PBXBuildFile; fileRef = B77EAF8F06BA6BBADD33F5FE /* bear_crawl.gif */; };
 		461A82F4227BA1DDA1811454 /* lateral_lunge.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5A19C945F6016F0E571BEA2E /* lateral_lunge.gif */; };
 		48599EFD0FF72AAB997EF8C1 /* LianjiWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6794DD7DF7C6EF5B78D87ECF /* LianjiWatchApp.swift */; };
+		4C434A346C95AB1BEA4B5108 /* single_arm_row.gif in Resources */ = {isa = PBXBuildFile; fileRef = 04ADAA270425E0E78534C91E /* single_arm_row.gif */; };
 		4F79B15259D98C44AA2B0B3C /* breathing-profiles.json in Resources */ = {isa = PBXBuildFile; fileRef = 037A331FB6BC72B0C8DDCF46 /* breathing-profiles.json */; };
+		4FAF5859859BD5283489F6BF /* barbell_squat.gif in Resources */ = {isa = PBXBuildFile; fileRef = 2549EB3E45B984E4AD8CA7CE /* barbell_squat.gif */; };
 		50038BA0764981120E535C5D /* crab_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 94F272396F1D7160AB43E5CD /* crab_hold.gif */; };
 		5232F489B8A86D851F5D367F /* dumbbell_shoulder_press.gif in Resources */ = {isa = PBXBuildFile; fileRef = 462E27E10C83557D51409E13 /* dumbbell_shoulder_press.gif */; };
+		5242640BD5AA133E513B48D9 /* kettlebell_swing.gif in Resources */ = {isa = PBXBuildFile; fileRef = F96FA8E14B85B3821DC9DE0D /* kettlebell_swing.gif */; };
+		5336D48FB64FC24149454735 /* barbell_squat.gif in Resources */ = {isa = PBXBuildFile; fileRef = 2549EB3E45B984E4AD8CA7CE /* barbell_squat.gif */; };
 		538CC45551FA3E73244FD06C /* jumping_jack.gif in Resources */ = {isa = PBXBuildFile; fileRef = 596346EBA87DC0A1D930ED8A /* jumping_jack.gif */; };
+		5411CC53A1D5F9D361D3D2CD /* cable_fly.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5A6F30C057283301BA5411A4 /* cable_fly.gif */; };
+		587722E70D046719651D9CC5 /* lat_pulldown.gif in Resources */ = {isa = PBXBuildFile; fileRef = 30FD6C40B1F3A6CE480E5045 /* lat_pulldown.gif */; };
 		589380E8534FCC2C8037A4B0 /* lateral_raise.gif in Resources */ = {isa = PBXBuildFile; fileRef = 6F7F579601897A28DF215A83 /* lateral_raise.gif */; };
+		5A77A7A68B1253276E2F5248 /* mountain_climber.gif in Resources */ = {isa = PBXBuildFile; fileRef = 79EE20FCB8048198D4D87DC3 /* mountain_climber.gif */; };
+		5AC138562054458F7FD4915D /* overhead_press.gif in Resources */ = {isa = PBXBuildFile; fileRef = 322765885DF4DDEA05A86B2D /* overhead_press.gif */; };
+		60C7D68103EE23B7B19C9DA8 /* triceps_pushdown.gif in Resources */ = {isa = PBXBuildFile; fileRef = 03095F3431037FADE95BCE5C /* triceps_pushdown.gif */; };
+		62364D4F418520AB687657D2 /* barbell_row.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5182D5DB509271C8787BB739 /* barbell_row.gif */; };
 		6267D68CF8208D2EF5321B89 /* hammer_curl.gif in Resources */ = {isa = PBXBuildFile; fileRef = 79DEC031264D52609A33D728 /* hammer_curl.gif */; };
+		69F1957796A61377C8E6CCB8 /* crunch.gif in Resources */ = {isa = PBXBuildFile; fileRef = 96B8DC87884CFA745EE8C8AF /* crunch.gif */; };
 		6CDDCFC41960E2D338392346 /* ape_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3CCDEE40F79E7692D2B0FED0 /* ape_hold.gif */; };
 		7156568FB8E33F00D02A4254 /* TrainingPrograms.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD50B4EDA4214FFFC7890005 /* TrainingPrograms.swift */; };
 		71FB8D75118CED66D188559C /* incline_dumbbell_press.gif in Resources */ = {isa = PBXBuildFile; fileRef = CD9FA528C8C25094F8DC6B79 /* incline_dumbbell_press.gif */; };
+		7258DB9C35F4E3705EC601DD /* dumbbell_step_up.gif in Resources */ = {isa = PBXBuildFile; fileRef = 43801193CCDEA8AFAB1CDD8E /* dumbbell_step_up.gif */; };
+		738381151D1154CFDEE4673A /* original-demos.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DA9478017DED8B389ABA882 /* original-demos.json */; };
+		73E757747458A69966AFA0E9 /* deadlift.gif in Resources */ = {isa = PBXBuildFile; fileRef = 722F536546B49D7452BACBB1 /* deadlift.gif */; };
+		78259AEF4B310A302ADA8F42 /* bear_crawl.gif in Resources */ = {isa = PBXBuildFile; fileRef = B77EAF8F06BA6BBADD33F5FE /* bear_crawl.gif */; };
 		7D570E1CBD2C75F00F5F2BC0 /* ExerciseGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB085FD94011B679FA718FC /* ExerciseGuide.swift */; };
 		7E8D652CF5F70D52CE6A79FC /* calf_raise.gif in Resources */ = {isa = PBXBuildFile; fileRef = DDAC8F15FBB099211B11B240 /* calf_raise.gif */; };
 		82F0560BAC117C0658118400 /* face_pull.gif in Resources */ = {isa = PBXBuildFile; fileRef = 92D68B8015DBFCFD356C80DF /* face_pull.gif */; };
+		839D1E01F037823357A60997 /* dead_bug.gif in Resources */ = {isa = PBXBuildFile; fileRef = C4CF20A21168FB96AC672E26 /* dead_bug.gif */; };
 		84E109622C8769DE598109E8 /* crab_walk.gif in Resources */ = {isa = PBXBuildFile; fileRef = 0EA1506748F77E8725B6084F /* crab_walk.gif */; };
 		862AF505B0C557B8BDB90BD5 /* face_pull.gif in Resources */ = {isa = PBXBuildFile; fileRef = 92D68B8015DBFCFD356C80DF /* face_pull.gif */; };
 		863269D1AC99BC0F51F737CD /* seated_row.gif in Resources */ = {isa = PBXBuildFile; fileRef = D93D3B9271E7357C8EE98D13 /* seated_row.gif */; };
@@ -53,6 +80,7 @@
 		879DB03802562CDD02F4A0EC /* WatchViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 279B6664F737DFAFB6DB856C /* WatchViews.swift */; };
 		87E6CFEDDF141D1A0A29ABD2 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 94B8D678678EDAAA5AD64EA6 /* README.md */; };
 		8C9057FB977E64A83C096596 /* bird_dog.gif in Resources */ = {isa = PBXBuildFile; fileRef = 9ADBE8BC0B2F4AA0E981B189 /* bird_dog.gif */; };
+		8D2DB6FA63D2614B9DCEEAAA /* triceps_pushdown.gif in Resources */ = {isa = PBXBuildFile; fileRef = 03095F3431037FADE95BCE5C /* triceps_pushdown.gif */; };
 		8D75F1326F51DFDA8F9B49B8 /* barbell_curl.gif in Resources */ = {isa = PBXBuildFile; fileRef = B12B3BFEDB35A299BFEBCCB6 /* barbell_curl.gif */; };
 		8E20829A843E5763AB42505D /* MacViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502A6D58B5A0B27BA21D34C6 /* MacViews.swift */; };
 		93A9EA1325755B4C6E9E04B0 /* leg_press.gif in Resources */ = {isa = PBXBuildFile; fileRef = 7B737A8A6B4C5B86748D8E4D /* leg_press.gif */; };
@@ -60,14 +88,25 @@
 		A1710BCCA4CB26055BA9E030 /* Breathing.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2CD8D5B45C9BB8116681A5 /* Breathing.swift */; };
 		A39A897B854202C829CEBDD3 /* cat_cow.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3AC23BE8F59825529D7CA60A /* cat_cow.gif */; };
 		A3F01712348D887307EDAE89 /* bird_dog.gif in Resources */ = {isa = PBXBuildFile; fileRef = 9ADBE8BC0B2F4AA0E981B189 /* bird_dog.gif */; };
+		A423FD10B065BCB26C9B3101 /* romanian_deadlift.gif in Resources */ = {isa = PBXBuildFile; fileRef = A97F569DED9A07D8D93E97E5 /* romanian_deadlift.gif */; };
+		A537BFF7C3408148C001F719 /* bulgarian_split_squat.gif in Resources */ = {isa = PBXBuildFile; fileRef = F22D759DEEFED7FB19582A11 /* bulgarian_split_squat.gif */; };
+		A6FEA73133E542B9283DAD31 /* glute_bridge.gif in Resources */ = {isa = PBXBuildFile; fileRef = AA7C9BEB7C0A0DA241115387 /* glute_bridge.gif */; };
 		A8A825472882BD7391A1122F /* TrainingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352C1F134477A0F087710F1 /* TrainingStore.swift */; };
+		A932A03913948B52A14EE2EB /* mountain_climber.gif in Resources */ = {isa = PBXBuildFile; fileRef = 79EE20FCB8048198D4D87DC3 /* mountain_climber.gif */; };
+		AE0285A4A1DA8C0BEFA82ECF /* dumbbell_step_up.gif in Resources */ = {isa = PBXBuildFile; fileRef = 43801193CCDEA8AFAB1CDD8E /* dumbbell_step_up.gif */; };
 		B0EDE424E48EB5CC0248EADA /* plank.gif in Resources */ = {isa = PBXBuildFile; fileRef = 64607564DA60D6BE8097A832 /* plank.gif */; };
 		B290A54D6A296A47DC73DB5D /* reverse_fly.gif in Resources */ = {isa = PBXBuildFile; fileRef = 480A570A9D24B1FFB2598736 /* reverse_fly.gif */; };
+		B30805B9EC95CC80E8E6BFC9 /* push_up.gif in Resources */ = {isa = PBXBuildFile; fileRef = 4AEAE1BF4C9D9C562BAB45E1 /* push_up.gif */; };
+		B9EEE208A0FD2AE02B758516 /* single_leg_rdl.gif in Resources */ = {isa = PBXBuildFile; fileRef = 0DD6DE6C6CC223161C9DE3C2 /* single_leg_rdl.gif */; };
+		BE517D47484E32EA653D38A9 /* crunch.gif in Resources */ = {isa = PBXBuildFile; fileRef = 96B8DC87884CFA745EE8C8AF /* crunch.gif */; };
+		BFE5394B4F9F8A90898A992A /* romanian_deadlift.gif in Resources */ = {isa = PBXBuildFile; fileRef = A97F569DED9A07D8D93E97E5 /* romanian_deadlift.gif */; };
+		C1F81E97023242BBD760CEAF /* push_up.gif in Resources */ = {isa = PBXBuildFile; fileRef = 4AEAE1BF4C9D9C562BAB45E1 /* push_up.gif */; };
 		C3D39336143B87E78D1AD3A5 /* hammer_curl.gif in Resources */ = {isa = PBXBuildFile; fileRef = 79DEC031264D52609A33D728 /* hammer_curl.gif */; };
 		C45392955FFF523F54C6869E /* Breathing.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2CD8D5B45C9BB8116681A5 /* Breathing.swift */; };
 		C6F636AFA4847DA6841C4B86 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ADC71A24848B83E7819EBAA /* Models.swift */; };
 		C7B9B8A5B2C725400C56E697 /* TrainingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352C1F134477A0F087710F1 /* TrainingStore.swift */; };
 		C9566E4ED9AFE6438D4C89FF /* dips.gif in Resources */ = {isa = PBXBuildFile; fileRef = D24DCC9BD1FAEF0229A4B1A2 /* dips.gif */; };
+		CB159FB6CF188D928B36CA22 /* bodyweight_squat.gif in Resources */ = {isa = PBXBuildFile; fileRef = D1C280A04BCDFE43F947ABBD /* bodyweight_squat.gif */; };
 		CF534995D7646E602183F96B /* lateral_raise.gif in Resources */ = {isa = PBXBuildFile; fileRef = 6F7F579601897A28DF215A83 /* lateral_raise.gif */; };
 		D3559ADB26BD15987A75B22E /* dumbbell_shoulder_press.gif in Resources */ = {isa = PBXBuildFile; fileRef = 462E27E10C83557D51409E13 /* dumbbell_shoulder_press.gif */; };
 		D395FE80936B36273E43D668 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ADC71A24848B83E7819EBAA /* Models.swift */; };
@@ -76,45 +115,75 @@
 		D8639E6FA808D3E579605F82 /* leg_curl.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3A7C789860C2F41BD7345530 /* leg_curl.gif */; };
 		D9A12FE131907256346D1DDE /* dumbbell_rdl.gif in Resources */ = {isa = PBXBuildFile; fileRef = C3144ABD456C4F1F34BAAD42 /* dumbbell_rdl.gif */; };
 		DD493E30DFE3E86DD8868F35 /* TrainingPrograms.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD50B4EDA4214FFFC7890005 /* TrainingPrograms.swift */; };
+		DDF0F00DD1511F418D6B6169 /* hanging_leg_raise.gif in Resources */ = {isa = PBXBuildFile; fileRef = 53A9C015B3A7E35412821739 /* hanging_leg_raise.gif */; };
+		E2067E778BB9349A46C00569 /* burpee.gif in Resources */ = {isa = PBXBuildFile; fileRef = 4D845994850EAA6803344059 /* burpee.gif */; };
 		E22D2D6BE846979C88F827BE /* leg_press.gif in Resources */ = {isa = PBXBuildFile; fileRef = 7B737A8A6B4C5B86748D8E4D /* leg_press.gif */; };
+		E282482309F6E18B2503FCA0 /* cable_fly.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5A6F30C057283301BA5411A4 /* cable_fly.gif */; };
+		E2D29779D6D16FA66471FE8C /* goblet_squat.gif in Resources */ = {isa = PBXBuildFile; fileRef = 0A50AC36139F0CC4870A832E /* goblet_squat.gif */; };
+		E400339E33090DEEA84BBC04 /* hanging_leg_raise.gif in Resources */ = {isa = PBXBuildFile; fileRef = 53A9C015B3A7E35412821739 /* hanging_leg_raise.gif */; };
 		E6BB39D73988E5149F20396E /* pull_up.gif in Resources */ = {isa = PBXBuildFile; fileRef = 7E8DCD52E59814E4D1824036 /* pull_up.gif */; };
+		EB9B2B9D97F4940937A6E6F7 /* bodyweight_squat.gif in Resources */ = {isa = PBXBuildFile; fileRef = D1C280A04BCDFE43F947ABBD /* bodyweight_squat.gif */; };
 		EBA95AB0937E4A707B6EA689 /* extra-exercises.json in Resources */ = {isa = PBXBuildFile; fileRef = 935B1BDD641EB16407948FE4 /* extra-exercises.json */; };
 		ED593677E35A9934FE578AF5 /* exercise-demos.json in Resources */ = {isa = PBXBuildFile; fileRef = 856BBA4F261D927E5C73A1DD /* exercise-demos.json */; };
 		EE010584B3C4842777DE44BA /* training-programs.json in Resources */ = {isa = PBXBuildFile; fileRef = 11612D6026F5B76C63E66DE1 /* training-programs.json */; };
+		EF4BBC1D69D5488E0E0F7E88 /* dead_bug.gif in Resources */ = {isa = PBXBuildFile; fileRef = C4CF20A21168FB96AC672E26 /* dead_bug.gif */; };
+		EF727E78C4AD13F00D30E341 /* goblet_squat.gif in Resources */ = {isa = PBXBuildFile; fileRef = 0A50AC36139F0CC4870A832E /* goblet_squat.gif */; };
 		F0C4B36EA9589B8FF4EEDCCA /* dips.gif in Resources */ = {isa = PBXBuildFile; fileRef = D24DCC9BD1FAEF0229A4B1A2 /* dips.gif */; };
 		F1F82FFEB77627B95B72CCEE /* barbell_bench.gif in Resources */ = {isa = PBXBuildFile; fileRef = CA8C8110BCBDE70C2B59D2F5 /* barbell_bench.gif */; };
 		F283B107E8CEDABFAD877671 /* reverse_fly.gif in Resources */ = {isa = PBXBuildFile; fileRef = 480A570A9D24B1FFB2598736 /* reverse_fly.gif */; };
+		F446548C43CB32A1C6C294E0 /* bodyweight_lunge.gif in Resources */ = {isa = PBXBuildFile; fileRef = 634DBF2D9B2E8E85F00B4118 /* bodyweight_lunge.gif */; };
 		F4A3472F62A8ADE0538837E8 /* beast_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 89630D6A29FFE3F51D50524F /* beast_hold.gif */; };
 		F5241B3700BA0C276730F429 /* media-sources.json in Resources */ = {isa = PBXBuildFile; fileRef = 1E213AA747191D45C4D32540 /* media-sources.json */; };
+		F642331C9E23826708644F77 /* overhead_press.gif in Resources */ = {isa = PBXBuildFile; fileRef = 322765885DF4DDEA05A86B2D /* overhead_press.gif */; };
+		F75DABB297CC6D055E47B3BB /* single_leg_rdl.gif in Resources */ = {isa = PBXBuildFile; fileRef = 0DD6DE6C6CC223161C9DE3C2 /* single_leg_rdl.gif */; };
 		F79A92B86EA7FD4015F90550 /* cat_cow.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3AC23BE8F59825529D7CA60A /* cat_cow.gif */; };
+		F7CF2930887F5D929BE1DEA2 /* barbell_row.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5182D5DB509271C8787BB739 /* barbell_row.gif */; };
 		F866216742AC0D6361FC9798 /* crab_hold.gif in Resources */ = {isa = PBXBuildFile; fileRef = 94F272396F1D7160AB43E5CD /* crab_hold.gif */; };
+		F8D9A9ECA94BFD1B2EB1BD1C /* leg_extension.gif in Resources */ = {isa = PBXBuildFile; fileRef = DAF3424BDD1540C9D1949420 /* leg_extension.gif */; };
 		F8FDBF0E0DAFF68189E61963 /* ExerciseGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB085FD94011B679FA718FC /* ExerciseGuide.swift */; };
 		FB10BBE0BCD6BF804329B1EB /* exercise-demos.json in Resources */ = {isa = PBXBuildFile; fileRef = 856BBA4F261D927E5C73A1DD /* exercise-demos.json */; };
 		FB12AE743590081D5137DD7E /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 94B8D678678EDAAA5AD64EA6 /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		03095F3431037FADE95BCE5C /* triceps_pushdown.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = triceps_pushdown.gif; sourceTree = "<group>"; };
 		037A331FB6BC72B0C8DDCF46 /* breathing-profiles.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "breathing-profiles.json"; sourceTree = "<group>"; };
+		04ADAA270425E0E78534C91E /* single_arm_row.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = single_arm_row.gif; sourceTree = "<group>"; };
+		0A50AC36139F0CC4870A832E /* goblet_squat.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = goblet_squat.gif; sourceTree = "<group>"; };
+		0DD6DE6C6CC223161C9DE3C2 /* single_leg_rdl.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = single_leg_rdl.gif; sourceTree = "<group>"; };
 		0EA1506748F77E8725B6084F /* crab_walk.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = crab_walk.gif; sourceTree = "<group>"; };
 		0FB085FD94011B679FA718FC /* ExerciseGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseGuide.swift; sourceTree = "<group>"; };
 		11612D6026F5B76C63E66DE1 /* training-programs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "training-programs.json"; sourceTree = "<group>"; };
+		1DA9478017DED8B389ABA882 /* original-demos.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "original-demos.json"; sourceTree = "<group>"; };
 		1E213AA747191D45C4D32540 /* media-sources.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "media-sources.json"; sourceTree = "<group>"; };
 		1ED08DCC8A5F494F5FA0F120 /* exercise-guides.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "exercise-guides.json"; sourceTree = "<group>"; };
+		2549EB3E45B984E4AD8CA7CE /* barbell_squat.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = barbell_squat.gif; sourceTree = "<group>"; };
 		279B6664F737DFAFB6DB856C /* WatchViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchViews.swift; sourceTree = "<group>"; };
 		2E595F5949AD6D56B96A9E08 /* LianjiWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LianjiWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		30FD6C40B1F3A6CE480E5045 /* lat_pulldown.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = lat_pulldown.gif; sourceTree = "<group>"; };
+		322765885DF4DDEA05A86B2D /* overhead_press.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = overhead_press.gif; sourceTree = "<group>"; };
 		3A7C789860C2F41BD7345530 /* leg_curl.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = leg_curl.gif; sourceTree = "<group>"; };
 		3AC23BE8F59825529D7CA60A /* cat_cow.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = cat_cow.gif; sourceTree = "<group>"; };
 		3ADC71A24848B83E7819EBAA /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		3CCDEE40F79E7692D2B0FED0 /* ape_hold.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = ape_hold.gif; sourceTree = "<group>"; };
+		43801193CCDEA8AFAB1CDD8E /* dumbbell_step_up.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = dumbbell_step_up.gif; sourceTree = "<group>"; };
 		462E27E10C83557D51409E13 /* dumbbell_shoulder_press.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = dumbbell_shoulder_press.gif; sourceTree = "<group>"; };
 		480A570A9D24B1FFB2598736 /* reverse_fly.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = reverse_fly.gif; sourceTree = "<group>"; };
+		4AEAE1BF4C9D9C562BAB45E1 /* push_up.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = push_up.gif; sourceTree = "<group>"; };
+		4D845994850EAA6803344059 /* burpee.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = burpee.gif; sourceTree = "<group>"; };
 		502A6D58B5A0B27BA21D34C6 /* MacViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacViews.swift; sourceTree = "<group>"; };
+		5182D5DB509271C8787BB739 /* barbell_row.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = barbell_row.gif; sourceTree = "<group>"; };
+		53A9C015B3A7E35412821739 /* hanging_leg_raise.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = hanging_leg_raise.gif; sourceTree = "<group>"; };
 		596346EBA87DC0A1D930ED8A /* jumping_jack.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = jumping_jack.gif; sourceTree = "<group>"; };
 		5A19C945F6016F0E571BEA2E /* lateral_lunge.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = lateral_lunge.gif; sourceTree = "<group>"; };
+		5A6F30C057283301BA5411A4 /* cable_fly.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = cable_fly.gif; sourceTree = "<group>"; };
+		634DBF2D9B2E8E85F00B4118 /* bodyweight_lunge.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = bodyweight_lunge.gif; sourceTree = "<group>"; };
 		64607564DA60D6BE8097A832 /* plank.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = plank.gif; sourceTree = "<group>"; };
 		6794DD7DF7C6EF5B78D87ECF /* LianjiWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LianjiWatchApp.swift; sourceTree = "<group>"; };
 		6F7F579601897A28DF215A83 /* lateral_raise.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = lateral_raise.gif; sourceTree = "<group>"; };
+		722F536546B49D7452BACBB1 /* deadlift.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = deadlift.gif; sourceTree = "<group>"; };
 		79DEC031264D52609A33D728 /* hammer_curl.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = hammer_curl.gif; sourceTree = "<group>"; };
+		79EE20FCB8048198D4D87DC3 /* mountain_climber.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = mountain_climber.gif; sourceTree = "<group>"; };
 		7B737A8A6B4C5B86748D8E4D /* leg_press.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = leg_press.gif; sourceTree = "<group>"; };
 		7E8DCD52E59814E4D1824036 /* pull_up.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = pull_up.gif; sourceTree = "<group>"; };
 		856BBA4F261D927E5C73A1DD /* exercise-demos.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "exercise-demos.json"; sourceTree = "<group>"; };
@@ -124,22 +193,31 @@
 		935B1BDD641EB16407948FE4 /* extra-exercises.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "extra-exercises.json"; sourceTree = "<group>"; };
 		94B8D678678EDAAA5AD64EA6 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		94F272396F1D7160AB43E5CD /* crab_hold.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = crab_hold.gif; sourceTree = "<group>"; };
+		96B8DC87884CFA745EE8C8AF /* crunch.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = crunch.gif; sourceTree = "<group>"; };
 		9ADBE8BC0B2F4AA0E981B189 /* bird_dog.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = bird_dog.gif; sourceTree = "<group>"; };
 		9D144AA910D30A000FA90F41 /* BreathingGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreathingGuide.swift; sourceTree = "<group>"; };
 		9E0E45B890F14444818175D0 /* LianjiMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LianjiMacApp.swift; sourceTree = "<group>"; };
 		A71DC399637DEC1B6DF6B207 /* side_plank.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = side_plank.gif; sourceTree = "<group>"; };
+		A97F569DED9A07D8D93E97E5 /* romanian_deadlift.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = romanian_deadlift.gif; sourceTree = "<group>"; };
+		AA7C9BEB7C0A0DA241115387 /* glute_bridge.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = glute_bridge.gif; sourceTree = "<group>"; };
 		B12B3BFEDB35A299BFEBCCB6 /* barbell_curl.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = barbell_curl.gif; sourceTree = "<group>"; };
+		B77EAF8F06BA6BBADD33F5FE /* bear_crawl.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = bear_crawl.gif; sourceTree = "<group>"; };
 		BD50B4EDA4214FFFC7890005 /* TrainingPrograms.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPrograms.swift; sourceTree = "<group>"; };
 		C3144ABD456C4F1F34BAAD42 /* dumbbell_rdl.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = dumbbell_rdl.gif; sourceTree = "<group>"; };
+		C4CF20A21168FB96AC672E26 /* dead_bug.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = dead_bug.gif; sourceTree = "<group>"; };
 		CA8C8110BCBDE70C2B59D2F5 /* barbell_bench.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = barbell_bench.gif; sourceTree = "<group>"; };
 		CD9FA528C8C25094F8DC6B79 /* incline_dumbbell_press.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = incline_dumbbell_press.gif; sourceTree = "<group>"; };
+		D1C280A04BCDFE43F947ABBD /* bodyweight_squat.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = bodyweight_squat.gif; sourceTree = "<group>"; };
 		D24DCC9BD1FAEF0229A4B1A2 /* dips.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = dips.gif; sourceTree = "<group>"; };
 		D352C1F134477A0F087710F1 /* TrainingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingStore.swift; sourceTree = "<group>"; };
 		D93D3B9271E7357C8EE98D13 /* seated_row.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = seated_row.gif; sourceTree = "<group>"; };
+		DAF3424BDD1540C9D1949420 /* leg_extension.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = leg_extension.gif; sourceTree = "<group>"; };
 		DDAC8F15FBB099211B11B240 /* calf_raise.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = calf_raise.gif; sourceTree = "<group>"; };
 		E9E75F6DB8051B73D4194999 /* LianjiMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LianjiMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC2CD8D5B45C9BB8116681A5 /* Breathing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Breathing.swift; sourceTree = "<group>"; };
+		F22D759DEEFED7FB19582A11 /* bulgarian_split_squat.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = bulgarian_split_squat.gif; sourceTree = "<group>"; };
 		F6D32C5250ED4ED14CC3B00E /* skull_crusher.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = skull_crusher.gif; sourceTree = "<group>"; };
+		F96FA8E14B85B3821DC9DE0D /* kettlebell_swing.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = kettlebell_swing.gif; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -176,35 +254,61 @@
 				3CCDEE40F79E7692D2B0FED0 /* ape_hold.gif */,
 				CA8C8110BCBDE70C2B59D2F5 /* barbell_bench.gif */,
 				B12B3BFEDB35A299BFEBCCB6 /* barbell_curl.gif */,
+				5182D5DB509271C8787BB739 /* barbell_row.gif */,
+				2549EB3E45B984E4AD8CA7CE /* barbell_squat.gif */,
+				B77EAF8F06BA6BBADD33F5FE /* bear_crawl.gif */,
 				89630D6A29FFE3F51D50524F /* beast_hold.gif */,
 				9ADBE8BC0B2F4AA0E981B189 /* bird_dog.gif */,
+				634DBF2D9B2E8E85F00B4118 /* bodyweight_lunge.gif */,
+				D1C280A04BCDFE43F947ABBD /* bodyweight_squat.gif */,
 				037A331FB6BC72B0C8DDCF46 /* breathing-profiles.json */,
+				F22D759DEEFED7FB19582A11 /* bulgarian_split_squat.gif */,
+				4D845994850EAA6803344059 /* burpee.gif */,
+				5A6F30C057283301BA5411A4 /* cable_fly.gif */,
 				DDAC8F15FBB099211B11B240 /* calf_raise.gif */,
 				3AC23BE8F59825529D7CA60A /* cat_cow.gif */,
 				94F272396F1D7160AB43E5CD /* crab_hold.gif */,
 				0EA1506748F77E8725B6084F /* crab_walk.gif */,
+				96B8DC87884CFA745EE8C8AF /* crunch.gif */,
+				C4CF20A21168FB96AC672E26 /* dead_bug.gif */,
+				722F536546B49D7452BACBB1 /* deadlift.gif */,
 				D24DCC9BD1FAEF0229A4B1A2 /* dips.gif */,
 				C3144ABD456C4F1F34BAAD42 /* dumbbell_rdl.gif */,
 				462E27E10C83557D51409E13 /* dumbbell_shoulder_press.gif */,
+				43801193CCDEA8AFAB1CDD8E /* dumbbell_step_up.gif */,
 				856BBA4F261D927E5C73A1DD /* exercise-demos.json */,
 				1ED08DCC8A5F494F5FA0F120 /* exercise-guides.json */,
 				935B1BDD641EB16407948FE4 /* extra-exercises.json */,
 				92D68B8015DBFCFD356C80DF /* face_pull.gif */,
+				AA7C9BEB7C0A0DA241115387 /* glute_bridge.gif */,
+				0A50AC36139F0CC4870A832E /* goblet_squat.gif */,
 				79DEC031264D52609A33D728 /* hammer_curl.gif */,
+				53A9C015B3A7E35412821739 /* hanging_leg_raise.gif */,
 				CD9FA528C8C25094F8DC6B79 /* incline_dumbbell_press.gif */,
 				596346EBA87DC0A1D930ED8A /* jumping_jack.gif */,
+				F96FA8E14B85B3821DC9DE0D /* kettlebell_swing.gif */,
+				30FD6C40B1F3A6CE480E5045 /* lat_pulldown.gif */,
 				5A19C945F6016F0E571BEA2E /* lateral_lunge.gif */,
 				6F7F579601897A28DF215A83 /* lateral_raise.gif */,
 				3A7C789860C2F41BD7345530 /* leg_curl.gif */,
+				DAF3424BDD1540C9D1949420 /* leg_extension.gif */,
 				7B737A8A6B4C5B86748D8E4D /* leg_press.gif */,
 				1E213AA747191D45C4D32540 /* media-sources.json */,
+				79EE20FCB8048198D4D87DC3 /* mountain_climber.gif */,
+				1DA9478017DED8B389ABA882 /* original-demos.json */,
+				322765885DF4DDEA05A86B2D /* overhead_press.gif */,
 				64607564DA60D6BE8097A832 /* plank.gif */,
 				7E8DCD52E59814E4D1824036 /* pull_up.gif */,
+				4AEAE1BF4C9D9C562BAB45E1 /* push_up.gif */,
 				94B8D678678EDAAA5AD64EA6 /* README.md */,
 				480A570A9D24B1FFB2598736 /* reverse_fly.gif */,
+				A97F569DED9A07D8D93E97E5 /* romanian_deadlift.gif */,
 				D93D3B9271E7357C8EE98D13 /* seated_row.gif */,
 				A71DC399637DEC1B6DF6B207 /* side_plank.gif */,
+				04ADAA270425E0E78534C91E /* single_arm_row.gif */,
+				0DD6DE6C6CC223161C9DE3C2 /* single_leg_rdl.gif */,
 				F6D32C5250ED4ED14CC3B00E /* skull_crusher.gif */,
+				03095F3431037FADE95BCE5C /* triceps_pushdown.gif */,
 			);
 			name = exercises;
 			path = ../assets/exercises;
@@ -330,35 +434,61 @@
 				0B49E860F74E9A61C02EDFF6 /* ape_hold.gif in Resources */,
 				D7C4DA8F7954713EBF20AB27 /* barbell_bench.gif in Resources */,
 				15165B2143EBCE6FEAF52D5E /* barbell_curl.gif in Resources */,
+				62364D4F418520AB687657D2 /* barbell_row.gif in Resources */,
+				5336D48FB64FC24149454735 /* barbell_squat.gif in Resources */,
+				45BEA4CD5E7C7591E50CB426 /* bear_crawl.gif in Resources */,
 				F4A3472F62A8ADE0538837E8 /* beast_hold.gif in Resources */,
 				A3F01712348D887307EDAE89 /* bird_dog.gif in Resources */,
+				F446548C43CB32A1C6C294E0 /* bodyweight_lunge.gif in Resources */,
+				EB9B2B9D97F4940937A6E6F7 /* bodyweight_squat.gif in Resources */,
 				4F79B15259D98C44AA2B0B3C /* breathing-profiles.json in Resources */,
+				A537BFF7C3408148C001F719 /* bulgarian_split_squat.gif in Resources */,
+				29E441C5F60813FEDFE9270C /* burpee.gif in Resources */,
+				E282482309F6E18B2503FCA0 /* cable_fly.gif in Resources */,
 				7E8D652CF5F70D52CE6A79FC /* calf_raise.gif in Resources */,
 				A39A897B854202C829CEBDD3 /* cat_cow.gif in Resources */,
 				F866216742AC0D6361FC9798 /* crab_hold.gif in Resources */,
 				1C1F4CCFFAF09C0955CC8EC7 /* crab_walk.gif in Resources */,
+				BE517D47484E32EA653D38A9 /* crunch.gif in Resources */,
+				839D1E01F037823357A60997 /* dead_bug.gif in Resources */,
+				3DE2942BB41EE80D31A7593B /* deadlift.gif in Resources */,
 				F0C4B36EA9589B8FF4EEDCCA /* dips.gif in Resources */,
 				D8252FA3F253C5AC1AB69E54 /* dumbbell_rdl.gif in Resources */,
 				D3559ADB26BD15987A75B22E /* dumbbell_shoulder_press.gif in Resources */,
+				AE0285A4A1DA8C0BEFA82ECF /* dumbbell_step_up.gif in Resources */,
 				FB10BBE0BCD6BF804329B1EB /* exercise-demos.json in Resources */,
 				1A72F1324A0C83637D17A411 /* exercise-guides.json in Resources */,
 				32FAD4B0877E6396704F244F /* extra-exercises.json in Resources */,
 				82F0560BAC117C0658118400 /* face_pull.gif in Resources */,
+				A6FEA73133E542B9283DAD31 /* glute_bridge.gif in Resources */,
+				E2D29779D6D16FA66471FE8C /* goblet_squat.gif in Resources */,
 				C3D39336143B87E78D1AD3A5 /* hammer_curl.gif in Resources */,
+				DDF0F00DD1511F418D6B6169 /* hanging_leg_raise.gif in Resources */,
 				71FB8D75118CED66D188559C /* incline_dumbbell_press.gif in Resources */,
 				241646FF9D1A7629EF0551C3 /* jumping_jack.gif in Resources */,
+				10DE128198291E28E54AB222 /* kettlebell_swing.gif in Resources */,
+				1272CECDE63E330D5950EE3D /* lat_pulldown.gif in Resources */,
 				461A82F4227BA1DDA1811454 /* lateral_lunge.gif in Resources */,
 				CF534995D7646E602183F96B /* lateral_raise.gif in Resources */,
 				2642EA0D26F08E09522D860E /* leg_curl.gif in Resources */,
+				F8D9A9ECA94BFD1B2EB1BD1C /* leg_extension.gif in Resources */,
 				93A9EA1325755B4C6E9E04B0 /* leg_press.gif in Resources */,
 				F5241B3700BA0C276730F429 /* media-sources.json in Resources */,
+				A932A03913948B52A14EE2EB /* mountain_climber.gif in Resources */,
+				738381151D1154CFDEE4673A /* original-demos.json in Resources */,
+				F642331C9E23826708644F77 /* overhead_press.gif in Resources */,
 				3FCB5205C7E3EE619936D26C /* plank.gif in Resources */,
 				056109F1131B91A93BEDCC3A /* pull_up.gif in Resources */,
+				C1F81E97023242BBD760CEAF /* push_up.gif in Resources */,
 				B290A54D6A296A47DC73DB5D /* reverse_fly.gif in Resources */,
+				BFE5394B4F9F8A90898A992A /* romanian_deadlift.gif in Resources */,
 				863269D1AC99BC0F51F737CD /* seated_row.gif in Resources */,
 				11DE7A70F1C711D1E3D70DC1 /* side_plank.gif in Resources */,
+				4C434A346C95AB1BEA4B5108 /* single_arm_row.gif in Resources */,
+				F75DABB297CC6D055E47B3BB /* single_leg_rdl.gif in Resources */,
 				35B938640E297CE31FB649FD /* skull_crusher.gif in Resources */,
 				3AA90D432C788FE7E0C39409 /* training-programs.json in Resources */,
+				8D2DB6FA63D2614B9DCEEAAA /* triceps_pushdown.gif in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -370,35 +500,61 @@
 				6CDDCFC41960E2D338392346 /* ape_hold.gif in Resources */,
 				F1F82FFEB77627B95B72CCEE /* barbell_bench.gif in Resources */,
 				8D75F1326F51DFDA8F9B49B8 /* barbell_curl.gif in Resources */,
+				F7CF2930887F5D929BE1DEA2 /* barbell_row.gif in Resources */,
+				4FAF5859859BD5283489F6BF /* barbell_squat.gif in Resources */,
+				78259AEF4B310A302ADA8F42 /* bear_crawl.gif in Resources */,
 				2C680BE104A451C3CD0DDE3E /* beast_hold.gif in Resources */,
 				8C9057FB977E64A83C096596 /* bird_dog.gif in Resources */,
+				2B8B7E46E9D5D780E9E5CC42 /* bodyweight_lunge.gif in Resources */,
+				CB159FB6CF188D928B36CA22 /* bodyweight_squat.gif in Resources */,
 				08F6E19E3507C83CD8DA26B0 /* breathing-profiles.json in Resources */,
+				39499ACD0E0B8A5C9E3AA294 /* bulgarian_split_squat.gif in Resources */,
+				E2067E778BB9349A46C00569 /* burpee.gif in Resources */,
+				5411CC53A1D5F9D361D3D2CD /* cable_fly.gif in Resources */,
 				22B3EC7579C62F2D85FA97AD /* calf_raise.gif in Resources */,
 				F79A92B86EA7FD4015F90550 /* cat_cow.gif in Resources */,
 				50038BA0764981120E535C5D /* crab_hold.gif in Resources */,
 				84E109622C8769DE598109E8 /* crab_walk.gif in Resources */,
+				69F1957796A61377C8E6CCB8 /* crunch.gif in Resources */,
+				EF4BBC1D69D5488E0E0F7E88 /* dead_bug.gif in Resources */,
+				73E757747458A69966AFA0E9 /* deadlift.gif in Resources */,
 				C9566E4ED9AFE6438D4C89FF /* dips.gif in Resources */,
 				D9A12FE131907256346D1DDE /* dumbbell_rdl.gif in Resources */,
 				5232F489B8A86D851F5D367F /* dumbbell_shoulder_press.gif in Resources */,
+				7258DB9C35F4E3705EC601DD /* dumbbell_step_up.gif in Resources */,
 				ED593677E35A9934FE578AF5 /* exercise-demos.json in Resources */,
 				305AA8560974C994778BDE3E /* exercise-guides.json in Resources */,
 				EBA95AB0937E4A707B6EA689 /* extra-exercises.json in Resources */,
 				862AF505B0C557B8BDB90BD5 /* face_pull.gif in Resources */,
+				3564A50BDBEA58589B536EF6 /* glute_bridge.gif in Resources */,
+				EF727E78C4AD13F00D30E341 /* goblet_squat.gif in Resources */,
 				6267D68CF8208D2EF5321B89 /* hammer_curl.gif in Resources */,
+				E400339E33090DEEA84BBC04 /* hanging_leg_raise.gif in Resources */,
 				438AE7DAE5F9E644DC9D63FA /* incline_dumbbell_press.gif in Resources */,
 				538CC45551FA3E73244FD06C /* jumping_jack.gif in Resources */,
+				5242640BD5AA133E513B48D9 /* kettlebell_swing.gif in Resources */,
+				587722E70D046719651D9CC5 /* lat_pulldown.gif in Resources */,
 				9F839D9C21BCF9B5A5D3ED57 /* lateral_lunge.gif in Resources */,
 				589380E8534FCC2C8037A4B0 /* lateral_raise.gif in Resources */,
 				D8639E6FA808D3E579605F82 /* leg_curl.gif in Resources */,
+				092B44440A33A1BAE5BFA0F5 /* leg_extension.gif in Resources */,
 				E22D2D6BE846979C88F827BE /* leg_press.gif in Resources */,
 				10B5BE5946903B0FE5C34011 /* media-sources.json in Resources */,
+				5A77A7A68B1253276E2F5248 /* mountain_climber.gif in Resources */,
+				04F7B319DE69E0B4FE77A7E5 /* original-demos.json in Resources */,
+				5AC138562054458F7FD4915D /* overhead_press.gif in Resources */,
 				B0EDE424E48EB5CC0248EADA /* plank.gif in Resources */,
 				E6BB39D73988E5149F20396E /* pull_up.gif in Resources */,
+				B30805B9EC95CC80E8E6BFC9 /* push_up.gif in Resources */,
 				F283B107E8CEDABFAD877671 /* reverse_fly.gif in Resources */,
+				A423FD10B065BCB26C9B3101 /* romanian_deadlift.gif in Resources */,
 				1EF3BB45FA1B1E53F5CEBF63 /* seated_row.gif in Resources */,
 				8754386656EFFA19A2EFE92F /* side_plank.gif in Resources */,
+				03ECB50B2795D1073C633656 /* single_arm_row.gif in Resources */,
+				B9EEE208A0FD2AE02B758516 /* single_leg_rdl.gif in Resources */,
 				1EEF152530E1B04D5530FB76 /* skull_crusher.gif in Resources */,
 				EE010584B3C4842777DE44BA /* training-programs.json in Resources */,
+				60C7D68103EE23B7B19C9DA8 /* triceps_pushdown.gif in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -474,7 +630,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -487,7 +643,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.3.0;
+				MARKETING_VERSION = 1.3.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -532,7 +688,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -551,7 +707,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.3.0;
+				MARKETING_VERSION = 1.3.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

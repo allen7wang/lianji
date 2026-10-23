@@ -33,6 +33,7 @@ function DemoContent({ exercise, onClose }: { exercise: Exercise; onClose: () =>
       {guide ? <View onLayout={event => { instructionsY.current = event.nativeEvent.layout.y; }}><DemoInstructions guide={guide} /></View> : null}
       {demo ? <View style={styles.credit}>
         <Text style={styles.creditText}>素材：{demo.source}</Text>
+        {demo.referenceUrl ? <Text accessibilityRole="link" style={styles.link} onPress={() => Linking.openURL(demo.referenceUrl!).catch(console.error)}>联网模型参考（需联网）</Text> : null}
         {demo.sourceUrl ? <Text accessibilityRole="link" style={styles.link} onPress={() => Linking.openURL(demo.sourceUrl!).catch(console.error)}>查看来源</Text> : null}
         {demo.licenseUrl ? <Text accessibilityRole="link" style={styles.link} onPress={() => Linking.openURL(demo.licenseUrl!).catch(console.error)}>{demo.license}</Text> : null}
       </View> : null}
@@ -88,7 +89,7 @@ function DemoPlayer({ demo, onViewInstructions }: { demo: ExerciseDemo; onViewIn
   }, [loaded, failed, active, demo.asset, settleLoad]);
 
   return <View style={styles.player}>
-    <View style={[styles.frame, !failed && { aspectRatio: demo.asset ? 16 / 9 : 1 }]}>
+    <View style={[styles.frame, !failed && { aspectRatio: Math.max(1, demo.aspectRatio ?? (demo.asset ? 16 / 9 : 1)) }]}>
       {!failed ? <Image key={attempt} ref={imageRef} source={demoSource(demo)} style={styles.image} contentFit="contain" cachePolicy={demo.asset ? 'none' : 'disk'} autoplay={playing && active} accessibilityLabel={`${demo.name}动作演示`} onLoad={() => settleLoad('ready')} onError={() => settleLoad('error')} /> : null}
       {!loaded ? <View style={[styles.status, failed && styles.failedStatus]}>{failed ? <><Text style={styles.error}>{status === 'timeout' ? '网络加载超时' : '动图加载失败'}</Text><Text style={styles.errorSub}>{demo.asset ? '本地素材未能打开，可重试或查看动作步骤' : '可重新加载，或先查看无需联网的动作步骤'}</Text><Button label="重新加载" variant="secondary" onPress={() => setLoad(current => ({ attempt: current.attempt + 1, status: 'loading' }))} /></> : <><ActivityIndicator color={C.accent} /><Text style={styles.errorSub}>正在加载动图…</Text></>}</View> : null}
     </View>

@@ -26,20 +26,37 @@ def sha256(path):
 
 
 def build(source, cache, destination):
-    original = cache / f'wger-{source["videoId"]}.MOV'
-    # Also reuse the exercise-named files from a local review session.
+    cache_name = source.get('cacheFile') or f'wger-{source["videoId"]}.MOV'
+    if Path(cache_name).name != cache_name:
+        raise ValueError('Source cache files must stay inside the selected cache directory')
+    original = cache / cache_name
+    # Also reuse the exercise-named MOV files from an earlier local review session.
     reviewed = cache / f'{source["id"]}.MOV'
     if not original.exists() and reviewed.exists():
         original = reviewed
     if not original.exists():
-        request = urllib.request.Request(source['videoUrl'], headers={'User-Agent': 'LianjiMediaBuild/1.0'})
-        partial = original.with_suffix('.download')
-        try:
-            with urllib.request.urlopen(request, timeout=60) as response, partial.open('wb') as file:
+        url = source.get('downloadUrl') or source['videoUrl']
+        partial = original.with_name(original.name + '.download')
+        if shutil.which('curl'):
+            # Keep interrupted bytes: large source MOVs can exceed a single request window.
+            for _ in range(4):
+                result = subprocess.run([
+                    'curl', '-L', '--fail', '--silent', '--show-error',
+                    '--continue-at', '-', '--max-time', '180',
+                    '--user-agent', 'LianjiMediaBuild/1.0', url, '-o', str(partial),
+                ], timeout=200)
+                if result.returncode == 0:
+                    partial.replace(original)
+                    break
+                if result.returncode == 33:
+                    raise RuntimeError(f'Server refused resume; inspect the retained download: {partial}')
+            else:
+                raise RuntimeError(f'Source download incomplete; retained for resume: {partial}')
+        else:
+            request = urllib.request.Request(url, headers={'User-Agent': 'LianjiMediaBuild/1.0'})
+            with urllib.request.urlopen(request, timeout=120) as response, partial.open('wb') as file:
                 shutil.copyfileobj(response, file)
             partial.replace(original)
-        finally:
-            partial.unlink(missing_ok=True)
     if sha256(original) != source['sourceSha256']:
         raise ValueError(f'Source changed; review it again before converting: {source["id"]}')
     output = destination / source['asset']

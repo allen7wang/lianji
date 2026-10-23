@@ -42,13 +42,13 @@ jobs:
               target = root / folder / app
               resources = target / 'Contents/Resources' if app == 'LianjiMac.app' else target
               info = target / 'Contents/Info.plist' if app == 'LianjiMac.app' else target / 'Info.plist'
-              assert plistlib.loads(info.read_bytes())['CFBundleShortVersionString'] == '1.3.0'
+              assert plistlib.loads(info.read_bytes())['CFBundleShortVersionString'] == '1.3.1'
               assert len(json.loads((resources / 'training-programs.json').read_text())) == 34
               assert len(json.loads((resources / 'exercise-demos.json').read_text())) == 55
               assert len(json.loads((resources / 'breathing-profiles.json').read_text())) == 4
           PY
-          ditto -c -k --sequesterRsrc --keepParent apple-build/Build/Products/Release/LianjiMac.app apple-artifacts/Lianji-1.3.0-macOS-universal.zip
-          ditto -c -k --sequesterRsrc --keepParent apple-build/Build/Products/Release-watchsimulator/LianjiWatch.app apple-artifacts/Lianji-1.3.0-watchOS-Simulator.zip
+          ditto -c -k --sequesterRsrc --keepParent apple-build/Build/Products/Release/LianjiMac.app apple-artifacts/Lianji-1.3.1-macOS-universal.zip
+          ditto -c -k --sequesterRsrc --keepParent apple-build/Build/Products/Release-watchsimulator/LianjiWatch.app apple-artifacts/Lianji-1.3.1-watchOS-Simulator.zip
       - uses: actions/upload-artifact@v7
         with:
           name: apple-desktop-watch-preview
@@ -90,10 +90,10 @@ jobs:
           app = pathlib.Path('ios-build/Build/Products/Release-iphonesimulator/app.app')
           info = plistlib.loads((app / 'Info.plist').read_bytes())
           assert info['CFBundleIdentifier'] == 'com.allenwang.lianji'
-          assert info['CFBundleShortVersionString'] == '1.3.0'
+          assert info['CFBundleShortVersionString'] == '1.3.1'
           assert (app / 'main.jsbundle').stat().st_size > 100000
           PY
-          ditto -c -k --sequesterRsrc --keepParent ios-build/Build/Products/Release-iphonesimulator/app.app ios-artifacts/Lianji-1.3.0-iOS-Simulator.zip
+          ditto -c -k --sequesterRsrc --keepParent ios-build/Build/Products/Release-iphonesimulator/app.app ios-artifacts/Lianji-1.3.1-iOS-Simulator.zip
       - uses: actions/upload-artifact@v7
         with:
           name: ios-simulator-preview

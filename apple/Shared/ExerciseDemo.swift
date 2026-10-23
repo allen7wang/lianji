@@ -11,6 +11,8 @@ struct ExerciseDemo: Codable, Identifiable {
     let sourceUrl: String?
     let license: String?
     let licenseUrl: String?
+    let mediaKind: String?
+    let referenceUrl: String?
     let caption: String
 
     static let catalog: [ExerciseDemo] = {
@@ -28,7 +30,10 @@ struct ExerciseDemo: Codable, Identifiable {
 
     var hasLocalMedia: Bool { asset?.isEmpty == false }
     var mediaLabel: String {
-        if hasLocalMedia { return source.contains("wger") ? "离线真人" : "离线示意" }
+        if hasLocalMedia {
+            let isReal = mediaKind.map { $0 == "real" } ?? source.contains("wger")
+            return isReal ? "离线真人" : "离线示意"
+        }
         return gifUrl?.isEmpty == false ? "联网动图" : "离线呼吸"
     }
 
@@ -168,6 +173,7 @@ struct ExerciseDemoView: View {
                 if let demo {
                     Divider()
                     Text("素材：\(demo.source)").font(.caption2).foregroundStyle(.secondary)
+                    if let reference = demo.referenceUrl, !reference.isEmpty, let url = URL(string: reference) { Link("联网模型参考（需联网）", destination: url).font(.caption2) }
                     if let source = demo.sourceUrl, !source.isEmpty, let url = URL(string: source) { Link("查看来源", destination: url).font(.caption2) }
                     if let license = demo.license, let source = demo.licenseUrl, !source.isEmpty, let url = URL(string: source) { Link(license, destination: url).font(.caption2) }
                 }

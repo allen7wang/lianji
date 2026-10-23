@@ -7,7 +7,9 @@
     "sourceUrl": "https://wger.de/en/exercise/73/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 平板杠铃卧推 · 视频转制 GIF"
+    "caption": "真人演示 · 平板杠铃卧推 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.811321
   },
   {
     "id": "incline_dumbbell_press",
@@ -17,7 +19,9 @@
     "sourceUrl": "https://wger.de/en/exercise/537/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 上斜凳哑铃卧推 · 视频转制 GIF"
+    "caption": "真人演示 · 上斜凳哑铃卧推 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "dips",
@@ -27,25 +31,34 @@
     "sourceUrl": "https://wger.de/en/exercise/194/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 双杠自重臂屈伸 · 视频转制 GIF"
+    "caption": "真人演示 · 双杠自重臂屈伸 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "cable_fly",
     "name": "绳索夹胸",
-    "mediaId": "UKWTJWR",
-    "gifUrl": "https://static.exercisedb.dev/media/UKWTJWR.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 沿弧线合拢 / 肘角基本不变 / 躯干稳定",
+    "asset": "cable_fly.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/UKWTJWR.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "push_up",
     "name": "俯卧撑",
-    "mediaId": "I4hDWkc",
-    "gifUrl": "https://static.exercisedb.dev/media/I4hDWkc.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "Photograph:  Frank C. Müller, Baden-Baden / Wikimedia Commons",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Liegestuetz02_ani_fcm.gif",
+    "caption": "真人俯卧撑姿势序列 · 原片仅 6 帧，可暂停观察 · 原 GIF 缩放",
+    "asset": "push_up.gif",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "mediaKind": "real",
+    "aspectRatio": 1.488372
   },
   {
     "id": "pull_up",
@@ -55,25 +68,34 @@
     "sourceUrl": "https://wger.de/en/exercise/475/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 正握引体向上 · 视频转制 GIF"
+    "caption": "真人演示 · 正握引体向上 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "barbell_row",
     "name": "杠铃划船",
-    "mediaId": "eZyBC3j",
-    "gifUrl": "https://static.exercisedb.dev/media/eZyBC3j.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "FitnessScape / Wikimedia Commons",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bent-over_row_-_exercise_demonstration_video.webm",
+    "caption": "真人杠铃俯身划船 · 稳住俯身姿势，肘向后带 · 视频转制 GIF",
+    "asset": "barbell_row.gif",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "lat_pulldown",
     "name": "高位下拉",
-    "mediaId": "RVwzP10",
-    "gifUrl": "https://static.exercisedb.dev/media/RVwzP10.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 横杆向胸前 / 不拉到颈后 / 控制回程",
+    "asset": "lat_pulldown.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/RVwzP10.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "seated_row",
@@ -83,25 +105,34 @@
     "sourceUrl": "https://wger.de/en/exercise/512/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 窄握坐姿绳索划船 · 视频转制 GIF"
+    "caption": "真人演示 · 窄握坐姿绳索划船 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "single_arm_row",
     "name": "单臂哑铃划船",
-    "mediaId": "C0MA9bC",
-    "gifUrl": "https://static.exercisedb.dev/media/C0MA9bC.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 一手一膝撑凳 / 肘向后带 / 换侧练习",
+    "asset": "single_arm_row.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/C0MA9bC.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "barbell_squat",
     "name": "杠铃深蹲",
-    "mediaId": "qXTaZnJ",
-    "gifUrl": "https://static.exercisedb.dev/media/qXTaZnJ.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "FitnessScape / Wikimedia Commons",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Squat_-_exercise_demonstration_video.webm",
+    "caption": "真人背杠铃深蹲 · 原片站立时头顶局部出画 · 视频转制 GIF",
+    "asset": "barbell_squat.gif",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "leg_press",
@@ -111,34 +142,46 @@
     "sourceUrl": "https://wger.de/en/exercise/371/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 斜板器械腿举 · 视频转制 GIF"
+    "caption": "真人演示 · 斜板器械腿举 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "romanian_deadlift",
     "name": "罗马尼亚硬拉",
-    "mediaId": "wQ2c4XD",
-    "gifUrl": "https://static.exercisedb.dev/media/wQ2c4XD.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "Goulart / wger",
+    "sourceUrl": "https://wger.de/en/exercise/507/view/",
+    "caption": "真人杠铃罗马尼亚硬拉 · 屈髋后移；原片头顶局部出画 · 视频转制 GIF",
+    "asset": "romanian_deadlift.gif",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "bulgarian_split_squat",
     "name": "保加利亚分腿蹲",
-    "mediaId": "qx4fgX7",
-    "gifUrl": "https://static.exercisedb.dev/media/qx4fgX7.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 后脚放凳 / 前脚踩稳 / 双手持哑铃",
+    "asset": "bulgarian_split_squat.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/qx4fgX7.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "leg_extension",
     "name": "腿屈伸",
-    "mediaId": "my33uHU",
-    "gifUrl": "https://static.exercisedb.dev/media/my33uHU.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "Centers for Disease Control and Prevention / Wikimedia Commons",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Muscle_Strengthening_at_the_Gym_-_Leg_Extension.webm",
+    "caption": "真人坐姿器械腿屈伸 · 全身镜头，控制伸膝与回程 · 视频转制 GIF",
+    "asset": "leg_extension.gif",
+    "license": "Public domain",
+    "licenseUrl": "https://commons.wikimedia.org/wiki/File:Muscle_Strengthening_at_the_Gym_-_Leg_Extension.webm",
+    "mediaKind": "real",
+    "aspectRatio": 1.333333
   },
   {
     "id": "leg_curl",
@@ -148,7 +191,9 @@
     "sourceUrl": "https://wger.de/en/exercise/365/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 俯卧器械腿弯举 · 视频转制 GIF"
+    "caption": "真人演示 · 俯卧器械腿弯举 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "calf_raise",
@@ -158,16 +203,21 @@
     "sourceUrl": "https://wger.de/en/exercise/622/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 器械站姿提踵 · 视频转制 GIF"
+    "caption": "真人演示 · 器械站姿提踵 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "overhead_press",
     "name": "杠铃肩推",
-    "mediaId": "wdRZISl",
-    "gifUrl": "https://static.exercisedb.dev/media/wdRZISl.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "FitnessScape / Wikimedia Commons",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Shoulder_press_-_exercise_demonstration_video.webm",
+    "caption": "真人站姿杠铃肩推 · 上半身镜头，控制推举与回程 · 视频转制 GIF",
+    "asset": "overhead_press.gif",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "lateral_raise",
@@ -177,7 +227,9 @@
     "sourceUrl": "https://wger.de/en/exercise/348/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 站姿哑铃侧平举 · 视频转制 GIF"
+    "caption": "真人演示 · 站姿哑铃侧平举 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "reverse_fly",
@@ -187,7 +239,9 @@
     "sourceUrl": "https://wger.de/en/exercise/82/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 坐姿俯身哑铃反向飞鸟 · 视频转制 GIF"
+    "caption": "真人演示 · 坐姿俯身哑铃反向飞鸟 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "barbell_curl",
@@ -197,7 +251,9 @@
     "sourceUrl": "https://wger.de/en/exercise/91/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 站姿杠铃弯举 · 视频转制 GIF"
+    "caption": "真人演示 · 站姿杠铃弯举 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "hammer_curl",
@@ -207,16 +263,22 @@
     "sourceUrl": "https://wger.de/en/exercise/272/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 哑铃锤式弯举 · 视频转制 GIF"
+    "caption": "真人演示 · 哑铃锤式弯举 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "triceps_pushdown",
     "name": "绳索下压",
-    "mediaId": "dU605di",
-    "gifUrl": "https://static.exercisedb.dev/media/dU605di.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 固定上臂 / 只做屈伸肘 / 不靠体重压",
+    "asset": "triceps_pushdown.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/dU605di.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "skull_crusher",
@@ -226,43 +288,59 @@
     "sourceUrl": "https://wger.de/en/exercise/246/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 曲杆仰卧臂屈伸 · 视频转制 GIF"
+    "caption": "真人演示 · 曲杆仰卧臂屈伸 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "crunch",
     "name": "卷腹",
-    "mediaId": "TFqbd8t",
-    "gifUrl": "https://static.exercisedb.dev/media/TFqbd8t.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 肩胛轻离地 / 下背稳定 / 不做完整坐起",
+    "asset": "crunch.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/TFqbd8t.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "hanging_leg_raise",
     "name": "悬垂举腿",
-    "mediaId": "I3tsCnC",
-    "gifUrl": "https://static.exercisedb.dev/media/I3tsCnC.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "FitnessScape / Wikimedia Commons",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Leg_raises_-_exercise_demonstration_video.webm",
+    "caption": "真人单杠悬垂直腿举腿 · 原片最低位脚部局部出画 · 视频转制 GIF",
+    "asset": "hanging_leg_raise.gif",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "deadlift",
     "name": "硬拉",
-    "mediaId": "ila4NZS",
-    "gifUrl": "https://static.exercisedb.dev/media/ila4NZS.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 杠铃由地面起拉 / 手臂伸直 / 伸髋站稳",
+    "asset": "deadlift.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778,
+    "referenceUrl": "https://static.exercisedb.dev/media/ila4NZS.gif"
   },
   {
     "id": "kettlebell_swing",
     "name": "壶铃摆动",
-    "mediaId": "UHJlbu3",
-    "gifUrl": "https://static.exercisedb.dev/media/UHJlbu3.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "Taco fleur / Wikimedia Commons",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kettlebell_Swing_Hip_Hinge_Style.webm",
+    "caption": "真人双手壶铃摆动（髋铰链式）· 摆至胸肩附近，不过顶 · 视频转制 GIF",
+    "asset": "kettlebell_swing.gif",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "mediaKind": "real",
+    "aspectRatio": 1.333333
   },
   {
     "id": "face_pull",
@@ -272,50 +350,69 @@
     "sourceUrl": "https://wger.de/en/exercise/222/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人动作演示 · 视频转制 GIF"
+    "caption": "真人动作演示 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "plank",
     "name": "平板支撑",
     "asset": "plank.gif",
     "source": "练迹原创",
-    "caption": "保持支撑姿势，呼吸环表示自然呼吸"
+    "caption": "保持支撑姿势，呼吸环表示自然呼吸",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "bodyweight_squat",
     "name": "自重深蹲",
-    "mediaId": "75Bgtjy",
-    "gifUrl": "https://static.exercisedb.dev/media/75Bgtjy.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "Danielflefil / Wikimedia Commons",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bodyweight_Squats.gif",
+    "caption": "真人徒手深蹲 · 无负重，平稳下蹲站回 · 原 GIF 缩放与调帧",
+    "asset": "bodyweight_squat.gif",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "mediaKind": "real",
+    "aspectRatio": 1.0
   },
   {
     "id": "bodyweight_lunge",
     "name": "徒手弓步蹲",
-    "mediaId": "kMzUs9Y",
-    "gifUrl": "https://static.exercisedb.dev/media/kMzUs9Y.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 向前迈步 / 平稳下沉 / 蹬回站立再换边",
+    "asset": "bodyweight_lunge.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/kMzUs9Y.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "glute_bridge",
     "name": "臀桥",
-    "mediaId": "u0cNiij",
-    "gifUrl": "https://static.exercisedb.dev/media/u0cNiij.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 肩背与脚掌支撑 / 肩髋膝大致连线",
+    "asset": "glute_bridge.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/u0cNiij.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "goblet_squat",
     "name": "哑铃高脚杯深蹲",
-    "mediaId": "yn8yg1r",
-    "gifUrl": "https://static.exercisedb.dev/media/yn8yg1r.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 双手托哑铃上端 / 贴近胸口 / 脚掌踩实",
+    "asset": "goblet_squat.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/yn8yg1r.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "dumbbell_rdl",
@@ -325,7 +422,9 @@
     "sourceUrl": "https://wger.de/en/exercise/507/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 哑铃罗马尼亚硬拉 · 侧面 · 视频转制 GIF"
+    "caption": "真人演示 · 哑铃罗马尼亚硬拉 · 侧面 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "dumbbell_shoulder_press",
@@ -335,124 +434,168 @@
     "sourceUrl": "https://wger.de/en/exercise/567/view/",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
-    "caption": "真人演示 · 坐姿哑铃肩推 · 视频转制 GIF"
+    "caption": "真人演示 · 坐姿哑铃肩推 · 视频转制 GIF",
+    "mediaKind": "real",
+    "aspectRatio": 1.777778
   },
   {
     "id": "jumping_jack",
     "name": "开合跳",
     "asset": "jumping_jack.gif",
     "source": "练迹原创动作简图",
-    "caption": "简图动作演示，低速练习并在需要时换侧"
+    "caption": "简图动作演示，低速练习并在需要时换侧",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "mountain_climber",
     "name": "登山跑",
-    "mediaId": "RJgzwny",
-    "gifUrl": "https://static.exercisedb.dev/media/RJgzwny.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 双手稳撑 / 双腿交替收膝 / 骨盆稳定",
+    "asset": "mountain_climber.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/RJgzwny.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "burpee",
     "name": "波比",
-    "mediaId": "dK9394r",
-    "gifUrl": "https://static.exercisedb.dev/media/dK9394r.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 下蹲撑地—撤腿—收脚—轻跳 / 无俯卧撑",
+    "asset": "burpee.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/dK9394r.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "bear_crawl",
     "name": "熊爬",
-    "mediaId": "0Yz8WdV",
-    "gifUrl": "https://static.exercisedb.dev/media/0Yz8WdV.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 双膝微离地 / 对侧手脚配合 / 小步慢爬",
+    "asset": "bear_crawl.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/0Yz8WdV.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "dead_bug",
     "name": "死虫式",
-    "mediaId": "iny3m5y",
-    "gifUrl": "https://static.exercisedb.dev/media/iny3m5y.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 对侧手脚伸展 / 另一对收回 / 腰背稳定",
+    "asset": "dead_bug.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/iny3m5y.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "dumbbell_step_up",
     "name": "哑铃登阶",
-    "mediaId": "aXtJhlg",
-    "gifUrl": "https://static.exercisedb.dev/media/aXtJhlg.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 台上腿发力 / 另一脚跟上 / 控制下台",
+    "asset": "dumbbell_step_up.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/aXtJhlg.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "single_leg_rdl",
     "name": "哑铃单腿硬拉",
-    "mediaId": "gKozT8X",
-    "gifUrl": "https://static.exercisedb.dev/media/gKozT8X.gif",
-    "source": "ExerciseDB / AscendAPI",
-    "sourceUrl": "https://docs.ascendapi.com/products/edb-v1/overview",
-    "caption": "人体模型动作演示"
+    "source": "练迹原创（关节动作示意，非真人）",
+    "sourceUrl": "https://github.com/allen7wang/lianji",
+    "caption": "原创关节动作示意（非真人）· 双手持哑铃 / 屈髋后移 / 后腿随躯干伸展",
+    "asset": "single_leg_rdl.gif",
+    "license": "MIT",
+    "licenseUrl": "https://github.com/allen7wang/lianji/blob/main/LICENSE",
+    "referenceUrl": "https://static.exercisedb.dev/media/gKozT8X.gif",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "crab_walk",
     "name": "蟹行",
     "asset": "crab_walk.gif",
     "source": "练迹原创动作简图",
-    "caption": "简图动作演示，低速练习并在需要时换侧"
+    "caption": "简图动作演示，低速练习并在需要时换侧",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "beast_hold",
     "name": "兽式支撑",
     "asset": "beast_hold.gif",
     "source": "练迹原创动作简图",
-    "caption": "静态姿势配合呼吸提示"
+    "caption": "静态姿势配合呼吸提示",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "crab_hold",
     "name": "蟹式支撑",
     "asset": "crab_hold.gif",
     "source": "练迹原创动作简图",
-    "caption": "静态姿势配合呼吸提示"
+    "caption": "静态姿势配合呼吸提示",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "ape_hold",
     "name": "猿式深蹲",
     "asset": "ape_hold.gif",
     "source": "练迹原创动作简图",
-    "caption": "静态姿势配合呼吸提示"
+    "caption": "静态姿势配合呼吸提示",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "side_plank",
     "name": "侧平板支撑",
     "asset": "side_plank.gif",
     "source": "练迹原创动作简图",
-    "caption": "静态姿势配合呼吸提示"
+    "caption": "静态姿势配合呼吸提示",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "bird_dog",
     "name": "鸟狗式",
     "asset": "bird_dog.gif",
     "source": "练迹原创动作简图",
-    "caption": "简图动作演示，低速练习并在需要时换侧"
+    "caption": "简图动作演示，低速练习并在需要时换侧",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "cat_cow",
     "name": "猫牛式",
     "asset": "cat_cow.gif",
     "source": "练迹原创动作简图",
-    "caption": "简图动作演示，低速练习并在需要时换侧"
+    "caption": "简图动作演示，低速练习并在需要时换侧",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "lateral_lunge",
     "name": "侧弓步",
     "asset": "lateral_lunge.gif",
     "source": "练迹原创动作简图",
-    "caption": "简图动作演示，低速练习并在需要时换侧"
+    "caption": "简图动作演示，低速练习并在需要时换侧",
+    "mediaKind": "illustration",
+    "aspectRatio": 1.777778
   },
   {
     "id": "diaphragmatic_breathing",
@@ -464,7 +607,9 @@
     "sourceUrl": "",
     "license": "原创程序动画",
     "licenseUrl": "",
-    "caption": "坐稳或仰卧，一手放在腹部。轻柔吸气时腹部自然起伏，呼气时放松，不要用力深吸。"
+    "caption": "坐稳或仰卧，一手放在腹部。轻柔吸气时腹部自然起伏，呼气时放松，不要用力深吸。",
+    "mediaKind": "breathing",
+    "aspectRatio": 1
   },
   {
     "id": "balanced_breathing",
@@ -476,7 +621,9 @@
     "sourceUrl": "",
     "license": "原创程序动画",
     "licenseUrl": "",
-    "caption": "肩颈放松，以舒适的幅度吸气和呼气；两段节奏等长，无需屏息。"
+    "caption": "肩颈放松，以舒适的幅度吸气和呼气；两段节奏等长，无需屏息。",
+    "mediaKind": "breathing",
+    "aspectRatio": 1
   },
   {
     "id": "long_exhale_breathing",
@@ -488,7 +635,9 @@
     "sourceUrl": "",
     "license": "原创程序动画",
     "licenseUrl": "",
-    "caption": "轻柔吸气后缓慢呼气，不用力排空。若呼气六秒吃力，可改选等长呼吸。"
+    "caption": "轻柔吸气后缓慢呼气，不用力排空。若呼气六秒吃力，可改选等长呼吸。",
+    "mediaKind": "breathing",
+    "aspectRatio": 1
   },
   {
     "id": "box_breathing",
@@ -500,6 +649,8 @@
     "sourceUrl": "",
     "license": "原创程序动画",
     "licenseUrl": "",
-    "caption": "按吸气、吸后停留、呼气、呼后停留的顺序练习。停留时不要用力憋气；不舒服时改用无屏息练习。"
+    "caption": "按吸气、吸后停留、呼气、呼后停留的顺序练习。停留时不要用力憋气；不舒服时改用无屏息练习。",
+    "mediaKind": "breathing",
+    "aspectRatio": 1
   }
 ]

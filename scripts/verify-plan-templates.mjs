@@ -116,10 +116,10 @@ assert.equal(new Set(media.map(demo => demo.name)).size, media.length, 'Duplicat
 const { demoFor, demoSource, demoMediaLabel } = loadSource(path.join(root, 'src/lib/exercise-demos.ts'));
 for (const demo of media) {
   for (const field of ['id', 'name', 'caption', 'source']) assert.ok(typeof demo[field] === 'string' && demo[field].trim(), `${demo.id}: invalid ${field}`);
-  for (const field of ['asset', 'gifUrl', 'mediaId', 'sourceUrl', 'license', 'licenseUrl']) {
+  for (const field of ['asset', 'gifUrl', 'mediaId', 'sourceUrl', 'license', 'licenseUrl', 'mediaKind', 'referenceUrl']) {
     assert.ok(demo[field] === undefined || typeof demo[field] === 'string', `${demo.id}: ${field} must decode as an optional Swift string`);
   }
-  for (const field of ['gifUrl', 'sourceUrl', 'licenseUrl']) if (demo[field]) assert.match(demo[field], /^https:\/\//, `${demo.id}: invalid ${field}`);
+  for (const field of ['gifUrl', 'sourceUrl', 'licenseUrl', 'referenceUrl']) if (demo[field]) assert.match(demo[field], /^https:\/\//, `${demo.id}: invalid ${field}`);
   const breathing = breathingProfiles.some(profile => profile.id === demo.id && profile.name === demo.name);
   assert.equal(Number(!!demo.asset) + Number(!!demo.gifUrl), breathing ? 0 : 1, `${demo.id}: ambiguous or missing media source`);
   assert.equal(demoFor({ name: demo.name, isCustom: 0 })?.id, demo.id);
@@ -132,8 +132,17 @@ for (const demo of media) {
 }
 assert.equal(typeof demoMediaLabel, 'function', 'Demos must disclose whether they are offline or need a network');
 assert.equal(demoMediaLabel(media.find(demo => demo.id === 'barbell_bench')), '离线真人');
+assert.equal(demoMediaLabel({ ...media.find(demo => demo.id === 'barbell_bench'), source: 'FitnessScape / Wikimedia Commons', mediaKind: 'real' }), '离线真人', 'Real footage must not be mislabeled merely because it is not from wger');
 assert.equal(demoMediaLabel(media.find(demo => demo.id === 'bird_dog')), '离线示意');
-assert.equal(demoMediaLabel(media.find(demo => demo.id === 'barbell_squat')), '联网动图');
+assert.equal(demoMediaLabel(media.find(demo => demo.id === 'barbell_squat')), '离线真人');
+assert.equal(demoMediaLabel(media.find(demo => demo.id === 'deadlift')), '离线示意');
+assert.equal(media.filter(demo => demo.asset).length, 51);
+assert.equal(media.filter(demo => demo.gifUrl).length, 0);
+for (const demo of media) {
+  assert.ok(['real', 'illustration', 'breathing'].includes(demo.mediaKind), `${demo.id}: unknown media style`);
+  assert.ok(Number.isFinite(demo.aspectRatio) && demo.aspectRatio >= 0.5 && demo.aspectRatio <= 3, `${demo.id}: invalid display aspect ratio`);
+  if (demo.referenceUrl) assert.equal(demo.mediaKind, 'illustration', 'Optional online references must not replace the offline primary animation');
+}
 assert.equal(demoMediaLabel(media.find(demo => demo.id === 'box_breathing')), '离线呼吸');
 const guides = loadSource(path.join(root, 'assets/exercises/exercise-guides.json'));
 const { guideFor } = loadSource(path.join(root, 'src/lib/exercise-demos.ts'));
@@ -159,13 +168,19 @@ for (const demoId of offlineLifts) {
   assert.match(demo.source, /Goulart/);
 }
 const sourceRecords = loadSource(path.join(root, 'assets/exercises/media-sources.json'));
-assert.deepEqual(new Set(sourceRecords.map(record => record.id)), new Set(offlineLifts), 'Reviewed source records must cover each new offline lift');
+const additionalFootage = ['barbell_row', 'overhead_press', 'barbell_squat', 'leg_extension', 'bodyweight_squat', 'push_up', 'hanging_leg_raise', 'kettlebell_swing', 'romanian_deadlift'];
+assert.equal(new Set(sourceRecords.map(record => record.id)).size, sourceRecords.length, 'Duplicate imported media records');
+assert.deepEqual(new Set(sourceRecords.map(record => record.id)), new Set([...offlineLifts, ...additionalFootage]), 'Reviewed source records must cover both imported media batches');
 for (const record of sourceRecords) {
   const demo = media.find(item => item.id === record.id);
   assert.equal(demo.asset, record.asset);
   assert.equal(demo.sourceUrl, record.sourceUrl);
   assert.equal(demo.licenseUrl, record.licenseUrl);
   assert.match(record.sourceSha256, /^[a-f0-9]{64}$/);
+  assert.match(record.downloadUrl ?? record.videoUrl, /^https:\/\//);
+  assert.match(record.metadataUrl, /^https:\/\//);
+  assert.equal(demo.mediaKind, 'real');
+  assert.ok(record.author?.trim());
   assert.ok(record.durationSeconds > 0 && record.fps > 0 && record.width >= 180);
 }
 for (const demo of media) if (demo.asset) {
@@ -336,4 +351,4 @@ for (const id of ['home-dumbbell', 'home-bodyweight']) {
 }
 assert.ok(legacy.native.prepare("SELECT e.isCustom FROM plan_items i JOIN exercises e ON e.id = i.exerciseId WHERE i.planId = 'template:home-bodyweight:a' AND e.name = '自重深蹲'").get().isCustom === 0);
 legacy.native.close();
-console.log('Passed: 34 programs / 69 days / 55 demos with offline teaching / 26 bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import and workout storage; backup export/import round-trip, validation and rollback.');
+console.log(`Passed: 34 programs / 69 days / ${media.length} demos with offline teaching / ${media.filter(demo => demo.asset).length} bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import and workout storage; backup export/import round-trip, validation and rollback.`);
