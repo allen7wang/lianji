@@ -3,9 +3,7 @@ import Combine
 
 @MainActor
 final class TrainingStore: ObservableObject {
-    @Published private(set) var state: AppState {
-        didSet { save() }
-    }
+    @Published private(set) var state: AppState
 
     private let fileURL: URL
 
@@ -20,7 +18,7 @@ final class TrainingStore: ObservableObject {
             state = .starter()
         }
         state.addMissingExercises()
-        save()
+        try? persist(state)
     }
 
     var activeWorkout: Workout? { state.workouts.first { $0.endedAt == nil } }
@@ -28,10 +26,18 @@ final class TrainingStore: ObservableObject {
 
     func exercise(_ id: String) -> Exercise? { state.exercises.first { $0.id == id } }
 
+    func setWeeklyGoal(_ days: Int?) throws {
+        if let days, !(1...7).contains(days) { throw WeeklyGoalError.invalidDays }
+        guard days != state.weeklyGoalDays else { return }
+        var next = state
+        next.weeklyGoalDays = days
+        try commit(next)
+    }
+
     func addExercise(name: String, muscle: String, equipment: String) {
         var next = state
         next.exercises.append(Exercise(id: UUID().uuidString, name: name, muscle: muscle, equipment: equipment, isCustom: true))
-        state = next
+        updateState(next)
     }
 
     func savePlan(_ plan: Plan) {
@@ -41,7 +47,47 @@ final class TrainingStore: ObservableObject {
         } else {
             next.plans.append(plan)
         }
-        state = next
+        updateState(next)
+    }
+
+    @discardableResult
+    func saveWorkoutAsPlan(_ id: String) throws -> Plan {
+        guard let workout = state.workouts.first(where: { $0.id == id && $0.endedAt != nil }) else {
+            throw WorkoutPlanError.unavailable
+        }
+        let completed = workout.completedSets.filter { $0.reps > 0 }
+        let groups = Dictionary(grouping: completed, by: \.exerciseId)
+        var seen = Set<String>()
+        let items = completed.compactMap { set -> PlanItem? in
+            guard seen.insert(set.exerciseId).inserted,
+                  let exerciseSets = groups[set.exerciseId],
+                  let last = exerciseSets.last else { return nil }
+            let unit = last.unit ?? .reps
+            let count = exerciseSets.filter { ($0.unit ?? .reps) == unit }.count
+            return PlanItem(
+                exerciseId: last.exerciseId,
+                sets: min(count, 20),
+                reps: min(last.reps, 1000),
+                weight: min(max(last.weight, 0), 2000),
+                unit: unit,
+                restSeconds: min(max(last.restSeconds ?? 90, 0), 600)
+            )
+        }
+        guard !items.isEmpty else { throw WorkoutPlanError.empty }
+
+        let baseName = "\(workout.name) · 复练计划"
+        let usedNames = Set(state.plans.map(\.name))
+        var name = baseName
+        var suffix = 2
+        while usedNames.contains(name) {
+            name = "\(baseName)（\(suffix)）"
+            suffix += 1
+        }
+        let plan = Plan(name: name, items: items)
+        var next = state
+        next.plans.append(plan)
+        try commit(next)
+        return plan
     }
 
     @discardableResult
@@ -51,14 +97,75 @@ final class TrainingStore: ObservableObject {
         guard !pending.isEmpty else { return 0 }
         var next = state
         next.plans.append(contentsOf: pending)
-        state = next
+        updateState(next)
         return pending.count
     }
 
-    func deletePlan(_ id: String) {
+    func deletePlan(_ id: String) throws {
         var next = state
         next.plans.removeAll { $0.id == id }
-        state = next
+        next.trainingSchedule?.removeAll { $0.planId == id }
+        try commit(next)
+    }
+
+    @discardableResult
+    func scheduleTraining(planId: String, on date: Date, now: Date = .now, timeZone: TimeZone = .current) throws -> Bool {
+        guard state.plans.contains(where: { $0.id == planId }) else { throw ScheduleError.missingPlan }
+        let day = ScheduledTraining.localDay(date, timeZone: timeZone)
+        guard day >= ScheduledTraining.localDay(now, timeZone: timeZone) else { throw ScheduleError.pastDate }
+        let entry = ScheduledTraining(planId: planId, day: day)
+        var schedule = state.trainingSchedule ?? []
+        guard !schedule.contains(entry) else { return false }
+        schedule.append(entry)
+        var next = state
+        next.trainingSchedule = schedule
+        try commit(next)
+        return true
+    }
+
+    func cancelScheduledTraining(_ entry: ScheduledTraining) throws {
+        guard state.trainingSchedule?.contains(entry) == true else { return }
+        var next = state
+        next.trainingSchedule?.removeAll { $0 == entry }
+        try commit(next)
+    }
+
+    @discardableResult
+    func startScheduledTraining(_ entry: ScheduledTraining) -> Bool {
+        guard activeWorkout == nil, entry.day == ScheduledTraining.localDay(.now),
+              state.trainingSchedule?.contains(entry) == true,
+              state.plans.contains(where: { $0.id == entry.planId }) else { return false }
+        startWorkout(planId: entry.planId)
+        return true
+    }
+
+    func trainingSchedule(now: Date = .now, timeZone: TimeZone = .current) -> [TrainingScheduleItem] {
+        guard let schedule = state.trainingSchedule, !schedule.isEmpty else { return [] }
+        let today = ScheduledTraining.localDay(now, timeZone: timeZone)
+        let completed = Set(state.workouts.compactMap { workout -> ScheduledTraining? in
+            guard let planId = workout.planId, workout.endedAt != nil,
+                  workout.sets.contains(where: \.completed) else { return nil }
+            return ScheduledTraining(planId: planId, day: ScheduledTraining.localDay(workout.startedAt, timeZone: timeZone))
+        })
+        let plans = Dictionary(state.plans.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let items = schedule.compactMap { entry -> TrainingScheduleItem? in
+            guard let plan = plans[entry.planId] else { return nil }
+            let status: TrainingScheduleStatus
+            if completed.contains(entry) { status = .completed }
+            else if entry.day < today { status = .missed }
+            else if entry.day == today { status = .pending }
+            else { status = .upcoming }
+            return TrainingScheduleItem(entry: entry, plan: plan, status: status)
+        }
+        return items.sorted { first, second in
+            let firstPast = first.entry.day < today
+            let secondPast = second.entry.day < today
+            if firstPast != secondPast { return !firstPast }
+            if first.entry.day == second.entry.day {
+                return first.plan.name.localizedStandardCompare(second.plan.name) == .orderedAscending
+            }
+            return firstPast ? first.entry.day > second.entry.day : first.entry.day < second.entry.day
+        }
     }
 
     func startWorkout(planId: String?) {
@@ -71,7 +178,7 @@ final class TrainingStore: ObservableObject {
         } ?? []
         var next = state
         next.workouts.append(Workout(planId: planId, name: plan?.name ?? "自由训练", note: plan?.note ?? "", sets: sets))
-        state = next
+        updateState(next)
     }
 
     func addWorkoutExercise(_ exerciseId: String) {
@@ -100,35 +207,72 @@ final class TrainingStore: ObservableObject {
     func discardWorkout() {
         var next = state
         next.workouts.removeAll { $0.endedAt == nil }
-        state = next
+        updateState(next)
     }
     func deleteWorkout(_ id: String) {
         var next = state
         next.workouts.removeAll { $0.id == id }
-        state = next
+        updateState(next)
     }
 
     func addBodyEntry(weight: Double, bodyFat: Double?) {
         var next = state
         next.bodyEntries.append(BodyEntry(weight: weight, bodyFat: bodyFat))
-        state = next
+        updateState(next)
     }
 
     func addFoodEntry(_ entry: FoodEntry) {
         var next = state
         next.foodEntries.append(entry)
-        state = next
+        updateState(next)
     }
 
     private func mutateActive(_ change: (inout Workout) -> Void) {
         var next = state
         guard let index = next.workouts.firstIndex(where: { $0.endedAt == nil }) else { return }
         change(&next.workouts[index])
+        updateState(next)
+    }
+
+    private func updateState(_ next: AppState) {
+        state = next
+        try? persist(next)
+    }
+
+    private func commit(_ next: AppState) throws {
+        try persist(next)
         state = next
     }
 
-    private func save() {
-        guard let data = try? JSONEncoder().encode(state) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+    private func persist(_ snapshot: AppState) throws {
+        try JSONEncoder().encode(snapshot).write(to: fileURL, options: .atomic)
+    }
+}
+
+enum WeeklyGoalError: Error {
+    case invalidDays
+}
+
+enum ScheduleError: LocalizedError {
+    case missingPlan
+    case pastDate
+
+    var errorDescription: String? {
+        switch self {
+        case .missingPlan: "找不到这份训练计划。"
+        case .pastDate: "请选择今天或之后的日期。"
+        }
+    }
+}
+
+enum WorkoutPlanError: LocalizedError {
+    case unavailable
+    case empty
+
+    var errorDescription: String? {
+        switch self {
+        case .unavailable: "找不到这次已保存的训练。"
+        case .empty: "这次训练没有可存为计划的完成组。"
+        }
     }
 }

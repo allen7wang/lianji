@@ -16,7 +16,9 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="workout" />
           <Stack.Screen name="plan-editor" />
+          <Stack.Screen name="training-schedule" />
           <Stack.Screen name="history/[id]" />
+          <Stack.Screen name="history/edit/[id]" />
           <Stack.Screen name="nutrition" />
         </Stack>
       </DataProvider>

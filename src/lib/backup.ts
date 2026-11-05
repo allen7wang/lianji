@@ -1,4 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { insertScheduledTraining, isWeeklyGoal, readTrainingSchedule, readWeeklyGoal, writeWeeklyGoal } from './database';
+import { isScheduleDay, scheduleKey, type ScheduledTraining } from './training-schedule';
 import type { BodyEntry, Exercise, FoodEntry, Plan, PlanItem, Workout, WorkoutSet } from './types';
 
 export const BACKUP_VERSION = 1;
@@ -18,14 +20,31 @@ export type BackupFile = {
   version: number;
   exportedAt: string;
   tables: BackupTables;
+  weeklyGoal?: number;
+  schedule?: ScheduledTraining[];
 };
 
 const TABLES = ['exercises', 'plans', 'plan_items', 'workouts', 'workout_sets', 'body_entries', 'food_entries'] as const;
 // Children first so foreign keys hold during the replace.
-const DELETE_ORDER = ['workout_sets', 'plan_items', 'food_entries', 'body_entries', 'workouts', 'plans', 'exercises'] as const;
+const DELETE_ORDER = ['training_schedule', 'workout_sets', 'plan_items', 'food_entries', 'body_entries', 'workouts', 'plans', 'exercises'] as const;
+
+function validateSchedule(schedule: unknown, plans: Plan[]) {
+  if (schedule === undefined) return;
+  if (!Array.isArray(schedule)) throw new Error('备份中的训练日程无效。');
+  const planIds = new Set(plans.map(plan => plan.id));
+  const entries = new Set<string>();
+  for (const entry of schedule as (Partial<ScheduledTraining> | null)[]) {
+    if (!entry || !isScheduleDay(entry.day) || typeof entry.planId !== 'string' || !planIds.has(entry.planId)) {
+      throw new Error('备份中的训练日程包含无效日期或找不到对应计划。');
+    }
+    const key = scheduleKey({ day: entry.day, planId: entry.planId });
+    if (entries.has(key)) throw new Error('备份中有重复的训练日程。');
+    entries.add(key);
+  }
+}
 
 export async function exportBackup(db: SQLiteDatabase): Promise<BackupFile> {
-  const [exercises, plans, plan_items, workouts, workout_sets, body_entries, food_entries] = await Promise.all([
+  const [exercises, plans, plan_items, workouts, workout_sets, body_entries, food_entries, weeklyGoal, scheduleRows] = await Promise.all([
     db.getAllAsync<Exercise>('SELECT * FROM exercises'),
     db.getAllAsync<Plan>('SELECT * FROM plans'),
     db.getAllAsync<PlanItem>('SELECT * FROM plan_items'),
@@ -33,8 +52,13 @@ export async function exportBackup(db: SQLiteDatabase): Promise<BackupFile> {
     db.getAllAsync<WorkoutSet>('SELECT * FROM workout_sets'),
     db.getAllAsync<BodyEntry>('SELECT * FROM body_entries'),
     db.getAllAsync<FoodEntry>('SELECT * FROM food_entries'),
+    readWeeklyGoal(db),
+    readTrainingSchedule(db),
   ]);
-  return { app: 'lianji', version: BACKUP_VERSION, exportedAt: new Date().toISOString(), tables: { exercises, plans, plan_items, workouts, workout_sets, body_entries, food_entries } };
+  // Only include assignments whose plans were captured by the parallel reads.
+  const planIds = new Set(plans.map(plan => plan.id));
+  const schedule = scheduleRows.filter(entry => planIds.has(entry.planId));
+  return { app: 'lianji', version: BACKUP_VERSION, exportedAt: new Date().toISOString(), tables: { exercises, plans, plan_items, workouts, workout_sets, body_entries, food_entries }, weeklyGoal, schedule };
 }
 
 export function parseBackup(text: string): BackupFile {
@@ -47,6 +71,7 @@ export function parseBackup(text: string): BackupFile {
   const backup = data as Partial<BackupFile> | null;
   if (backup?.app !== 'lianji' || !backup.tables) throw new Error('这不是练迹的备份文件。');
   if (backup.version !== BACKUP_VERSION) throw new Error(`备份版本（${backup.version}）与当前应用（${BACKUP_VERSION}）不兼容。`);
+  if (backup.weeklyGoal !== undefined && !isWeeklyGoal(backup.weeklyGoal)) throw new Error('备份中的每周训练目标无效。');
   for (const table of TABLES) {
     const rows = backup.tables[table];
     if (!Array.isArray(rows)) throw new Error(`备份缺少 ${table} 数据。`);
@@ -54,17 +79,23 @@ export function parseBackup(text: string): BackupFile {
       if (typeof row?.id !== 'string' || !row.id) throw new Error('备份内容已损坏：存在缺少 id 的记录。');
     }
   }
+  validateSchedule(backup.schedule, backup.tables.plans);
   return backup as BackupFile;
 }
 
 export async function importBackup(db: SQLiteDatabase, backup: BackupFile): Promise<void> {
+  validateSchedule(backup.schedule, backup.tables.plans);
   await db.withExclusiveTransactionAsync(async transaction => {
+    if (backup.weeklyGoal !== undefined) await writeWeeklyGoal(transaction, backup.weeklyGoal);
     for (const table of DELETE_ORDER) await transaction.runAsync(`DELETE FROM ${table}`);
     for (const exercise of backup.tables.exercises) {
       await transaction.runAsync('INSERT INTO exercises VALUES (?, ?, ?, ?, ?)', exercise.id, exercise.name, exercise.muscle, exercise.equipment, exercise.isCustom);
     }
     for (const plan of backup.tables.plans) {
       await transaction.runAsync('INSERT INTO plans VALUES (?, ?, ?, ?)', plan.id, plan.name, plan.note, plan.createdAt);
+    }
+    for (const entry of backup.schedule ?? []) {
+      await insertScheduledTraining(transaction, entry.day, entry.planId);
     }
     for (const item of backup.tables.plan_items) {
       await transaction.runAsync('INSERT INTO plan_items (id, planId, exerciseId, sortOrder, sets, reps, weight, unit, restSeconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', item.id, item.planId, item.exerciseId, item.sortOrder, item.sets, item.reps, item.weight, item.unit ?? 'reps', item.restSeconds ?? 90);

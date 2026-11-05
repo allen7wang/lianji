@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useData } from '@/lib/data';
-import { durationLabel, volumeOf, type Exercise, type Workout, type WorkoutSet } from '@/lib/types';
+import { findPreviousExerciseSets } from '@/lib/training-comparison';
+import { durationLabel, volumeOf, type Exercise, type TrainingUnit, type Workout, type WorkoutSet } from '@/lib/types';
 import { Button, Card, ExercisePicker, IconButton, Metric } from '@/ui/components';
+import { PreviousTraining } from '@/ui/previous-training';
 import { C } from '@/ui/theme';
 import { demoFor } from '@/lib/exercise-demos';
 import { ExerciseDemoModal } from '@/ui/exercise-demo';
@@ -43,46 +45,40 @@ export default function WorkoutScreen() {
 
 function ActiveWorkout({ workout }: { workout: Workout }) {
   const { workoutSets, exercises, workouts, addWorkoutExercise, addSet, updateSet, deleteSet, finishWorkout, deleteWorkout, updateWorkoutNote } = useData();
-  const sets = workoutSets.filter(item => item.workoutId === workout?.id);
+  const sets = useMemo(() => workoutSets.filter(item => item.workoutId === workout.id), [workout.id, workoutSets]);
   const completed = sets.filter(item => item.completed).length;
   const [picker, setPicker] = useState(false);
   const [demoExercise, setDemoExercise] = useState<Exercise | null>(null);
   const [breathGuide, setBreathGuide] = useState<BreathGuideRequest | null>(null);
   const [note, setNote] = useState(workout.note);
+  const [saving, setSaving] = useState(false);
+  const saveInFlight = useRef(false);
   const [timer, setTimer] = useState<{ label: string; deadline: number } | null>(null);
   const [clock, setClock] = useState(0);
   useEffect(() => { const interval = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(interval); }, []);
-  const lastPerformed = useMemo(() => {
-    const byWorkout = new Map<string, WorkoutSet[]>();
-    for (const set of workoutSets) {
-      const list = byWorkout.get(set.workoutId);
-      if (list) list.push(set); else byWorkout.set(set.workoutId, [set]);
-    }
-    const ended = workouts.filter(item => item.endedAt).sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-    const latest = new Map<string, WorkoutSet>();
-    const settled = new Set<string>();
-    for (const endedWorkout of ended) {
-      for (const set of byWorkout.get(endedWorkout.id) ?? []) {
-        if (set.completed && !settled.has(set.exerciseId)) latest.set(set.exerciseId, set);
-      }
-      for (const exerciseId of latest.keys()) settled.add(exerciseId);
-    }
-    return latest;
-  }, [workouts, workoutSets]);
-  const lastLabel = (exerciseId: string) => {
-    const set = lastPerformed.get(exerciseId);
-    if (!set) return '';
-    return set.unit === 'seconds' ? ` · 上次 ${set.reps} 秒` : ` · 上次 ${set.weight} kg × ${set.reps}`;
-  };
+  const previousByExercise = useMemo(() => findPreviousExerciseSets(workout, workouts, workoutSets), [workout, workouts, workoutSets]);
   const seconds = timer ? Math.max(0, Math.ceil((timer.deadline - clock) / 1000)) : 0;
   const startTimer = (duration: number, label: string, now: number) => {
     setClock(now);
     setTimer(duration > 0 ? { label, deadline: now + duration * 1000 } : null);
   };
   const groups = useMemo(() => {
-    const keys = Array.from(new Set(sets.map(set => set.exerciseId)));
-    return keys.map(exerciseId => ({ exerciseId, exercise: exercises.find(item => item.id === exerciseId), sets: sets.filter(item => item.exerciseId === exerciseId) }));
-  }, [sets, exercises]);
+    const grouped = new Map<string, WorkoutSet[]>();
+    for (const set of sets) {
+      const group = grouped.get(set.exerciseId);
+      if (group) group.push(set);
+      else grouped.set(set.exerciseId, [set]);
+    }
+    return Array.from(grouped, ([exerciseId, items]) => {
+      const comparable = previousByExercise.get(exerciseId);
+      const units = new Set<TrainingUnit>(items.map(set => set.unit === 'seconds' ? 'seconds' : 'reps'));
+      const previous = Array.from(units).flatMap(unit => {
+        const session = comparable?.[unit];
+        return session ? [{ unit, ...session }] : [];
+      });
+      return { exerciseId, exercise: exercises.find(item => item.id === exerciseId), sets: items, previous };
+    });
+  }, [sets, exercises, previousByExercise]);
 
   const update = (setId: string, patch: Partial<WorkoutSet>) => { updateSet(setId, patch).catch(console.error); };
   const toggle = (setId: string, now: number) => {
@@ -93,11 +89,23 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
     if (!set.completed) startTimer(set.restSeconds ?? 90, '组间休息', now);
   };
   const finish = () => {
-    if (!workout) return;
+    if (saveInFlight.current) return;
     if (!completed) return Alert.alert('还没有完成的组数', '至少完成一组训练后再结束。');
     Alert.alert('结束训练', `已完成 ${completed} 组，训练容量 ${Math.round(volumeOf(sets))} kg。`, [
       { text: '继续训练', style: 'cancel' },
-      { text: '完成', onPress: async () => { await finishWorkout(workout.id, note); router.replace('/history'); } },
+      { text: '完成', onPress: async () => {
+        if (saveInFlight.current) return;
+        saveInFlight.current = true;
+        setSaving(true);
+        try {
+          await finishWorkout(workout.id, note);
+          router.replace({ pathname: '/history/[id]', params: { id: workout.id, saved: '1' } });
+        } catch {
+          saveInFlight.current = false;
+          setSaving(false);
+          Alert.alert('保存训练失败', '请再试一次。');
+        }
+      } },
     ]);
   };
   const discard = () => {
@@ -114,7 +122,8 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
       <Card style={styles.summary}><Metric value={durationLabel(workout.startedAt, null)} label="训练时长" accent /><Metric value={`${completed}/${sets.length}`} label="已完成组" /><Metric value={`${Math.round(volumeOf(sets))}`} label="容量 · kg" /></Card>
       {timer ? <Pressable onPress={() => setTimer(null)} style={styles.timer}><Ionicons name="timer-outline" size={17} color={C.accent} /><Text style={styles.timerText}>{seconds > 0 ? `${timer.label} ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : timer.label === '动作计时' ? '动作计时结束，请按实际完成情况勾选' : '休息结束，可以开始下一组'}</Text><Text style={styles.timerSkip}>{seconds > 0 ? '停止' : '关闭'}</Text></Pressable> : null}
       {groups.map((group, index) => <Card key={group.exerciseId} style={{ gap: 14 }}>
-        <View style={styles.exerciseHeader}><View style={styles.exerciseIndex}><Text style={styles.exerciseIndexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{group.exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta} numberOfLines={1}>{group.exercise?.muscle} · {group.exercise?.equipment}{group.exercise ? lastLabel(group.exercise.id) : ''}</Text></View><Text style={styles.exerciseCount}>{group.sets.filter(set => set.completed).length}/{group.sets.length}</Text></View>
+        <View style={styles.exerciseHeader}><View style={styles.exerciseIndex}><Text style={styles.exerciseIndexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{group.exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta} numberOfLines={1}>{group.exercise?.muscle} · {group.exercise?.equipment}</Text></View><Text style={styles.exerciseCount}>{group.sets.filter(set => set.completed).length}/{group.sets.length}</Text></View>
+        <PreviousTraining exerciseName={group.exercise?.name ?? '未知动作'} entries={group.previous} />
         {group.exercise && demoFor(group.exercise) ? <Button label="查看动图" icon="play-circle-outline" variant="ghost" onPress={() => setDemoExercise(group.exercise!)} /> : null}
         <View style={styles.tableHead}><Text style={styles.headNumber}>组</Text>{!breathingProfileFor(group.exercise) ? <Text style={styles.headCell}>重量</Text> : null}<Text style={styles.headCell}>{group.sets[0]?.unit === 'seconds' ? '时长 · 秒' : '次数'}</Text><Text style={styles.headCheck}>完成</Text></View>
         {group.sets.map(item => <SetRow key={item.id} item={item} breathing={!!breathingProfileFor(group.exercise)} onUpdate={update} onDelete={setId => Alert.alert('删除组数', '确定删除这一组？', [{ text: '取消', style: 'cancel' }, { text: '删除', style: 'destructive', onPress: () => deleteSet(setId) }])} onComplete={toggle} onTimer={(duration, now) => {
@@ -129,7 +138,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
       <View style={{ gap: 8 }}><Text style={styles.noteLabel}>训练笔记</Text><TextInput multiline placeholder="今天的状态、动作感受…" placeholderTextColor={C.faint} value={note} onChangeText={setNote} onBlur={() => updateWorkoutNote(workout.id, note)} style={styles.note} /></View>
       <Text style={styles.hint}>长按组号可删除该组。</Text>
     </ScrollView>
-    <View style={styles.footer}><Button label="结束训练" icon="checkmark-circle-outline" onPress={finish} /></View>
+    <View style={styles.footer}><Button label={saving ? '正在保存…' : '结束训练'} icon="checkmark-circle-outline" onPress={finish} disabled={saving} /></View>
     <ExercisePicker visible={picker} onClose={() => setPicker(false)} onSelect={exercise => addWorkoutExercise(workout.id, exercise.id)} excluded={groups.map(item => item.exerciseId)} />
     <ExerciseDemoModal exercise={demoExercise} onClose={() => setDemoExercise(null)} />
     <BreathingGuideModal request={breathGuide} onClose={() => setBreathGuide(null)} />

@@ -30,6 +30,18 @@ struct WatchHomeView: View {
                         } label: {
                             Label("自由训练", systemImage: "plus.circle.fill")
                         }
+                    }
+                    NavigationLink {
+                        WatchScheduleView()
+                    } label: {
+                        Label("训练安排", systemImage: "calendar.badge.clock")
+                    }
+                    NavigationLink {
+                        WatchProgressView()
+                    } label: {
+                        Label("训练进度", systemImage: "chart.bar.fill")
+                    }
+                    if store.activeWorkout == nil {
                         ForEach(store.state.plans) { plan in
                             Button {
                                 store.startWorkout(planId: plan.id)
@@ -50,7 +62,7 @@ struct WatchHomeView: View {
                     NavigationLink {
                         WatchHistoryView()
                     } label: {
-                        Label("训练历史", systemImage: "chart.bar.fill")
+                        Label("训练历史", systemImage: "clock.arrow.circlepath")
                     }
                     NavigationLink {
                         WatchDemoLibrary()
@@ -60,6 +72,89 @@ struct WatchHomeView: View {
                 }
             }
             .navigationTitle("练迹")
+        }
+    }
+}
+
+private struct WatchScheduleView: View {
+    @EnvironmentObject private var store: TrainingStore
+    @State private var showWorkout = false
+
+    var body: some View {
+        let items = store.trainingSchedule()
+        List {
+            NavigationLink {
+                WatchScheduleEditor()
+            } label: {
+                Label("添加安排", systemImage: "plus")
+            }
+            if items.isEmpty {
+                Text("还没有训练安排。").font(.caption).foregroundStyle(.secondary)
+            }
+            ForEach(items) { item in
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(item.plan.name).font(.subheadline.bold())
+                    Text("\(item.entry.day) · \(item.status.rawValue)")
+                        .font(.caption2)
+                        .foregroundStyle(item.status == .missed ? .secondary : lime)
+                    TrainingScheduleActions(item: item) { showWorkout = true }
+                }
+            }
+        }
+        .navigationTitle("训练安排")
+        .navigationDestination(isPresented: $showWorkout) { WatchWorkoutView() }
+    }
+}
+
+private struct WatchScheduleEditor: View {
+    @EnvironmentObject private var store: TrainingStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var offset = 0
+    @State private var planId = ""
+    @State private var saveFailed = false
+
+    var body: some View {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let date = calendar.date(byAdding: .day, value: offset, to: today) ?? today
+        let selectedPlan = store.state.plans.first { $0.id == planId }
+        let entry = ScheduledTraining(planId: planId, day: ScheduledTraining.localDay(date))
+        let duplicate = store.state.trainingSchedule?.contains(entry) == true
+
+        List {
+            if store.state.plans.isEmpty {
+                Text("先添加一份训练计划。").font(.caption).foregroundStyle(.secondary)
+            } else {
+                Picker("日期", selection: $offset) {
+                    Text("今天").tag(0)
+                    ForEach(1..<7) { day in
+                        if let option = calendar.date(byAdding: .day, value: day, to: today) {
+                            Text(option.formatted(.dateTime.month().day().weekday(.abbreviated))).tag(day)
+                        }
+                    }
+                }
+                .pickerStyle(.navigationLink)
+                Picker("计划", selection: Binding(
+                    get: { selectedPlan?.id ?? "" },
+                    set: { planId = $0 }
+                )) {
+                    Text("选择计划").tag("")
+                    ForEach(store.state.plans) { plan in Text(plan.name).tag(plan.id) }
+                }
+                .pickerStyle(.navigationLink)
+                Button(duplicate ? "已安排" : "添加安排") {
+                    do {
+                        if try store.scheduleTraining(planId: planId, on: date) { dismiss() }
+                    } catch { saveFailed = true }
+                }
+                .disabled(selectedPlan == nil || duplicate)
+            }
+        }
+        .navigationTitle("添加安排")
+        .alert("无法添加训练安排", isPresented: $saveFailed) {
+            Button("好", role: .cancel) {}
+        } message: {
+            Text("请重试。")
         }
     }
 }
@@ -199,12 +294,19 @@ private struct WatchExerciseView: View {
     @State private var timerLabel = "休息"
 
     var body: some View {
+        let workout = store.activeWorkout
+        let references = workout.map {
+            TrainingComparison(workouts: store.state.workouts).previousExerciseSets(for: $0, exerciseId: exerciseId)[exerciseId] ?? []
+        } ?? []
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
                 Text(store.exercise(exerciseId)?.name ?? "未知动作")
                     .font(.headline).lineLimit(2)
                 if let exercise = store.exercise(exerciseId), ExerciseDemo.find(exercise) != nil {
                     NavigationLink("查看动图", destination: ExerciseDemoView(exercise: exercise))
+                }
+                ForEach(references) { reference in
+                    PreviousExerciseSetsView(reference: reference)
                 }
                 if let restUntil {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -215,7 +317,7 @@ private struct WatchExerciseView: View {
                     }
                     Button("停止计时") { self.restUntil = nil }
                 }
-                ForEach(store.activeWorkout?.sets.filter { $0.exerciseId == exerciseId } ?? []) { set in
+                ForEach(workout?.sets.filter { $0.exerciseId == exerciseId } ?? []) { set in
                     VStack(alignment: .leading, spacing: 7) {
                         Text("第 \(set.setNumber) 组").font(.caption.bold()).foregroundStyle(lime)
                         if BreathingProfile.find(store.exercise(exerciseId)) == nil {
@@ -277,16 +379,128 @@ private struct WatchExercisePicker: View {
     }
 }
 
+private struct WatchProgressView: View {
+    @EnvironmentObject private var store: TrainingStore
+    @State private var weekOffset = 0
+
+    var body: some View {
+        let progress = TrainingProgress(workouts: store.state.workouts)
+        let today = Date.now
+        let currentWeek = progress.week(containing: today)
+        let date = progress.calendar.date(byAdding: .weekOfYear, value: weekOffset, to: today) ?? today
+        let week = weekOffset == 0 ? currentWeek : progress.week(containing: date)
+        let days = week.days
+        let exercises = progress.exerciseOptions(store.state.exercises)
+
+        List {
+            Section("每周目标") {
+                WeeklyGoalControl(activeDays: currentWeek.activeDays(through: today))
+            }
+            Section("训练日历") {
+                VStack(alignment: .leading, spacing: 7) {
+                    if let first = days.first, let last = days.last {
+                        Text("\(first.date.formatted(.dateTime.month().day())) – \(last.date.formatted(.dateTime.month().day()))")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                    HStack(spacing: 2) {
+                        ForEach(days) { day in
+                            VStack(spacing: 4) {
+                                Text(day.date.formatted(.dateTime.day()))
+                                    .font(.caption2.monospacedDigit())
+                                    .lineLimit(1).minimumScaleFactor(0.65)
+                                Circle()
+                                    .fill(day.completedSets > 0 ? lime : .secondary.opacity(0.45))
+                                    .frame(width: 6, height: 6)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("\(day.date.formatted(date: .abbreviated, time: .omitted))，\(day.completedSets) 组")
+                        }
+                    }
+                    Text("\(week.activeDays()) 天 · \(week.completedSets) 组")
+                        .font(.caption.bold()).foregroundStyle(lime)
+                }
+                Button(weekOffset == 0 ? "查看上周" : "返回本周") {
+                    weekOffset = weekOffset == 0 ? -1 : 0
+                }
+            }
+            Section("动作进度") {
+                if exercises.isEmpty {
+                    Text("保存已完成的训练组后查看个人纪录。")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                ForEach(exercises) { exercise in
+                    NavigationLink {
+                        WatchExerciseProgressView(exercise: exercise)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(exercise.name)
+                            if exercise.isCustom {
+                                Text("自定义").font(.caption2).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("训练进度")
+    }
+}
+
+private struct WatchExerciseProgressView: View {
+    @EnvironmentObject private var store: TrainingStore
+    let exercise: Exercise
+
+    var body: some View {
+        let progress = TrainingProgress(workouts: store.state.workouts).exercise(exercise.id)
+        List {
+            Section("个人纪录") {
+                if progress.records.metrics.isEmpty {
+                    Text("暂无可比较的次数或时长。").font(.caption).foregroundStyle(.secondary)
+                }
+                ForEach(progress.records.metrics) { metric in
+                    if let label = progress.records.label(metric) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(metric.rawValue).font(.caption2).foregroundStyle(.secondary)
+                            Text(label).font(.subheadline.bold()).foregroundStyle(lime)
+                        }
+                    }
+                }
+            }
+            Section("最近训练") {
+                ForEach(progress.recent) { session in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(session.date.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption2).foregroundStyle(.secondary)
+                        ForEach(session.records.metrics) { metric in
+                            if let label = session.records.label(metric) {
+                                Text(label).font(.caption)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle(exercise.name)
+    }
+}
+
 private struct WatchHistoryView: View {
     @EnvironmentObject private var store: TrainingStore
     var body: some View {
-        List(store.finishedWorkouts.prefix(20)) { workout in
+        let history = store.finishedWorkouts
+        let comparison = TrainingComparison(workouts: history)
+        List(history.prefix(20)) { workout in
             VStack(alignment: .leading, spacing: 4) {
                 Text(workout.name).font(.subheadline.bold()).lineLimit(2)
                 Text(workout.startedAt.formatted(date: .abbreviated, time: .omitted))
                     .font(.caption2).foregroundStyle(.secondary)
                 Text("\(workout.completedSets.count) 组 · \(Int(workout.volume)) kg")
                     .font(.caption2).foregroundStyle(lime)
+                if let prior = comparison.previousPlanWorkout(for: workout) {
+                    PlanWorkoutComparisonView(comparison: prior)
+                }
+                SaveWorkoutPlanButton(workout: workout)
             }
         }
         .navigationTitle("历史")

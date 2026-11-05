@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import extraExercises from '../../assets/exercises/extra-exercises.json';
+import { isScheduleDay, type ScheduledTraining } from './training-schedule';
 import { id } from './types';
 
 const defaultExercises: [string, string, string][] = [
@@ -15,6 +16,43 @@ const defaultExercises: [string, string, string][] = [
   ['悬垂举腿', '核心', '自重'], ['硬拉', '全身', '杠铃'], ['壶铃摆动', '全身', '壶铃'],
 ];
 
+export function isWeeklyGoal(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 7;
+}
+
+export async function readWeeklyGoal(db: SQLiteDatabase) {
+  const preferences = await db.getFirstAsync<{ weeklyGoal: number }>('SELECT weeklyGoal FROM training_preferences WHERE id = 1');
+  return preferences?.weeklyGoal ?? 0;
+}
+
+export async function writeWeeklyGoal(db: SQLiteDatabase, days: number) {
+  if (!isWeeklyGoal(days)) throw new Error('每周训练目标需为 0–7 天的整数。');
+  await db.runAsync(`
+    INSERT INTO training_preferences (id, weeklyGoal) VALUES (1, ?)
+    ON CONFLICT(id) DO UPDATE SET weeklyGoal = excluded.weeklyGoal
+  `, days);
+}
+
+export async function readTrainingSchedule(db: SQLiteDatabase) {
+  return db.getAllAsync<ScheduledTraining>('SELECT day, planId FROM training_schedule ORDER BY day, planId');
+}
+
+export async function insertScheduledTraining(db: SQLiteDatabase, day: string, planId: string) {
+  if (!isScheduleDay(day)) throw new Error('请选择有效的训练日期。');
+  // An existing pair still reports a change, so zero changes means the plan is missing.
+  const result = await db.runAsync(`
+    INSERT INTO training_schedule (day, planId)
+    SELECT ?, id FROM plans WHERE id = ?
+    ON CONFLICT(day, planId) DO UPDATE SET planId = excluded.planId
+  `, day, planId);
+  if (!result.changes) throw new Error('没有找到这个训练计划。');
+}
+
+export async function removeScheduledTraining(db: SQLiteDatabase, day: string, planId: string) {
+  if (!isScheduleDay(day)) throw new Error('请选择有效的训练日期。');
+  await db.runAsync('DELETE FROM training_schedule WHERE day = ? AND planId = ?', day, planId);
+}
+
 export async function migrate(db: SQLiteDatabase) {
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
@@ -26,6 +64,10 @@ export async function migrate(db: SQLiteDatabase) {
     CREATE TABLE IF NOT EXISTS plans (
       id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, note TEXT NOT NULL,
       createdAt TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS training_schedule (
+      day TEXT NOT NULL, planId TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+      PRIMARY KEY (day, planId)
     );
     CREATE TABLE IF NOT EXISTS plan_items (
       id TEXT PRIMARY KEY NOT NULL, planId TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
@@ -51,9 +93,14 @@ export async function migrate(db: SQLiteDatabase) {
       name TEXT NOT NULL, portion TEXT NOT NULL, calories REAL NOT NULL,
       protein REAL NOT NULL, carbs REAL NOT NULL, fat REAL NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS training_preferences (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      weeklyGoal INTEGER NOT NULL CHECK (typeof(weeklyGoal) = 'integer' AND weeklyGoal BETWEEN 0 AND 7)
+    );
     CREATE INDEX IF NOT EXISTS idx_workout_sets_workout ON workout_sets(workoutId);
     CREATE INDEX IF NOT EXISTS idx_workouts_started ON workouts(startedAt);
     CREATE INDEX IF NOT EXISTS idx_food_logged ON food_entries(loggedAt);
+    CREATE INDEX IF NOT EXISTS idx_training_schedule_plan ON training_schedule(planId);
   `);
 
   const count = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM exercises');

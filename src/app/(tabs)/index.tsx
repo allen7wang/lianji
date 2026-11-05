@@ -1,26 +1,59 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useData } from '@/lib/data';
-import { dateLabel, durationLabel, volumeOf } from '@/lib/types';
+import { buildWeeklyTrainingActivity, localDayKey } from '@/lib/training-progress';
+import { completedScheduleKeys, scheduleStatus } from '@/lib/training-schedule';
+import { dateLabel, durationLabel, volumeOf, type Plan } from '@/lib/types';
+import { useTrainingDate } from '@/lib/use-training-date';
 import { Button, Card, Header, Metric, Page, SectionTitle } from '@/ui/components';
 import { C } from '@/ui/theme';
+import { WeeklyTrainingGoal } from '@/ui/weekly-training-goal';
 
 export default function Today() {
-  const { ready, plans, planItems, exercises, workouts, workoutSets, startWorkout, deleteWorkout } = useData();
+  const { ready, plans, planItems, exercises, workouts, workoutSets, schedule, startWorkout, deleteWorkout } = useData();
   const active = workouts.find(item => !item.endedAt);
-  const finished = workouts.filter(item => item.endedAt);
-  const monday = new Date();
-  monday.setHours(0, 0, 0, 0);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  const weekWorkouts = finished.filter(item => new Date(item.startedAt) >= monday);
-  const weekVolume = weekWorkouts.reduce((sum, workout) => sum + volumeOf(workoutSets.filter(set => set.workoutId === workout.id)), 0);
-  const daily = Array.from({ length: 7 }, (_, index) => {
-    const day = new Date(monday);
-    day.setDate(day.getDate() + index);
-    return finished.filter(item => new Date(item.startedAt).toDateString() === day.toDateString()).length;
-  });
-  const now = new Date();
+  const [starting, setStarting] = useState(false);
+  const startInFlight = useRef(false);
+  const now = useTrainingDate();
+  const todayKey = localDayKey(now);
+  const todaySchedule = useMemo(() => {
+    const entries = schedule.filter(entry => entry.day === todayKey);
+    if (!entries.length) return [];
+    const byId = new Map(plans.map(plan => [plan.id, plan]));
+    const completed = completedScheduleKeys(workouts, workoutSets);
+    return entries.flatMap(entry => {
+      const plan = byId.get(entry.planId);
+      return plan ? [{ plan, status: scheduleStatus(entry, todayKey, completed) }] : [];
+    });
+  }, [plans, schedule, todayKey, workouts, workoutSets]);
+  const { finished, weeks, weekCount, weekVolume, daily } = useMemo(() => {
+    const finished = workouts.filter(item => item.endedAt);
+    const completedWorkoutIds = new Set(workoutSets.filter(set => set.completed).map(set => set.workoutId));
+    const sessions = finished.map(workout => ({
+      workout,
+      day: localDayKey(new Date(workout.startedAt)),
+      completedSets: completedWorkoutIds.has(workout.id) ? 1 : 0,
+    }));
+    const weeks = buildWeeklyTrainingActivity(sessions, now);
+    const counts = new Map(weeks[0].days.map(day => [day.key, 0]));
+    const weekIds = new Set<string>();
+    for (const { workout, day } of sessions) {
+      const count = counts.get(day);
+      if (count !== undefined && day <= todayKey) {
+        counts.set(day, count + 1);
+        weekIds.add(workout.id);
+      }
+    }
+    return {
+      finished,
+      weeks,
+      weekCount: weekIds.size,
+      weekVolume: volumeOf(workoutSets.filter(set => weekIds.has(set.workoutId))),
+      daily: [...counts.values()],
+    };
+  }, [now, todayKey, workouts, workoutSets]);
 
   async function begin(planId?: string, planName?: string) {
     const conflict = planId ? workouts.find(item => !item.endedAt && item.planId !== planId) : null;
@@ -36,6 +69,21 @@ export default function Today() {
     router.push('/workout');
   }
 
+  async function startScheduled(plan: Plan) {
+    if (startInFlight.current || (active && active.planId !== plan.id)) return;
+    startInFlight.current = true;
+    setStarting(true);
+    try {
+      await startWorkout(plan.id);
+      router.push('/workout');
+    } catch {
+      Alert.alert('无法开始训练', '请确认计划仍可用后重试。');
+    } finally {
+      startInFlight.current = false;
+      setStarting(false);
+    }
+  }
+
   return <Page>
     <Header eyebrow="LIANJI · TRAINING LOG" title="今天练什么？" right={<View style={styles.date}><Text style={styles.dateDay}>{now.getDate()}</Text><Text style={styles.dateMonth}>{now.getMonth() + 1}月</Text></View>} />
     <View style={styles.hero}>
@@ -47,9 +95,32 @@ export default function Today() {
         <Button label={active ? '继续记录' : '开始自由训练'} icon="arrow-forward" onPress={() => active ? router.push('/workout') : begin()} style={{ alignSelf: 'flex-start', marginTop: 22 }} />
       </View>
     </View>
+    {ready ? <>
+      <SectionTitle title="今日安排" action={todaySchedule.length ? '查看安排' : undefined} onAction={() => router.push('/training-schedule')} />
+      {todaySchedule.length ? <Card style={styles.schedule}>
+        {todaySchedule.map(({ plan, status }) => <View key={plan.id} style={styles.scheduleRow}>
+          <View style={styles.scheduleLabel}>
+            <Ionicons name={status === '已完成' ? 'checkmark-circle-outline' : 'calendar-outline'} size={20} color={C.accent} />
+            <View style={styles.scheduleText}>
+              <Text style={styles.planTitle}>{plan.name}</Text>
+              <Text style={styles.planSub}>{status === '待训练' && active?.planId === plan.id ? '进行中' : status}</Text>
+            </View>
+          </View>
+          {status === '待训练' ? <Button
+            label={active?.planId === plan.id ? '继续' : '开始'}
+            variant="secondary"
+            disabled={starting || !!(active && active.planId !== plan.id)}
+            onPress={() => startScheduled(plan)}
+            style={styles.scheduleStart}
+          /> : null}
+        </View>)}
+        {active && todaySchedule.some(({ plan, status }) => status === '待训练' && plan.id !== active.planId) ? <Text style={styles.scheduleHint}>完成当前训练后可开始下一项安排。</Text> : null}
+      </Card> : <Button label="安排训练" icon="calendar-outline" variant="secondary" onPress={() => router.push('/training-schedule')} />}
+    </> : null}
     <Pressable onPress={() => router.push('/nutrition')} style={styles.nutrition}><View style={styles.nutritionIcon}><Ionicons name="nutrition-outline" size={21} color={C.accent} /></View><View style={{ flex: 1 }}><Text style={styles.nutritionTitle}>记录今日饮食</Text><Text style={styles.nutritionSub}>热量 · 蛋白质 · 碳水 · 脂肪</Text></View><Ionicons name="chevron-forward" size={18} color={C.faint} /></Pressable>
-    <SectionTitle title="本周概览" action="查看统计" onAction={() => router.push('/history')} />
-    <Card><View style={styles.metricRow}><Metric value={`${weekWorkouts.length}`} label="训练次数" accent /><Metric value={`${Math.round(weekVolume).toLocaleString()}`} label="训练容量 · kg" /></View><View style={styles.bars}>{daily.map((count, i) => <View key={i} style={styles.barColumn}><View style={[styles.bar, { height: Math.max(6, Math.min(50, count * 25)), backgroundColor: count ? C.accent : C.line }]} /><Text style={styles.barLabel}>{'一二三四五六日'[i]}</Text></View>)}</View></Card>
+    <SectionTitle title="本周概览" action="查看进度" onAction={() => router.navigate('/history')} />
+    {ready ? <WeeklyTrainingGoal weeks={weeks} /> : null}
+    <Card><View style={styles.metricRow}><Metric value={`${weekCount}`} label="训练次数" accent /><Metric value={`${Math.round(weekVolume).toLocaleString()}`} label="训练容量 · kg × 次" /></View><View style={styles.bars}>{daily.map((count, i) => <View key={i} style={styles.barColumn}><View style={[styles.bar, { height: Math.max(6, Math.min(50, count * 25)), backgroundColor: count ? C.accent : C.line }]} /><Text style={styles.barLabel}>{'一二三四五六日'[i]}</Text></View>)}</View></Card>
     <SectionTitle title="我的训练计划" action="全部计划" onAction={() => router.push('/plans')} />
     {plans.slice(0, 3).map((plan, index) => {
       const items = planItems.filter(item => item.planId === plan.id);
@@ -71,6 +142,12 @@ const styles = StyleSheet.create({
   heroTitle: { color: C.text, fontSize: 30, lineHeight: 38, fontWeight: '800', marginTop: 18 }, heroSub: { color: '#C4D3BD', fontSize: 13, marginTop: 8 },
   metricRow: { flexDirection: 'row' }, bars: { marginTop: 22, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 73 },
   barColumn: { alignItems: 'center', gap: 6, width: 24 }, bar: { width: 16, borderRadius: 8 }, barLabel: { color: C.faint, fontSize: 11 },
+  schedule: { gap: 14 },
+  scheduleRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  scheduleLabel: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  scheduleText: { flex: 1 },
+  scheduleStart: { minHeight: 44, paddingVertical: 8, paddingHorizontal: 14 },
+  scheduleHint: { color: C.muted, fontSize: 12, lineHeight: 17 },
   plan: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, borderRadius: 17, padding: 15 },
   planNumber: { width: 42, height: 42, borderRadius: 12, backgroundColor: C.elevated, alignItems: 'center', justifyContent: 'center' }, planNumberText: { color: C.accent, fontSize: 14, fontWeight: '800' }, planTitle: { color: C.text, fontSize: 16, fontWeight: '700' }, planSub: { color: C.muted, fontSize: 11, marginTop: 5 },
   recent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, recentTitle: { color: C.text, fontSize: 16, fontWeight: '700' }, recentSub: { color: C.muted, marginTop: 5, fontSize: 12 },

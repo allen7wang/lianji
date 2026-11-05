@@ -76,6 +76,35 @@ struct Workout: Identifiable, Codable, Hashable {
     var volume: Double { completedSets.reduce(0) { $0 + ($1.unit == .seconds ? 0 : $1.weight * Double($1.reps)) } }
 }
 
+struct ScheduledTraining: Identifiable, Codable, Hashable {
+    let planId: String
+    let day: String
+
+    var id: Self { self }
+
+    static func localDay(_ date: Date, timeZone: TimeZone = .current) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", components.year ?? 0, components.month ?? 0, components.day ?? 0)
+    }
+}
+
+enum TrainingScheduleStatus: String {
+    case completed = "已完成"
+    case pending = "待训练"
+    case upcoming = "已安排"
+    case missed = "已错过"
+}
+
+struct TrainingScheduleItem: Identifiable {
+    let entry: ScheduledTraining
+    let plan: Plan
+    let status: TrainingScheduleStatus
+
+    var id: ScheduledTraining { entry }
+}
+
 struct BodyEntry: Identifiable, Codable, Hashable {
     var id: String = UUID().uuidString
     var recordedAt: Date = .now
@@ -101,6 +130,8 @@ struct AppState: Codable {
     var workouts: [Workout]
     var bodyEntries: [BodyEntry]
     var foodEntries: [FoodEntry]
+    var weeklyGoalDays: Int? = nil
+    var trainingSchedule: [ScheduledTraining]? = nil
 
     mutating func addMissingExercises() {
         for entry in ExtraExercise.catalog where !exercises.contains(where: { !$0.isCustom && $0.name == entry.name }) {

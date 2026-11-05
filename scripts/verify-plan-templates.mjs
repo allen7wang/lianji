@@ -50,10 +50,10 @@ function database() {
   return { native, db };
 }
 
-const { migrate } = loadSource(path.join(root, 'src/lib/database.ts'));
+const { migrate, readWeeklyGoal, writeWeeklyGoal, readTrainingSchedule, insertScheduledTraining, removeScheduledTraining } = loadSource(path.join(root, 'src/lib/database.ts'));
 const { trainingPrograms, templatePlanId } = loadSource(path.join(root, 'src/lib/plan-templates.ts'));
 const { importPlanTemplate } = loadSource(path.join(root, 'src/lib/import-plan-template.ts'));
-const { startWorkoutFromPlan, appendWorkoutSet } = loadSource(path.join(root, 'src/lib/workout-storage.ts'));
+const { startWorkoutFromPlan, repeatWorkoutFromHistory, appendWorkoutSet, editFinishedWorkout } = loadSource(path.join(root, 'src/lib/workout-storage.ts'));
 const { volumeOf } = loadSource(path.join(root, 'src/lib/types.ts'));
 const media = loadSource(path.join(root, 'assets/exercises/exercise-demos.json'));
 const { breathingProfiles, breathingProfileFor, breathingPhases, breathingPhaseAt, newBreathingSession, breathingElapsedMs, pauseBreathingSession, resumeBreathingSession } = loadSource(path.join(root, 'src/lib/breathing.ts'));
@@ -236,6 +236,83 @@ assert.equal(appended.setNumber, 5);
 assert.equal(appended.unit, 'seconds');
 assert.equal(appended.restSeconds, 40);
 native.prepare('UPDATE workouts SET endedAt = ? WHERE id = ?').run('2026-10-03', workoutId);
+await assert.rejects(repeatWorkoutFromHistory(db, 'missing-workout'), /没有找到/);
+await assert.rejects(repeatWorkoutFromHistory(db, workoutId), /没有完成的组/);
+const repetitions = started.filter(set => set.sortOrder === 0);
+native.prepare('UPDATE workout_sets SET completed = 1, reps = 25, weight = 12.5 WHERE id IN (?, ?)').run(repetitions[0].id, repetitions[2].id);
+native.prepare('UPDATE workout_sets SET completed = 1, reps = 8, weight = 20, unit = ?, restSeconds = 0 WHERE id = ?').run('reps', started.find(set => set.sortOrder === 1).id);
+const findWorkout = native.prepare('SELECT * FROM workouts WHERE id = ?');
+const workoutSets = native.prepare('SELECT * FROM workout_sets WHERE workoutId = ? ORDER BY sortOrder, setNumber');
+const originalWorkout = findWorkout.get(workoutId);
+const originalSets = workoutSets.all(workoutId);
+native.exec(`CREATE TRIGGER fail_repeat BEFORE INSERT ON workout_sets WHEN NEW.sortOrder = 1 BEGIN SELECT RAISE(ABORT, 'forced failure'); END;`);
+await assert.rejects(repeatWorkoutFromHistory(db, workoutId), /forced failure/);
+assert.equal(native.prepare('SELECT COUNT(*) AS count FROM workouts WHERE endedAt IS NULL').get().count, 0, 'Failed repeat must roll back its draft');
+assert.equal(native.prepare('SELECT COUNT(*) AS count FROM workout_sets').get().count, originalSets.length, 'Failed repeat must roll back copied sets');
+native.exec('DROP TRIGGER fail_repeat');
+const repeatedId = await repeatWorkoutFromHistory(db, workoutId);
+assert.ok(repeatedId && repeatedId !== workoutId);
+const repeatedWorkout = findWorkout.get(repeatedId);
+assert.equal(repeatedWorkout.planId, hiitId);
+assert.equal(repeatedWorkout.name, originalWorkout.name);
+assert.equal(repeatedWorkout.note, '');
+assert.equal(repeatedWorkout.endedAt, null);
+const repeatedSets = workoutSets.all(repeatedId);
+assert.deepEqual(repeatedSets.map(({ sortOrder, setNumber, weight, reps, completed, unit, restSeconds }) => [sortOrder, setNumber, weight, reps, completed, unit, restSeconds]), [
+  [0, 1, 12.5, 25, 0, 'seconds', 40], [0, 2, 12.5, 25, 0, 'seconds', 40], [1, 1, 20, 8, 0, 'reps', 0],
+]);
+assert.deepEqual(repeatedSets.map(set => set.exerciseId), originalSets.filter(set => set.completed).map(set => set.exerciseId));
+assert.ok(repeatedSets.every(set => !originalSets.some(original => original.id === set.id)));
+assert.equal(await repeatWorkoutFromHistory(db, workoutId), null, 'Repeat must preserve the existing draft');
+assert.deepEqual(findWorkout.get(workoutId), originalWorkout);
+assert.deepEqual(workoutSets.all(workoutId), originalSets);
+assert.deepEqual(workoutSets.all(repeatedId), repeatedSets);
+
+const editableSet = ({ id, weight, reps, completed }) => ({ id, weight, reps, completed });
+const draftEdit = { name: '编辑草稿', note: '', sets: repeatedSets.map(set => ({ ...editableSet(set), completed: 1 })) };
+await assert.rejects(editFinishedWorkout(db, repeatedId, draftEdit), /已结束/);
+assert.deepEqual(findWorkout.get(repeatedId), repeatedWorkout);
+assert.deepEqual(workoutSets.all(repeatedId), repeatedSets);
+
+const legacySetId = originalSets.find(set => set.sortOrder === 0 && set.setNumber === 3).id;
+native.prepare('UPDATE workout_sets SET weight = 2100, reps = 1200 WHERE id = ?').run(legacySetId);
+const storedSets = workoutSets.all(workoutId);
+const edit = {
+  name: '  修正的训练  ', note: '  修正后的笔记  ',
+  sets: storedSets.map(set => {
+    const editable = editableSet(set);
+    if (set.sortOrder === 0 && set.setNumber === 1) return { ...editable, completed: 0 };
+    if (set.sortOrder === 0 && set.setNumber === 2) return { ...editable, completed: 1, reps: 42 };
+    if (set.sortOrder === 1 && set.completed) return { ...editable, weight: 23.5, reps: 9 };
+    return editable;
+  }),
+};
+await assert.rejects(editFinishedWorkout(db, 'missing-workout', edit), /已结束/);
+await assert.rejects(editFinishedWorkout(db, workoutId, { ...edit, name: ' ' }), /训练名称/);
+await assert.rejects(editFinishedWorkout(db, workoutId, { ...edit, sets: edit.sets.slice(1) }), /已变更/);
+for (const [invalidSet, error] of [
+  [{ id: edit.sets[1].id }, /已变更/],
+  [{ id: repeatedSets[0].id }, /已变更/],
+  [{ weight: Number.NaN }, /重量/],
+  [{ weight: 2001 }, /重量/],
+  [{ reps: 0.5 }, /整数/],
+  [{ reps: 1001 }, /整数/],
+  [{ completed: 2 }, /完成状态/],
+  [{ completed: 1, reps: 0 }, /大于 0/],
+]) {
+  await assert.rejects(editFinishedWorkout(db, workoutId, { ...edit, sets: [{ ...edit.sets[0], ...invalidSet }, ...edit.sets.slice(1)] }), error);
+}
+await assert.rejects(editFinishedWorkout(db, workoutId, { ...edit, sets: edit.sets.map(set => ({ ...set, completed: 0 })) }), /至少保留/);
+native.exec(`CREATE TRIGGER fail_edit BEFORE UPDATE ON workout_sets WHEN NEW.sortOrder = 1 BEGIN SELECT RAISE(ABORT, 'forced failure'); END;`);
+await assert.rejects(editFinishedWorkout(db, workoutId, edit), /forced failure/);
+assert.deepEqual(findWorkout.get(workoutId), originalWorkout, 'Failed edit must roll back metadata');
+assert.deepEqual(workoutSets.all(workoutId), storedSets, 'Failed edit must roll back earlier sets');
+native.exec('DROP TRIGGER fail_edit');
+await editFinishedWorkout(db, workoutId, edit);
+assert.deepEqual({ ...findWorkout.get(workoutId) }, { ...originalWorkout, name: '修正的训练', note: '修正后的笔记' });
+assert.deepEqual(workoutSets.all(workoutId).map(set => ({ ...set })), storedSets.map((set, index) => ({ ...set, ...edit.sets[index] })));
+
+native.prepare('DELETE FROM workouts WHERE id = ?').run(repeatedId);
 await assert.rejects(startWorkoutFromPlan(db, 'missing-plan'), /没有找到/);
 const sprintWorkout = await startWorkoutFromPlan(db, 'template:sprint-strength:a');
 assert.ok(native.prepare('SELECT * FROM workout_sets WHERE workoutId = ?').all(sprintWorkout).some(set => set.unit === 'reps' && set.restSeconds === 180));
@@ -263,20 +340,58 @@ assert.deepEqual(items().filter(item => item.planId === editedId), editedItems);
 assert.equal(plans().length, 72);
 await assert.rejects(importPlanTemplate(db, 'unknown'), /没有找到/);
 
+// The calendar accepts several plans per day, and retrying one pair is safe.
+const scheduledDay = '2026-11-09';
+const nextScheduledDay = '2026-11-10';
+assert.deepEqual(await readTrainingSchedule(db), []);
+await insertScheduledTraining(db, nextScheduledDay, hiitId);
+await insertScheduledTraining(db, scheduledDay, hiitId);
+await insertScheduledTraining(db, scheduledDay, editedId);
+await insertScheduledTraining(db, scheduledDay, hiitId);
+const scheduleEntries = [editedId, hiitId].sort().map(planId => ({ day: scheduledDay, planId }));
+scheduleEntries.push({ day: nextScheduledDay, planId: hiitId });
+const scheduleRows = async sourceDb => (await readTrainingSchedule(sourceDb)).map(entry => ({ ...entry }));
+assert.deepEqual(await scheduleRows(db), scheduleEntries);
+await assert.rejects(insertScheduledTraining(db, '2026-02-29', hiitId), /有效的训练日期/);
+await assert.rejects(removeScheduledTraining(db, '2026-11-9', hiitId), /有效的训练日期/);
+native.exec('PRAGMA foreign_keys = OFF');
+await assert.rejects(insertScheduledTraining(db, scheduledDay, 'missing-plan'), /没有找到/);
+native.exec('PRAGMA foreign_keys = ON');
+await removeScheduledTraining(db, scheduledDay, editedId);
+await removeScheduledTraining(db, scheduledDay, editedId);
+assert.deepEqual(await scheduleRows(db), scheduleEntries.filter(entry => entry.planId !== editedId));
+await insertScheduledTraining(db, scheduledDay, editedId);
+native.prepare('INSERT INTO plans VALUES (?, ?, ?, ?)').run('schedule-delete', '临时计划', '', '2026-11-04');
+await insertScheduledTraining(db, scheduledDay, 'schedule-delete');
+await insertScheduledTraining(db, nextScheduledDay, 'schedule-delete');
+native.prepare('DELETE FROM plans WHERE id = ?').run('schedule-delete');
+assert.deepEqual(await scheduleRows(db), scheduleEntries, 'Deleting a plan only clears its scheduled days');
+
 // Backup export/import: full round-trip fidelity, validation errors and atomic rollback.
 const { exportBackup, parseBackup, importBackup, BACKUP_VERSION } = loadSource(path.join(root, 'src/lib/backup.ts'));
 native.prepare('INSERT INTO body_entries VALUES (?, ?, ?, ?)').run('body-1', '2026-10-20', 72.5, 18);
 native.prepare('INSERT INTO food_entries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run('food-1', '2026-10-20', '午餐', '鸡胸肉', '150g', 248, 46, 0, 5);
+assert.equal(await readWeeklyGoal(db), 0);
+await writeWeeklyGoal(db, 4);
+for (const invalid of [-1, 8, 2.5, '4', Infinity, NaN]) {
+  await assert.rejects(writeWeeklyGoal(db, invalid), /每周训练目标/);
+}
 const backup = await exportBackup(db);
 assert.equal(backup.app, 'lianji');
 assert.equal(backup.version, BACKUP_VERSION);
+assert.equal(backup.weeklyGoal, 4);
+assert.deepEqual(backup.schedule.map(entry => ({ ...entry })), scheduleEntries);
 assert.equal(backup.tables.plans.length, 72);
 assert.equal(backup.tables.body_entries.length, 1);
 assert.equal(backup.tables.food_entries.length, 1);
 const backupText = JSON.stringify(backup);
 const restored = database();
 await migrate(restored.db);
+// The Expo restore transaction uses a connection without the migration's FK setting.
+restored.native.exec('PRAGMA foreign_keys = OFF');
 await importBackup(restored.db, parseBackup(backupText));
+assert.equal(await readWeeklyGoal(restored.db), 4);
+assert.deepEqual(await scheduleRows(restored.db), scheduleEntries);
 for (const table of ['exercises', 'plans', 'plan_items', 'workouts', 'workout_sets', 'body_entries', 'food_entries']) {
   assert.deepEqual(restored.native.prepare(`SELECT * FROM ${table} ORDER BY id`).all(), native.prepare(`SELECT * FROM ${table} ORDER BY id`).all(), `round-trip mismatch in ${table}`);
 }
@@ -285,11 +400,40 @@ assert.throws(() => parseBackup(JSON.stringify({ app: 'other', version: 1, table
 assert.throws(() => parseBackup(JSON.stringify({ ...backup, version: BACKUP_VERSION + 1 })), /不兼容/);
 assert.throws(() => parseBackup(JSON.stringify({ ...backup, tables: { ...backup.tables, plans: null } })), /缺少/);
 assert.throws(() => parseBackup(JSON.stringify({ ...backup, tables: { ...backup.tables, plans: [{ name: '无 id' }] } })), /损坏/);
+for (const weeklyGoal of [-1, 8, 2.5, '4', null, false]) {
+  assert.throws(() => parseBackup(JSON.stringify({ ...backup, weeklyGoal })), /每周训练目标/);
+}
+for (const invalidSchedule of [null, {}, [null], [{ day: '2026-02-29', planId: hiitId }], [{ day: scheduledDay, planId: 'missing-plan' }]]) {
+  const invalid = { ...backup, schedule: invalidSchedule };
+  assert.throws(() => parseBackup(JSON.stringify(invalid)), /训练日程/);
+  await assert.rejects(importBackup(restored.db, invalid), /训练日程/);
+}
+const duplicateSchedule = { ...backup, schedule: [scheduleEntries[0], scheduleEntries[0]] };
+assert.throws(() => parseBackup(JSON.stringify(duplicateSchedule)), /重复/);
+await assert.rejects(importBackup(restored.db, duplicateSchedule), /重复/);
+assert.deepEqual(await scheduleRows(restored.db), scheduleEntries);
+const oldBackup = { ...backup };
+delete oldBackup.weeklyGoal;
+delete oldBackup.schedule;
+await writeWeeklyGoal(restored.db, 7);
+restored.native.prepare('DELETE FROM food_entries').run();
+await importBackup(restored.db, parseBackup(JSON.stringify(oldBackup)));
+assert.equal(await readWeeklyGoal(restored.db), 7, 'Old backups preserve the current goal');
+assert.deepEqual(await scheduleRows(restored.db), [], 'Old backups clear schedules tied to the replaced plans');
+assert.equal(restored.native.prepare('SELECT COUNT(*) AS count FROM food_entries').get().count, 1);
+await importBackup(restored.db, parseBackup(JSON.stringify({ ...backup, weeklyGoal: 0 })));
+assert.equal(await readWeeklyGoal(restored.db), 0, 'An explicit zero disables the goal');
 restored.native.close();
 const rollback = database();
 await migrate(rollback.db);
+await writeWeeklyGoal(rollback.db, 2);
+const originalSchedule = { day: scheduledDay, planId: rollback.native.prepare('SELECT id FROM plans LIMIT 1').get().id };
+await insertScheduledTraining(rollback.db, originalSchedule.day, originalSchedule.planId);
+rollback.native.exec('PRAGMA foreign_keys = OFF');
 rollback.native.exec(`CREATE TRIGGER fail_backup_body BEFORE INSERT ON body_entries BEGIN SELECT RAISE(ABORT, 'forced failure'); END;`);
 await assert.rejects(importBackup(rollback.db, parseBackup(backupText)), /forced failure/);
+assert.equal(await readWeeklyGoal(rollback.db), 2, 'Failed import must roll back the goal');
+assert.deepEqual(await scheduleRows(rollback.db), [originalSchedule], 'Failed import must roll back schedule replacement');
 assert.equal(rollback.native.prepare('SELECT COUNT(*) AS count FROM plans').get().count, 3, 'failed import must roll back to the original data');
 assert.equal(rollback.native.prepare('SELECT COUNT(*) AS count FROM exercises').get().count, 55);
 assert.equal(rollback.native.prepare('SELECT COUNT(*) AS count FROM body_entries').get().count, 0);
@@ -315,6 +459,7 @@ failure.native.close();
 // Upgrade a legacy database without touching plans, workouts or same-name custom exercises.
 const legacy = database();
 await migrate(legacy.db);
+legacy.native.exec('DROP TABLE training_preferences; DROP TABLE training_schedule');
 legacy.native.exec("DELETE FROM exercises WHERE id LIKE 'builtin:%'");
 // Remove the new columns to reproduce an actual v1.0.2 schema.
 for (const table of ['plan_items', 'workout_sets']) {
@@ -330,7 +475,13 @@ const savedPlans = legacy.native.prepare('SELECT * FROM plans ORDER BY id').all(
 const savedItems = legacy.native.prepare('SELECT * FROM plan_items ORDER BY id').all();
 const savedWorkouts = legacy.native.prepare('SELECT * FROM workouts ORDER BY id').all();
 await migrate(legacy.db);
+assert.equal(await readWeeklyGoal(legacy.db), 0);
+assert.deepEqual(await scheduleRows(legacy.db), []);
+await insertScheduledTraining(legacy.db, scheduledDay, savedPlans[0].id);
+await writeWeeklyGoal(legacy.db, 5);
 await migrate(legacy.db);
+assert.equal(await readWeeklyGoal(legacy.db), 5);
+assert.deepEqual(await scheduleRows(legacy.db), [{ day: scheduledDay, planId: savedPlans[0].id }]);
 assert.equal(legacy.native.prepare('SELECT COUNT(*) AS count FROM exercises WHERE isCustom = 0').get().count, 55);
 assert.equal(legacy.native.prepare('SELECT COUNT(*) AS count FROM exercises WHERE isCustom = 1').get().count, 1);
 assert.deepEqual(legacy.native.prepare('SELECT * FROM plans ORDER BY id').all(), savedPlans);
@@ -351,4 +502,194 @@ for (const id of ['home-dumbbell', 'home-bodyweight']) {
 }
 assert.ok(legacy.native.prepare("SELECT e.isCustom FROM plan_items i JOIN exercises e ON e.id = i.exerciseId WHERE i.planId = 'template:home-bodyweight:a' AND e.name = '自重深蹲'").get().isCustom === 0);
 legacy.native.close();
-console.log(`Passed: 34 programs / 69 days / ${media.length} demos with offline teaching / ${media.filter(demo => demo.asset).length} bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import and workout storage; backup export/import round-trip, validation and rollback.`);
+
+// Progress uses saved sessions, completed sets, stable exercise IDs and the original unit.
+const { buildTrainingProgress, buildWeeklyTrainingActivity, localDayKey, workoutMilestones } = loadSource(path.join(root, 'src/lib/training-progress.ts'));
+const loggedWorkout = (id, day, finished = true) => ({
+  id, startedAt: new Date(2026, 10, day, 23, 45).toISOString(),
+  endedAt: finished ? new Date(2026, 10, day + 1, 0, 15).toISOString() : null,
+});
+const earlier = loggedWorkout('earlier', 1);
+const current = loggedWorkout('current', 2);
+const draft = loggedWorkout('draft', 3, false);
+const empty = loggedWorkout('empty', 4);
+const loggedSet = (workout, exerciseId, weight, reps, unit, completed = 1) => ({
+  workoutId: workout.id, exerciseId, weight, reps, unit, completed,
+});
+const loggedSets = [
+  loggedSet(earlier, 'press', 40, 8),
+  loggedSet(earlier, 'timed', 15, 30, 'seconds'),
+  loggedSet(current, 'press', 45, 7, 'reps'),
+  loggedSet(current, 'press', 45, 8, 'reps'),
+  loggedSet(current, 'press', 30, 12, 'reps'),
+  loggedSet(current, 'press', 100, 100, 'reps', 0),
+  loggedSet(current, 'timed', 25, 50, 'seconds'),
+  loggedSet(current, 'custom-press', 0, 16, 'reps'),
+  loggedSet(draft, 'press', 200, 30, 'reps'),
+];
+const { sessions, byExercise } = buildTrainingProgress([current, draft, empty, earlier], loggedSets);
+assert.deepEqual(sessions.map(session => session.workout.id), ['empty', 'current', 'earlier']);
+assert.equal(sessions[1].day, '2026-11-02', 'a session belongs to its local start date');
+assert.equal(sessions[0].completedSets, 0);
+assert.equal(sessions[1].completedSets, 5);
+assert.equal(sessions[1].exerciseCount, 3);
+assert.equal(sessions[1].volume, 1035);
+assert.equal(sessions[1].timedSeconds, 50);
+assert.equal(byExercise.get('press').best.weight.weight, 45);
+assert.equal(byExercise.get('press').best.weight.weightReps, 8);
+assert.equal(byExercise.get('press').best.reps.reps, 12);
+assert.equal(byExercise.get('timed').best.seconds.seconds, 50);
+assert.equal(byExercise.get('timed').best.reps, undefined);
+assert.equal(byExercise.get('custom-press').best.weight, undefined);
+assert.equal(byExercise.get('custom-press').best.reps.reps, 16);
+assert.deepEqual(workoutMilestones(current, byExercise).map(({ metric, value, previous }) => [metric, value, previous]), [
+  ['weight', 45, 40], ['reps', 12, 8], ['seconds', 50, 30], ['reps', 16, 0],
+]);
+assert.deepEqual(workoutMilestones(draft, byExercise), []);
+const tied = loggedWorkout('tied', 5);
+const tiedProgress = buildTrainingProgress([earlier, tied], [...loggedSets, loggedSet(tied, 'press', 40, 8)]);
+assert.deepEqual(workoutMilestones(tied, tiedProgress.byExercise), [], 'equal scores do not create new records');
+
+// The goal counts distinct local training days across Sunday/Monday and month boundaries.
+const secondMonday = loggedWorkout('second-monday', 2);
+const weeklySessions = buildTrainingProgress(
+  [earlier, current, draft, empty, tied, secondMonday],
+  [...loggedSets, loggedSet(tied, 'press', 40, 8), loggedSet(secondMonday, 'press', 25, 7)],
+).sessions;
+const mondayActivity = buildWeeklyTrainingActivity(weeklySessions, new Date(2026, 10, 2, 20));
+assert.deepEqual(mondayActivity.map(week => localDayKey(week.start)), ['2026-11-02', '2026-10-26', '2026-10-19', '2026-10-12']);
+assert.deepEqual(mondayActivity.map(week => week.count), [1, 1, 0, 0], 'same-day sessions count once and future dates are excluded');
+assert.equal(mondayActivity[0].days[0].today, true);
+assert.equal(mondayActivity[1].days[6].trained, true);
+assert.deepEqual(buildWeeklyTrainingActivity(weeklySessions, new Date(2026, 10, 8, 20)).map(week => week.count), [2, 1, 0, 0], 'unfinished and empty workouts do not count');
+const newYear = buildWeeklyTrainingActivity([], new Date(2027, 0, 1, 12));
+assert.equal(localDayKey(newYear[0].start), '2026-12-28');
+assert.equal(newYear[0].days.find(day => day.today)?.key, '2027-01-01');
+
+// Arrangements use the local start date and stable plan ID of a saved workout with a completed group.
+const { completedScheduleKeys, isScheduleDay, parseScheduleDay, scheduleStatus } = loadSource(path.join(root, 'src/lib/training-schedule.ts'));
+assert.equal(isScheduleDay('2028-02-29'), true);
+assert.equal(isScheduleDay('2026-02-29'), false);
+assert.equal(isScheduleDay('2026-11-31'), false);
+assert.equal(isScheduleDay('2026-11-2'), false);
+assert.equal(isScheduleDay('0000-01-01'), false);
+assert.equal(parseScheduleDay('2026-13-01'), null);
+assert.equal(localDayKey(parseScheduleDay('0999-12-31')), '0999-12-31');
+assert.equal(localDayKey(parseScheduleDay('2026-11-01')), '2026-11-01');
+
+const scheduledWorkouts = [
+  { ...loggedWorkout('planned', 2), planId: 'plan-a' },
+  { ...loggedWorkout('pending', 2, false), planId: 'plan-b' },
+  { ...loggedWorkout('unchecked', 2), planId: 'plan-c' },
+  { ...loggedWorkout('free', 2), planId: null },
+  { ...loggedWorkout('future', 4), planId: 'plan-a' },
+];
+const scheduleKeys = completedScheduleKeys(scheduledWorkouts, scheduledWorkouts.map(workout =>
+  loggedSet(workout, 'press', 0, 10, 'reps', workout.id === 'unchecked' ? 0 : 1)));
+const dateStatus = (day, planId) => scheduleStatus({ day, planId }, '2026-11-02', scheduleKeys);
+assert.equal(dateStatus('2026-11-02', 'plan-a'), '已完成');
+assert.equal(dateStatus('2026-11-02', 'plan-b'), '待训练');
+assert.equal(dateStatus('2026-11-02', 'plan-c'), '待训练');
+assert.equal(dateStatus('2026-11-01', 'plan-a'), '已错过');
+assert.equal(dateStatus('2026-11-03', 'plan-a'), '已安排');
+assert.equal(dateStatus('2026-11-04', 'plan-a'), '已安排', 'future local dates never show as done');
+
+// A plan takes each exercise's latest completed target and counts groups with that unit.
+const { draftPlanFromWorkout } = loadSource(path.join(root, 'src/lib/workout-plan.ts'));
+const draftSet = (exerciseId, sortOrder, setNumber, weight, reps, unit, restSeconds, completed = 1) =>
+  ({ exerciseId, sortOrder, setNumber, weight, reps, unit, restSeconds, completed });
+const capped = Array.from({ length: 21 }, (_, index) =>
+  draftSet('custom-press', 2, index + 1, 2100, 1200, undefined, 750));
+assert.deepEqual(draftPlanFromWorkout([
+  ...capped,
+  draftSet('press', 0, 4, 200, 12, 'reps', 60, 0),
+  draftSet('timed', 1, 3, 0, 75, 'seconds', 0),
+  draftSet('press', 0, 2, 65.5, 6, 'reps', 120),
+  draftSet('timed', 1, 1, 0, 40, 'seconds'),
+  draftSet('timed', 1, 2, 0, 10, 'reps', 90),
+  draftSet('press', 0, 1, 50, 8),
+  draftSet('press', 0, 3, 90, 0, 'reps'),
+  draftSet('unused', 3, 1, 0, 10, 'reps', 90, 0),
+]), [
+  { exerciseId: 'press', unit: 'reps', sets: 2, reps: 6, weight: 65.5, restSeconds: 120 },
+  { exerciseId: 'timed', unit: 'seconds', sets: 2, reps: 75, weight: 0, restSeconds: 0 },
+  { exerciseId: 'custom-press', unit: 'reps', sets: 20, reps: 1000, weight: 2000, restSeconds: 600 },
+]);
+assert.deepEqual(draftPlanFromWorkout([draftSet('press', 0, 1, 40, 8)]), [
+  { exerciseId: 'press', unit: 'reps', sets: 1, reps: 8, weight: 40, restSeconds: 90 },
+]);
+
+// Comparison looks back from the source start, matching exercise/unit or stable plan ID.
+const { findPreviousExerciseSets, findWorkoutComparison } = loadSource(path.join(root, 'src/lib/training-comparison.ts'));
+const comparisonWorkout = (id, start, end, planId = 'plan-a', name = '训练') => ({
+  id, name, planId, note: '', startedAt: `2026-11-15T${start}:00Z`, endedAt: end ? `2026-11-15T${end}:00Z` : null,
+});
+const sourceWorkout = comparisonWorkout('source', '10:00', '10:00');
+const sourceDraft = { ...sourceWorkout, endedAt: null };
+const previousPlanWorkout = comparisonWorkout('previous-plan', '08:00', '09:00', 'plan-a', '旧训练名称');
+const equalBoundaryWorkout = comparisonWorkout('equal-boundary', '09:10', '10:00', 'plan-b');
+const earlierFinishWorkout = comparisonWorkout('earlier-finish', '09:10', '09:55', 'plan-b');
+const earlierStartWorkout = comparisonWorkout('earlier-start', '09:05', '09:59', 'plan-b');
+const emptyPreviousWorkout = comparisonWorkout('empty-previous', '09:15', '09:45');
+const overlapWorkout = comparisonWorkout('overlap', '09:45', '10:01');
+const unfinishedWorkout = comparisonWorkout('unfinished', '09:50', null);
+const invalidDateWorkout = { ...comparisonWorkout('invalid-date', '09:55', '09:59'), endedAt: 'invalid' };
+const reversedDatesWorkout = comparisonWorkout('reversed-dates', '09:58', '09:56');
+const comparisonWorkouts = [
+  overlapWorkout, earlierStartWorkout, sourceWorkout, emptyPreviousWorkout, unfinishedWorkout,
+  previousPlanWorkout, invalidDateWorkout, reversedDatesWorkout, earlierFinishWorkout, equalBoundaryWorkout,
+];
+const comparisonSet = (workout, exerciseId, setNumber, weight, reps, unit, completed = 1) => ({
+  ...loggedSet(workout, exerciseId, weight, reps, unit, completed), id: `${workout.id}/${exerciseId}/${setNumber}`, sortOrder: 0, setNumber,
+});
+const eligibleReps = [
+  comparisonSet(equalBoundaryWorkout, 'press', 3, 50, 7, 'reps'),
+  comparisonSet(equalBoundaryWorkout, 'press', 1, 45, 9),
+];
+const eligibleTimed = comparisonSet(previousPlanWorkout, 'press', 2, 99, 45, 'seconds');
+const comparisonSets = [
+  comparisonSet(overlapWorkout, 'press', 1, 99, 99),
+  comparisonSet(unfinishedWorkout, 'press', 1, 99, 99),
+  comparisonSet(invalidDateWorkout, 'press', 1, 99, 99),
+  comparisonSet(reversedDatesWorkout, 'press', 1, 99, 99),
+  comparisonSet(earlierFinishWorkout, 'press', 1, 99, 99),
+  comparisonSet(earlierFinishWorkout, 'row', 1, 30, 8),
+  comparisonSet(earlierStartWorkout, 'row', 1, 40, 8),
+  comparisonSet(emptyPreviousWorkout, 'press', 1, 99, 99, 'reps', 0),
+  comparisonSet(emptyPreviousWorkout, 'press', 2, 99, 0, 'seconds'),
+  comparisonSet(emptyPreviousWorkout, 'press', 3, 99, -4),
+  comparisonSet(equalBoundaryWorkout, 'press', 2, 99, 99, 'reps', 0),
+  comparisonSet(equalBoundaryWorkout, 'press', 4, 99, NaN, 'reps'),
+  ...eligibleReps,
+  comparisonSet(previousPlanWorkout, 'press', 1, 40, 8),
+  eligibleTimed,
+  comparisonSet(previousPlanWorkout, 'row', 1, 45.5, 6, 'reps'),
+  comparisonSet(previousPlanWorkout, 'hold', 1, 150, 30, 'seconds'),
+  comparisonSet(sourceWorkout, 'press', 1, 55, 7, 'reps'),
+  comparisonSet(sourceWorkout, 'press', 2, 200, 65, 'seconds'),
+  comparisonSet(sourceWorkout, 'row', 1, 30.5, 12),
+  comparisonSet(sourceWorkout, 'fresh-custom-press', 1, 150, 20, 'reps', 0),
+];
+const previousExerciseSets = findPreviousExerciseSets(sourceDraft, comparisonWorkouts, comparisonSets);
+const previousPress = previousExerciseSets.get('press');
+assert.equal(previousPress.reps.workout.id, equalBoundaryWorkout.id, 'a saved workout ending at the exact start is eligible');
+assert.deepEqual(previousPress.reps.sets.map(set => set.id).sort(), eligibleReps.map(set => set.id).sort(), 'legacy reps and explicit reps share a unit, but invalid or unchecked groups are omitted');
+assert.equal(previousPress.seconds.workout.id, previousPlanWorkout.id, 'units can reference separate workouts');
+assert.deepEqual(previousPress.seconds.sets, [eligibleTimed]);
+assert.equal(previousExerciseSets.get('row').reps.workout.id, earlierFinishWorkout.id, 'choose latest start among workouts that finished before the cutoff');
+assert.equal(previousExerciseSets.get('fresh-custom-press'), undefined);
+assert.equal(previousExerciseSets.get('hold').reps, undefined);
+assert.deepEqual(findPreviousExerciseSets(sourceWorkout, comparisonWorkouts, comparisonSets), previousExerciseSets, 'the source cannot become its own reference');
+assert.deepEqual(findWorkoutComparison(sourceWorkout, comparisonWorkouts, comparisonSets), {
+  previousWorkout: previousPlanWorkout,
+  current: { completedSets: 3, volume: 751, timedSeconds: 65 },
+  previous: { completedSets: 4, volume: 593, timedSeconds: 75 },
+});
+const samePlanBoundary = comparisonWorkouts.map(workout => workout.id === equalBoundaryWorkout.id
+  ? { ...workout, planId: sourceWorkout.planId } : workout);
+assert.equal(findWorkoutComparison(sourceWorkout, samePlanBoundary, comparisonSets)?.previousWorkout.id, equalBoundaryWorkout.id);
+assert.equal(findWorkoutComparison(sourceDraft, comparisonWorkouts, comparisonSets), null);
+assert.equal(findWorkoutComparison({ ...sourceWorkout, planId: null }, comparisonWorkouts, comparisonSets), null);
+assert.equal(findWorkoutComparison({ ...sourceWorkout, planId: 'missing' }, comparisonWorkouts, comparisonSets), null);
+
+console.log(`Passed: 34 programs / 69 days / ${media.length} demos with offline teaching / ${media.filter(demo => demo.asset).length} bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import, workout repeat and history edits; saved workouts converted to plans; backup, training schedule and weekly goal round-trip, validation and rollback; calendar, weekly activity, personal-record and training comparison metrics.`);

@@ -8,7 +8,7 @@ const items: { name: string; title: string; icon: TabIcon; selected: TabIcon }[]
   { name: 'index', title: '今天', icon: 'home-outline', selected: 'home' },
   { name: 'plans', title: '计划', icon: 'calendar-outline', selected: 'calendar' },
   { name: 'exercises', title: '动作', icon: 'barbell-outline', selected: 'barbell' },
-  { name: 'history', title: '历史', icon: 'stats-chart-outline', selected: 'stats-chart' },
+  { name: 'history', title: '进度', icon: 'stats-chart-outline', selected: 'stats-chart' },
   { name: 'me', title: '我的', icon: 'person-outline', selected: 'person' },
 ];
 

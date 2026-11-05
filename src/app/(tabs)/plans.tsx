@@ -10,7 +10,7 @@ import { PlanTemplatePreview } from '@/ui/plan-template-preview';
 import { C } from '@/ui/theme';
 
 export default function Plans() {
-  const { plans, planItems, exercises, workouts, startWorkout, deleteWorkout, deletePlan } = useData();
+  const { plans, planItems, exercises, workouts, schedule, startWorkout, deleteWorkout, deletePlan } = useData();
   const [tab, setTab] = useState<'my' | 'templates'>('my');
   const [preview, setPreview] = useState<TrainingProgram | null>(null);
   const [category, setCategory] = useState('全部');
@@ -29,13 +29,17 @@ export default function Plans() {
     ]);
   }
   function confirmDelete(planId: string, name: string) {
-    Alert.alert('删除训练计划', `确定删除“${name}”？已完成的训练记录会保留。`, [
+    const linked = schedule.some(entry => entry.planId === planId);
+    Alert.alert('删除训练计划', `确定删除「${name}」${linked ? '和关联的训练安排' : ''}？`, [
       { text: '取消', style: 'cancel' },
       { text: '删除', style: 'destructive', onPress: () => { deletePlan(planId).catch(console.error); } },
     ]);
   }
   return <Page key={tab}>
-    <Header eyebrow="YOUR PROGRAMS" title="训练计划" right={<IconButton icon="add" onPress={() => router.push('/plan-editor')} />} />
+    <Header eyebrow="YOUR PROGRAMS" title="训练计划" right={<View style={styles.actions}>
+      <IconButton icon="calendar-outline" label="训练安排" onPress={() => router.push('/training-schedule')} />
+      <IconButton icon="add" label="创建计划" onPress={() => router.push('/plan-editor')} />
+    </View>} />
     <View style={{ flexDirection: 'row', gap: 10 }}><Badge label={`我的计划 ${plans.length}`} active={tab === 'my'} onPress={() => setTab('my')} /><Badge label={`计划模板 · ${trainingPrograms.length} 套`} active={tab === 'templates'} onPress={() => setTab('templates')} /></View>
     <Text style={styles.intro}>{tab === 'my' ? '按自己的节奏安排动作与组数，也可以从模板添加整套计划。' : '按场景挑选计划，查看器材、频率和动作，再添加到我的计划。'}</Text>
     {tab === 'templates' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{programCategories.map(value => <Badge key={value} label={value} active={category === value} onPress={() => { setCategory(value); setSport('全部项目'); }} />)}</View> : null}
@@ -53,7 +57,7 @@ export default function Plans() {
     }) : plans.map((plan, index) => {
       const items = planItems.filter(item => item.planId === plan.id);
       return <Card key={plan.id} style={{ gap: 16 }}>
-        <View style={styles.top}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.name}>{plan.name}</Text><Text style={styles.note}>{plan.note || `${items.length} 个动作`}</Text></View><Pressable accessibilityLabel={`编辑${plan.name}`} onPress={() => router.push({ pathname: '/plan-editor', params: { id: plan.id } })} hitSlop={10}><Ionicons name="create-outline" color={C.muted} size={21} /></Pressable></View>
+        <View style={styles.top}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.name}>{plan.name}</Text><Text style={styles.note}>{plan.note || `${items.length} 个动作`}</Text></View><IconButton icon="calendar-outline" label={`安排${plan.name}的日期`} onPress={() => router.push({ pathname: '/training-schedule', params: { planId: plan.id } })} /><Pressable accessibilityLabel={`编辑${plan.name}`} onPress={() => router.push({ pathname: '/plan-editor', params: { id: plan.id } })} hitSlop={10}><Ionicons name="create-outline" color={C.muted} size={21} /></Pressable></View>
         <View style={styles.divider} />
         <View style={{ gap: 10 }}>{items.slice(0, 5).map((item, i) => <View key={item.id} style={styles.exerciseRow}><Text style={styles.exerciseNumber}>{i + 1}</Text><Text style={styles.exerciseName}>{exercises.find(ex => ex.id === item.exerciseId)?.name ?? '未知动作'}</Text><Text style={styles.exerciseSets}>{item.sets} × {targetLabel(item.reps, item.unit)}</Text></View>)}{items.length > 5 ? <Text style={styles.more}>还有 {items.length - 5} 个动作</Text> : null}</View>
         <View style={styles.actions}><Button label="开始训练" icon="play" onPress={() => begin(plan.id, plan.name)} style={{ flex: 1 }} /><IconButton icon="trash-outline" color={C.faint} onPress={() => confirmDelete(plan.id, plan.name)} /></View>

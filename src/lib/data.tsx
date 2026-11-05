@@ -1,9 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import { exportBackup, importBackup, type BackupFile } from './backup';
+import { insertScheduledTraining, readTrainingSchedule, readWeeklyGoal, removeScheduledTraining, writeWeeklyGoal } from './database';
 import { importPlanTemplate } from './import-plan-template';
+import type { ScheduledTraining } from './training-schedule';
 import { defaultUnit } from './training-target';
-import { appendWorkoutSet, startWorkoutFromPlan } from './workout-storage';
+import { appendWorkoutSet, editFinishedWorkout as saveWorkoutEdit, repeatWorkoutFromHistory, startWorkoutFromPlan, type FinishedWorkoutEdit } from './workout-storage';
 import { id, type BodyEntry, type Exercise, type FoodEntry, type Plan, type PlanDraftItem, type PlanItem, type Workout, type WorkoutSet } from './types';
 
 type Data = {
@@ -15,17 +17,24 @@ type Data = {
   workoutSets: WorkoutSet[];
   bodyEntries: BodyEntry[];
   foodEntries: FoodEntry[];
+  weeklyGoal: number;
+  setWeeklyGoal: (days: number) => Promise<void>;
+  schedule: ScheduledTraining[];
+  schedulePlan: (day: string, planId: string) => Promise<void>;
+  unschedulePlan: (day: string, planId: string) => Promise<void>;
   refresh: () => Promise<void>;
   savePlan: (name: string, note: string, items: PlanDraftItem[], planId?: string) => Promise<string>;
   deletePlan: (planId: string) => Promise<void>;
   addProgramTemplate: (programId: string) => Promise<number>;
   addExercise: (name: string, muscle: string, equipment: string) => Promise<string>;
   startWorkout: (planId?: string) => Promise<string>;
+  repeatWorkout: (workoutId: string) => Promise<string | null>;
   addWorkoutExercise: (workoutId: string, exerciseId: string) => Promise<void>;
   addSet: (workoutId: string, exerciseId: string) => Promise<void>;
   updateSet: (setId: string, patch: Partial<Pick<WorkoutSet, 'weight' | 'reps' | 'completed'>>) => Promise<void>;
   deleteSet: (setId: string) => Promise<void>;
   finishWorkout: (workoutId: string, note: string) => Promise<void>;
+  editFinishedWorkout: (workoutId: string, edit: FinishedWorkoutEdit) => Promise<void>;
   updateWorkoutNote: (workoutId: string, note: string) => Promise<void>;
   deleteWorkout: (workoutId: string) => Promise<void>;
   addBodyEntry: (weight: number, bodyFat: number | null) => Promise<void>;
@@ -48,6 +57,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [workoutSets, setWorkoutSets] = useState<WorkoutSet[]>([]);
   const [bodyEntries, setBodyEntries] = useState<BodyEntry[]>([]);
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
+  const [weeklyGoal, updateWeeklyGoal] = useState(0);
+  const [schedule, setSchedule] = useState<ScheduledTraining[]>([]);
 
   const refresh = useCallback(async () => {
     const [nextExercises, nextPlans, nextPlanItems, nextWorkouts, nextSets, nextBody, nextFood] = await Promise.all([
@@ -66,16 +77,36 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setWorkoutSets(nextSets);
     setBodyEntries(nextBody);
     setFoodEntries(nextFood);
-    setReady(true);
+  }, [db]);
+
+  const refreshSchedule = useCallback(async () => {
+    setSchedule(await readTrainingSchedule(db));
   }, [db]);
 
   useEffect(() => {
-    const timer = setTimeout(() => { refresh().catch(console.error); }, 0);
+    const timer = setTimeout(() => {
+      Promise.all([refresh(), readWeeklyGoal(db), refreshSchedule()]).then(([, goal]) => {
+        updateWeeklyGoal(goal);
+        setReady(true);
+      }).catch(console.error);
+    }, 0);
     return () => clearTimeout(timer);
-  }, [refresh]);
+  }, [db, refresh, refreshSchedule]);
 
   const value = useMemo<Data>(() => ({
-    ready, exercises, plans, planItems, workouts, workoutSets, bodyEntries, foodEntries, refresh,
+    ready, exercises, plans, planItems, workouts, workoutSets, bodyEntries, foodEntries, weeklyGoal, schedule, refresh,
+    async setWeeklyGoal(days) {
+      await writeWeeklyGoal(db, days);
+      updateWeeklyGoal(days);
+    },
+    async schedulePlan(day, planId) {
+      await insertScheduledTraining(db, day, planId);
+      await refreshSchedule();
+    },
+    async unschedulePlan(day, planId) {
+      await removeScheduledTraining(db, day, planId);
+      await refreshSchedule();
+    },
     async addProgramTemplate(programId) {
       const added = await importPlanTemplate(db, programId);
       await refresh();
@@ -100,7 +131,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     },
     async deletePlan(planId) {
       await db.runAsync('DELETE FROM plans WHERE id = ?', planId);
-      await refresh();
+      await Promise.all([refresh(), refreshSchedule()]);
     },
     async addExercise(name, muscle, equipment) {
       const nextId = id();
@@ -110,6 +141,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     },
     async startWorkout(planId) {
       const nextId = await startWorkoutFromPlan(db, planId);
+      await refresh();
+      return nextId;
+    },
+    async repeatWorkout(workoutId) {
+      const nextId = await repeatWorkoutFromHistory(db, workoutId);
       await refresh();
       return nextId;
     },
@@ -135,11 +171,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
       await refresh();
     },
     async finishWorkout(workoutId, note) {
-      await db.runAsync('UPDATE workouts SET endedAt = ?, note = ? WHERE id = ?', new Date().toISOString(), note.trim(), workoutId);
+      await db.runAsync('UPDATE workouts SET endedAt = ?, note = ? WHERE id = ? AND endedAt IS NULL', new Date().toISOString(), note.trim(), workoutId);
+      await refresh();
+    },
+    async editFinishedWorkout(workoutId, edit) {
+      await saveWorkoutEdit(db, workoutId, edit);
       await refresh();
     },
     async updateWorkoutNote(workoutId, note) {
-      await db.runAsync('UPDATE workouts SET note = ? WHERE id = ?', note, workoutId);
+      await db.runAsync('UPDATE workouts SET note = ? WHERE id = ? AND endedAt IS NULL', note, workoutId);
     },
     async deleteWorkout(workoutId) {
       await db.runAsync('DELETE FROM workouts WHERE id = ?', workoutId);
@@ -166,9 +206,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     },
     async restoreBackup(backup) {
       await importBackup(db, backup);
-      await refresh();
+      if (backup.weeklyGoal !== undefined) updateWeeklyGoal(backup.weeklyGoal);
+      await Promise.all([refresh(), refreshSchedule()]);
     },
-  }), [ready, exercises, plans, planItems, workouts, workoutSets, bodyEntries, foodEntries, refresh, db]);
+  }), [ready, exercises, plans, planItems, workouts, workoutSets, bodyEntries, foodEntries, weeklyGoal, schedule, refresh, refreshSchedule, db]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

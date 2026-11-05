@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 private enum Palette {
     static let background = Color(red: 0.047, green: 0.063, blue: 0.078)
@@ -10,7 +11,9 @@ private enum Palette {
 private enum Section: String, CaseIterable, Identifiable {
     case today = "今天"
     case plans = "训练计划"
+    case schedule = "训练安排"
     case exercises = "动作库"
+    case progress = "训练进度"
     case history = "训练历史"
     case nutrition = "饮食记录"
     case body = "身体数据"
@@ -20,8 +23,10 @@ private enum Section: String, CaseIterable, Identifiable {
         switch self {
         case .today: "house.fill"
         case .plans: "calendar"
+        case .schedule: "calendar.badge.clock"
         case .exercises: "dumbbell.fill"
-        case .history: "chart.bar.fill"
+        case .progress: "chart.bar.fill"
+        case .history: "clock.arrow.circlepath"
         case .nutrition: "fork.knife"
         case .body: "figure.strengthtraining.traditional"
         }
@@ -45,7 +50,9 @@ struct MacRootView: View {
                 switch selected ?? .today {
                 case .today: MacDashboard()
                 case .plans: MacPlansView()
+                case .schedule: MacScheduleView()
                 case .exercises: MacExercisesView()
+                case .progress: MacProgressView()
                 case .history: MacHistoryView()
                 case .nutrition: MacNutritionView()
                 case .body: MacBodyView()
@@ -141,6 +148,79 @@ private struct MacDashboard: View {
             }
             .padding(30)
             .frame(maxWidth: 1000, alignment: .leading)
+        }
+    }
+}
+
+private struct MacScheduleView: View {
+    @EnvironmentObject private var store: TrainingStore
+    @State private var date = Date.now
+    @State private var planId = ""
+    @State private var saveFailed = false
+
+    var body: some View {
+        let now = Date.now
+        let today = Calendar.current.startOfDay(for: now)
+        let items = store.trainingSchedule(now: now)
+        let selectedPlan = store.state.plans.first { $0.id == planId }
+        let scheduledDay = ScheduledTraining.localDay(date)
+        let duplicate = items.contains { $0.entry.day == scheduledDay && $0.entry.planId == planId }
+
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 16) {
+                PageHeader(eyebrow: "TRAINING SCHEDULE", title: "训练安排")
+                if store.activeWorkout != nil { MacActiveWorkout() }
+                Surface {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("添加安排").font(.title2.bold())
+                        if store.state.plans.isEmpty {
+                            Text("先在「训练计划」里新建或添加一份计划。").foregroundStyle(Palette.muted)
+                        } else {
+                            HStack {
+                                DatePicker("日期", selection: $date, in: today..., displayedComponents: .date)
+                                Picker("计划", selection: Binding(
+                                    get: { selectedPlan?.id ?? "" },
+                                    set: { planId = $0 }
+                                )) {
+                                    Text("选择计划").tag("")
+                                    ForEach(store.state.plans) { plan in Text(plan.name).tag(plan.id) }
+                                }
+                                .frame(maxWidth: 260)
+                                Button(duplicate ? "已安排" : "添加安排", systemImage: "plus") {
+                                    do { try store.scheduleTraining(planId: planId, on: date) }
+                                    catch { saveFailed = true }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(selectedPlan == nil || duplicate || date < today)
+                            }
+                        }
+                    }
+                }
+                if items.isEmpty {
+                    Text("还没有训练安排。").foregroundStyle(Palette.muted)
+                }
+                ForEach(items) { item in
+                    Surface {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(item.plan.name).font(.headline)
+                                Text("\(item.entry.day) · \(item.status.rawValue)")
+                                    .font(.subheadline)
+                                    .foregroundStyle(item.status == .missed ? Palette.muted : Palette.accent)
+                            }
+                            Spacer()
+                            TrainingScheduleActions(item: item)
+                        }
+                    }
+                }
+            }
+            .padding(30)
+            .frame(maxWidth: 1000, alignment: .leading)
+        }
+        .alert("无法添加训练安排", isPresented: $saveFailed) {
+            Button("好", role: .cancel) {}
+        } message: {
+            Text("请选择今天或之后的日期和可用计划，然后重试。")
         }
     }
 }
@@ -395,6 +475,7 @@ private struct MacActiveWorkout: View {
 
     var body: some View {
         if let workout = store.activeWorkout {
+            let references = TrainingComparison(workouts: store.state.workouts).previousExerciseSets(for: workout)
             Surface {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
@@ -426,6 +507,9 @@ private struct MacActiveWorkout: View {
                                 if let exercise = store.exercise(exerciseId), ExerciseDemo.find(exercise) != nil {
                                     Button("查看动图", systemImage: "play.circle") { demoExercise = exercise }
                                 }
+                            }
+                            ForEach(references[exerciseId, default: []]) { reference in
+                                PreviousExerciseSetsView(reference: reference)
                             }
                             ForEach(workout.sets.filter { $0.exerciseId == exerciseId }) { set in
                                 HStack(spacing: 12) {
@@ -475,17 +559,221 @@ private struct MacActiveWorkout: View {
     }
 }
 
+private struct MacProgressView: View {
+    @EnvironmentObject private var store: TrainingStore
+    @State private var weekOffset = 0
+    @State private var selectedDate: Date?
+    @State private var exerciseId: String?
+    @State private var metric: ProgressMetric = .weight
+
+    var body: some View {
+        let progress = TrainingProgress(workouts: store.state.workouts)
+        let today = Date.now
+        let weeks = progress.recentWeeks(through: today)
+        let currentWeek = weeks.last ?? progress.week(containing: today)
+        let weekDate = progress.calendar.date(byAdding: .weekOfYear, value: weekOffset, to: today) ?? today
+        let week = weekOffset == 0 ? currentWeek : progress.week(containing: weekDate)
+        let exercises = progress.exerciseOptions(store.state.exercises)
+        let activeExerciseId = exercises.first { $0.id == exerciseId }?.id ?? exercises.first?.id
+
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                PageHeader(eyebrow: "YOUR PROGRESS", title: "训练进度")
+                weeklyGoal(currentWeek, recentWeeks: weeks, through: today)
+                weeklyActivity(week)
+                Surface {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("动作进度").font(.title2.bold())
+                        if let activeExerciseId {
+                            Picker("动作", selection: Binding(
+                                get: { activeExerciseId },
+                                set: { exerciseId = $0 }
+                            )) {
+                                ForEach(exercises) { exercise in
+                                    Text(exercise.isCustom ? "\(exercise.name)（自定义）" : exercise.name).tag(exercise.id)
+                                }
+                            }
+                            exerciseProgress(progress.exercise(activeExerciseId))
+                        } else {
+                            Text("保存包含已完成组的训练后，可在这里查看个人纪录。")
+                                .foregroundStyle(Palette.muted)
+                        }
+                    }
+                }
+            }
+            .padding(30)
+            .frame(maxWidth: 1000, alignment: .leading)
+        }
+    }
+
+    private func weeklyGoal(_ week: TrainingWeek, recentWeeks: [TrainingWeek], through today: Date) -> some View {
+        Surface {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("每周训练目标").font(.title2.bold())
+                WeeklyGoalControl(activeDays: week.activeDays(through: today))
+                Divider()
+                Text("最近四周训练天数").font(.headline)
+                HStack(spacing: 12) {
+                    ForEach(recentWeeks) { activity in
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(activity.id == week.id ? "本周" : "\(activity.start.formatted(.dateTime.month().day()))起")
+                                .font(.caption).foregroundStyle(Palette.muted)
+                            Text("\(activity.activeDays(through: today)) 天")
+                                .font(.title3.bold().monospacedDigit()).foregroundStyle(Palette.accent)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Palette.accent.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+            }
+        }
+    }
+
+    private func weeklyActivity(_ week: TrainingWeek) -> some View {
+        let days = week.days
+        let selectedDay = days.first { $0.date == selectedDate }
+            ?? days.first { Calendar.current.isDateInToday($0.date) }
+            ?? days.first { $0.completedSets > 0 }
+            ?? days.first
+        return Surface {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("训练日历").font(.title2.bold())
+                    Spacer()
+                    if let first = days.first, let last = days.last {
+                        Text("\(first.date.formatted(.dateTime.year().month().day())) – \(last.date.formatted(.dateTime.month().day()))")
+                            .foregroundStyle(Palette.muted)
+                    }
+                    Button {
+                        weekOffset -= 1
+                        selectedDate = nil
+                    } label: {
+                        Image(systemName: "chevron.left")
+                    }.accessibilityLabel("上一周")
+                    Button {
+                        weekOffset += 1
+                        selectedDate = nil
+                    } label: {
+                        Image(systemName: "chevron.right")
+                    }
+                    .disabled(weekOffset == 0)
+                    .accessibilityLabel("下一周")
+                    Button("本周") {
+                        weekOffset = 0
+                        selectedDate = nil
+                    }.disabled(weekOffset == 0)
+                }
+                HStack(spacing: 8) {
+                    ForEach(days) { day in
+                        let isSelected = day.id == selectedDay?.id
+                        Button {
+                            selectedDate = day.date
+                        } label: {
+                            VStack(spacing: 4) {
+                                Text(day.date.formatted(.dateTime.weekday(.abbreviated))).font(.caption)
+                                Text(day.date.formatted(.dateTime.day())).font(.headline)
+                                Text("\(day.completedSets) 组").font(.caption)
+                                    .foregroundStyle(day.completedSets > 0 ? Palette.accent : Palette.muted)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 9)
+                            .background(Palette.accent.opacity(isSelected ? 0.18 : 0.04), in: RoundedRectangle(cornerRadius: 8))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(day.date.formatted(date: .complete, time: .omitted))，\(day.completedSets) 组")
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+                    }
+                }
+                Text("\(week.activeDays()) 个训练日 · \(week.completedSets) 个完成组")
+                    .font(.subheadline).foregroundStyle(Palette.accent)
+                if let selectedDay {
+                    Divider()
+                    Text(selectedDay.date.formatted(.dateTime.month().day().weekday())).font(.headline)
+                    if selectedDay.workouts.isEmpty {
+                        Text("当天没有保存的训练").foregroundStyle(Palette.muted)
+                    }
+                    ForEach(selectedDay.workouts) { workout in
+                        HStack {
+                            Text(workout.name)
+                            Spacer()
+                            Text("\(workout.startedAt.formatted(date: .omitted, time: .shortened)) · \(workout.completedSets.count) 组")
+                                .foregroundStyle(Palette.muted)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func exerciseProgress(_ progress: ExerciseProgress) -> some View {
+        let metrics = progress.records.metrics
+        if metrics.isEmpty {
+            Text("此动作还没有可比较的次数或时长。").foregroundStyle(Palette.muted)
+        } else {
+            Text("个人纪录").font(.headline)
+            HStack(spacing: 20) {
+                ForEach(metrics) { kind in
+                    if let label = progress.records.label(kind) {
+                        Stat(value: label, label: kind.rawValue)
+                    }
+                }
+            }
+            if let activeMetric = metrics.contains(metric) ? metric : metrics.first {
+                let samples = Array(progress.recentByMetric[activeMetric, default: []].reversed())
+                Divider()
+                Text("最近 \(samples.count) 次训练").font(.headline)
+                Picker("趋势指标", selection: Binding(get: { activeMetric }, set: { metric = $0 })) {
+                    ForEach(metrics) { kind in Text(kind.rawValue).tag(kind) }
+                }
+                .pickerStyle(.segmented)
+                Chart(samples) { session in
+                    if let value = session.records.value(activeMetric) {
+                        BarMark(
+                            x: .value("训练日期", session.date),
+                            y: .value(activeMetric.rawValue, value)
+                        )
+                        .foregroundStyle(Palette.accent)
+                        .accessibilityLabel(session.date.formatted(date: .abbreviated, time: .omitted))
+                        .accessibilityValue(session.records.label(activeMetric) ?? "")
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                        AxisGridLine()
+                        AxisValueLabel(format: .dateTime.month().day())
+                    }
+                }
+                .chartYAxisLabel(activeMetric.unit)
+                .frame(height: 150)
+                ForEach(samples.reversed()) { session in
+                    HStack {
+                        Text(session.date.formatted(date: .abbreviated, time: .shortened)).foregroundStyle(Palette.muted)
+                        Spacer()
+                        Text(session.records.label(activeMetric) ?? "")
+                    }
+                    .font(.subheadline)
+                }
+            }
+        }
+    }
+}
+
 private struct MacHistoryView: View {
     @EnvironmentObject private var store: TrainingStore
     var body: some View {
+        let history = store.finishedWorkouts
+        let comparison = TrainingComparison(workouts: history)
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            LazyVStack(alignment: .leading, spacing: 18) {
                 PageHeader(eyebrow: "YOUR PROGRESS", title: "训练历史")
                 HStack(spacing: 14) {
-                    Surface { Stat(value: "\(store.finishedWorkouts.count)", label: "累计训练") }
-                    Surface { Stat(value: "\(Int(store.finishedWorkouts.reduce(0) { $0 + $1.volume })) kg", label: "累计容量") }
+                    Surface { Stat(value: "\(history.count)", label: "累计训练") }
+                    Surface { Stat(value: "\(Int(history.reduce(0) { $0 + $1.volume })) kg", label: "累计容量") }
                 }
-                ForEach(store.finishedWorkouts) { workout in
+                ForEach(history) { workout in
                     Surface {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
@@ -497,14 +785,18 @@ private struct MacHistoryView: View {
                             }
                             Text("\(workout.completedSets.count) 组 · \(Int(workout.volume)) kg 容量")
                                 .font(.subheadline).foregroundStyle(Palette.accent)
+                            if let prior = comparison.previousPlanWorkout(for: workout) {
+                                PlanWorkoutComparisonView(comparison: prior)
+                            }
                             ForEach(workout.completedSets) { set in
                                 Text("\(store.exercise(set.exerciseId)?.name ?? "未知动作") · \(set.weight.formatted()) kg × \(set.targetLabel)")
                                     .font(.caption).foregroundStyle(Palette.muted)
                             }
+                            SaveWorkoutPlanButton(workout: workout)
                         }
                     }
                 }
-                if store.finishedWorkouts.isEmpty { Text("还没有训练记录").foregroundStyle(Palette.muted) }
+                if history.isEmpty { Text("还没有训练记录").foregroundStyle(Palette.muted) }
             }
             .padding(30).frame(maxWidth: 1000)
         }
