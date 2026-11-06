@@ -375,12 +375,17 @@ private struct WatchExerciseView: View {
                     VStack(alignment: .leading, spacing: 7) {
                         Text("第 \(set.setNumber) 组").font(.caption.bold()).foregroundStyle(lime)
                         if BreathingProfile.find(store.exercise(exerciseId)) == nil {
-                            Stepper(value: Binding(get: { set.weight }, set: { store.updateSet(set.id, weight: $0) }), in: 0...500, step: 2.5) {
+                            Stepper(value: Binding(get: { set.weight }, set: { store.updateSet(set.id, weight: $0) }), in: 0...2000, step: 2.5) {
                                 Text("\(set.weight.formatted()) kg")
                             }
                         }
                         Stepper(value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), in: 0...1000) {
                             Text(set.targetLabel)
+                        }
+                        if let workout,
+                           let reference = references.first(where: { $0.unit == (set.unit ?? .reps) }),
+                           let source = reference.reusableSet(for: set, in: workout) {
+                            ReusePreviousSetButton(workoutId: workout.id, setId: set.id, source: source)
                         }
                         if set.unit == .seconds && !set.completed {
                             if let profile = BreathingProfile.find(store.exercise(exerciseId)) {

@@ -53,7 +53,7 @@ function database() {
 const { migrate, readWeeklyGoal, writeWeeklyGoal, readTrainingSchedule, insertScheduledTraining, removeScheduledTraining, readFavoritePlanIds, writePlanFavorite } = loadSource(path.join(root, 'src/lib/database.ts'));
 const { trainingPrograms, templatePlanId } = loadSource(path.join(root, 'src/lib/plan-templates.ts'));
 const { importPlanTemplate } = loadSource(path.join(root, 'src/lib/import-plan-template.ts'));
-const { startWorkoutFromPlan, repeatWorkoutFromHistory, appendWorkoutSet, editFinishedWorkout } = loadSource(path.join(root, 'src/lib/workout-storage.ts'));
+const { startWorkoutFromPlan, repeatWorkoutFromHistory, appendWorkoutSet, editFinishedWorkout, reusePreviousWorkoutSet } = loadSource(path.join(root, 'src/lib/workout-storage.ts'));
 const { volumeOf } = loadSource(path.join(root, 'src/lib/types.ts'));
 const media = loadSource(path.join(root, 'assets/exercises/exercise-demos.json'));
 const { breathingProfiles, breathingProfileFor, breathingPhases, breathingPhaseAt, newBreathingSession, breathingElapsedMs, pauseBreathingSession, resumeBreathingSession } = loadSource(path.join(root, 'src/lib/breathing.ts'));
@@ -851,5 +851,72 @@ assert.deepEqual(copiedDraft.items, [
 copiedDraft.items[0].weight = 50;
 assert.equal(sourceTargets[1].weight, 42.5, 'editing the draft must not mutate its source');
 assert.equal(sourceTargets[0].id, 'timed', 'copy preparation must not reorder source items');
+
+// Reusing a row rechecks its saved reference inside the write transaction.
+const reuse = database();
+await migrate(reuse.db);
+const reuseExercises = reuse.native.prepare('SELECT id FROM exercises ORDER BY id LIMIT 2').all();
+const reuseExercise = reuseExercises[0].id;
+const reuseOtherExercise = reuseExercises[1].id;
+const insertReuseWorkout = reuse.native.prepare('INSERT INTO workouts VALUES (?, NULL, ?, ?, ?, ?)');
+insertReuseWorkout.run('reuse-old', '旧训练', '2026-11-01T10:00:00Z', '2026-11-01T11:00:00Z', '保留');
+insertReuseWorkout.run('reuse-last', '上次训练', '2026-11-02T10:00:00Z', '2026-11-02T11:00:00Z', '保留');
+insertReuseWorkout.run('reuse-active', '当前训练', '2026-11-03T10:00:00Z', null, '当前笔记');
+insertReuseWorkout.run('reuse-overlap', '重叠训练', '2026-11-03T09:00:00Z', '2026-11-03T10:01:00Z', '保留');
+const insertReuseSet = (id, workoutId, setNumber, weight, reps, completed, unit = 'reps', exerciseId = reuseExercise) => {
+  reuse.native.prepare('INSERT INTO workout_sets (id, workoutId, exerciseId, sortOrder, setNumber, weight, reps, completed, unit, restSeconds) VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?)')
+    .run(id, workoutId, exerciseId, setNumber, weight, reps, completed, unit, workoutId === 'reuse-active' ? 120 : 30);
+};
+insertReuseSet('reuse-old-1', 'reuse-old', 1, 20, 12, 1);
+insertReuseSet('reuse-old-2', 'reuse-old', 2, 25, 10, 1);
+insertReuseSet('reuse-last-1', 'reuse-last', 1, 30, 8, 1);
+insertReuseSet('reuse-unchecked', 'reuse-last', 2, 99, 99, 0);
+insertReuseSet('reuse-last-2', 'reuse-last', 3, 40, 6, 1);
+insertReuseSet('reuse-last-time', 'reuse-last', 4, 0, 60, 1, 'seconds');
+insertReuseSet('reuse-last-other', 'reuse-last', 1, 10, 15, 1, 'reps', reuseOtherExercise);
+insertReuseSet('reuse-overlap-1', 'reuse-overlap', 1, 99, 99, 1);
+insertReuseSet('reuse-target-1', 'reuse-active', 1, 12, 12, 1);
+insertReuseSet('reuse-target-2', 'reuse-active', 2, 11, 11, 0);
+insertReuseSet('reuse-target-3', 'reuse-active', 3, 11, 11, 0);
+insertReuseSet('reuse-target-time', 'reuse-active', 4, 0, 30, 0, 'seconds');
+const reuseGetSet = reuse.native.prepare('SELECT * FROM workout_sets WHERE id = ?');
+const reuseSourceBefore = reuseGetSet.get('reuse-last-2');
+const reuseTargetBefore = reuseGetSet.get('reuse-target-2');
+await assert.rejects(reusePreviousWorkoutSet(reuse.db, 'missing', 'reuse-last-1'), /找不到/);
+await assert.rejects(reusePreviousWorkoutSet(reuse.db, 'reuse-last-2', 'reuse-old-2'), /进行中的训练/);
+await assert.rejects(reusePreviousWorkoutSet(reuse.db, 'reuse-target-1', 'reuse-last-1'), /已完成/);
+for (const wrongSource of ['reuse-last-1', 'reuse-last-time', 'reuse-last-other', 'reuse-old-2', 'reuse-overlap-1']) {
+  await assert.rejects(reusePreviousWorkoutSet(reuse.db, 'reuse-target-2', wrongSource), /已变更/);
+}
+await assert.rejects(reusePreviousWorkoutSet(reuse.db, 'reuse-target-3', 'reuse-last-2'), /已变更/);
+assert.deepEqual(reuseGetSet.get('reuse-target-2'), reuseTargetBefore);
+assert.deepEqual(await reusePreviousWorkoutSet(reuse.db, 'reuse-target-2', 'reuse-last-2'), { weight: 40, reps: 6 }, 'completed current positions still reserve their prior ordinal');
+assert.deepEqual({ ...reuseGetSet.get('reuse-target-2') }, { ...reuseTargetBefore, weight: 40, reps: 6 }, 'reuse writes weight and target only');
+assert.deepEqual(await reusePreviousWorkoutSet(reuse.db, 'reuse-target-2', 'reuse-last-2'), { weight: 40, reps: 6 }, 'retrying an unchanged row is safe');
+assert.deepEqual(await reusePreviousWorkoutSet(reuse.db, 'reuse-target-time', 'reuse-last-time'), { weight: 0, reps: 60 });
+assert.equal(reuseGetSet.get('reuse-target-time').unit, 'seconds');
+assert.equal(reuseGetSet.get('reuse-target-time').restSeconds, 120);
+for (const [weight, reps] of [[2001, 6], [-1, 6], [Infinity, 6], [40, 1001], [40, 1.5], [40, 0]]) {
+  reuse.native.prepare('UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?').run(weight, reps, 'reuse-last-2');
+  await assert.rejects(reusePreviousWorkoutSet(reuse.db, 'reuse-target-2', 'reuse-last-2'), /已变更|范围/);
+}
+reuse.native.prepare('UPDATE workout_sets SET weight = 40, reps = 6 WHERE id = ?').run('reuse-last-2');
+reuse.native.prepare('UPDATE workout_sets SET completed = 0 WHERE id = ?').run('reuse-last-2');
+await assert.rejects(reusePreviousWorkoutSet(reuse.db, 'reuse-target-2', 'reuse-last-2'), /已变更/);
+reuse.native.prepare('UPDATE workout_sets SET completed = 1 WHERE id = ?').run('reuse-last-2');
+reuse.native.prepare('UPDATE workout_sets SET weight = 11, reps = 11 WHERE id = ?').run('reuse-target-2');
+reuse.native.exec(`CREATE TRIGGER fail_reuse AFTER UPDATE ON workout_sets WHEN NEW.id = 'reuse-target-2'
+  BEGIN UPDATE workouts SET note = '意外变更' WHERE id = 'reuse-active'; SELECT RAISE(ABORT, 'forced failure'); END;`);
+await assert.rejects(reusePreviousWorkoutSet(reuse.db, 'reuse-target-2', 'reuse-last-2'), /forced failure/);
+assert.deepEqual(reuseGetSet.get('reuse-target-2'), reuseTargetBefore, 'a failed reuse rolls back its target');
+assert.equal(reuse.native.prepare('SELECT note FROM workouts WHERE id = ?').get('reuse-active').note, '当前笔记');
+assert.deepEqual(reuseGetSet.get('reuse-last-2'), reuseSourceBefore, 'reusing never edits the source history');
+reuse.native.exec('DROP TRIGGER fail_reuse');
+reuse.native.prepare('UPDATE workout_sets SET completed = 1 WHERE id = ?').run('reuse-target-2');
+await assert.rejects(reusePreviousWorkoutSet(reuse.db, 'reuse-target-2', 'reuse-last-2'), /已完成/);
+reuse.native.prepare('UPDATE workout_sets SET completed = 0 WHERE id = ?').run('reuse-target-2');
+reuse.native.prepare('UPDATE workouts SET endedAt = ? WHERE id = ?').run('2026-11-03T11:00:00Z', 'reuse-active');
+await assert.rejects(reusePreviousWorkoutSet(reuse.db, 'reuse-target-2', 'reuse-last-2'), /进行中的训练/);
+reuse.native.close();
 
 console.log(`Passed: 34 programs / 69 days / ${media.length} demos with offline teaching / ${media.filter(demo => demo.asset).length} bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import, workout repeat and history edits; independent plan copies and favorite ordering; backup, training schedule, favorites and weekly goal round-trip, validation and rollback; calendar, weekly activity, personal-record and training comparison metrics; body and nutrition trends.`);

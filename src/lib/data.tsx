@@ -5,7 +5,7 @@ import { insertScheduledTraining, readFavoritePlanIds, readTrainingSchedule, rea
 import { importPlanTemplate } from './import-plan-template';
 import type { ScheduledTraining } from './training-schedule';
 import { defaultUnit } from './training-target';
-import { appendWorkoutSet, editFinishedWorkout as saveWorkoutEdit, repeatWorkoutFromHistory, startWorkoutFromPlan, type FinishedWorkoutEdit } from './workout-storage';
+import { appendWorkoutSet, editFinishedWorkout as saveWorkoutEdit, repeatWorkoutFromHistory, reusePreviousWorkoutSet, startWorkoutFromPlan, type FinishedWorkoutEdit } from './workout-storage';
 import { id, type BodyEntry, type Exercise, type FoodEntry, type Plan, type PlanDraftItem, type PlanItem, type Workout, type WorkoutSet } from './types';
 
 type Data = {
@@ -34,6 +34,7 @@ type Data = {
   addWorkoutExercise: (workoutId: string, exerciseId: string) => Promise<void>;
   addSet: (workoutId: string, exerciseId: string) => Promise<void>;
   updateSet: (setId: string, patch: Partial<Pick<WorkoutSet, 'weight' | 'reps' | 'completed'>>) => Promise<void>;
+  reusePreviousSet: (setId: string, sourceSetId: string) => Promise<{ weight: number; reps: number }>;
   deleteSet: (setId: string) => Promise<void>;
   finishWorkout: (workoutId: string, note: string) => Promise<void>;
   editFinishedWorkout: (workoutId: string, edit: FinishedWorkoutEdit) => Promise<void>;
@@ -179,6 +180,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const values = fields.map(key => patch[key] as number);
       await db.runAsync(`UPDATE workout_sets SET ${fields.map(key => `${key} = ?`).join(', ')} WHERE id = ?`, ...values, setId);
       await refresh();
+    },
+    async reusePreviousSet(setId, sourceSetId) {
+      const copied = await reusePreviousWorkoutSet(db, setId, sourceSetId);
+      await refresh();
+      return copied;
     },
     async deleteSet(setId) {
       await db.runAsync('DELETE FROM workout_sets WHERE id = ?', setId);

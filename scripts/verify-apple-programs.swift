@@ -93,7 +93,8 @@ struct AppleProgramChecks {
         try checkBackup(in: directory)
         checkWellnessTrends()
         try checkPlanReuse(in: directory)
-        print("Passed: 34 programs / 69 days; legacy data, timed targets, workout persistence, progress, copying history to plans, weekly goals, schedules, training comparisons, body and nutrition trends, cross-platform backup and plan reuse.")
+        try checkReusePreviousSet(in: directory)
+        print("Passed: 34 programs / 69 days; legacy data, persistence, progress, plans, goals, schedules, comparisons, wellness, backup, plan reuse and applying previous groups.")
     }
 
     static func checkProgress() {
@@ -603,6 +604,86 @@ struct AppleProgramChecks {
         } catch is CocoaError {}
         precondition(reopened.state.plans == plansBeforeFailure && reopened.state.favoritePlanIds == favoritesBeforeFailure,
                      "failed copy and favorite writes preserve in-memory state")
+    }
+
+    @MainActor
+    static func checkReusePreviousSet(in directory: URL) throws {
+        func expectStale(_ action: () throws -> Void) throws {
+            do {
+                try action()
+                preconditionFailure("a stale or completed row must not be overwritten")
+            } catch ReusePreviousSetError.staleReference {}
+        }
+        let now = Date.now
+        let exercise = "barbell_bench"
+        let sourceReps = Workout(id: "source-reps", name: "上次力量", startedAt: now.addingTimeInterval(-3600), endedAt: now.addingTimeInterval(-3000), sets: [
+            TrainingSet(id: "source-2", exerciseId: exercise, setNumber: 2, weight: 80, reps: 6, completed: true, restSeconds: 0),
+            TrainingSet(id: "source-1", exerciseId: exercise, setNumber: 1, weight: 70, reps: 8, completed: true, unit: .reps),
+            TrainingSet(id: "source-3", exerciseId: exercise, setNumber: 3, weight: 2500, reps: 5, completed: true)
+        ])
+        let sourceTimed = Workout(id: "source-timed", name: "上次计时", startedAt: now.addingTimeInterval(-1800), endedAt: now.addingTimeInterval(-1000), sets: [
+            TrainingSet(id: "source-time-1", exerciseId: exercise, setNumber: 1, weight: 7, reps: 60, completed: true, unit: .seconds),
+            TrainingSet(id: "source-time-2", exerciseId: exercise, setNumber: 2, weight: 0, reps: 1200, completed: true, unit: .seconds)
+        ])
+        let active = Workout(id: "active-reuse", name: "当前训练", startedAt: now, note: "保留", sets: [
+            TrainingSet(id: "done", exerciseId: exercise, setNumber: 1, weight: 10, reps: 2, completed: true),
+            TrainingSet(id: "time-1", exerciseId: exercise, setNumber: 2, weight: 5, reps: 30, unit: .seconds, restSeconds: 25),
+            TrainingSet(id: "rep-2", exerciseId: exercise, setNumber: 3, weight: 20, reps: 10, restSeconds: 35),
+            TrainingSet(id: "rep-3", exerciseId: exercise, setNumber: 4, weight: 20, reps: 10, restSeconds: 75),
+            TrainingSet(id: "time-2", exerciseId: exercise, setNumber: 5, weight: 5, reps: 30, unit: .seconds, restSeconds: 55),
+            TrainingSet(id: "rep-4", exerciseId: exercise, setNumber: 6, weight: 20, reps: 10)
+        ])
+        var fixture = AppState.starter()
+        fixture.workouts = [sourceReps, sourceTimed, active]
+        let references = TrainingComparison(workouts: fixture.workouts).previousExerciseSets(for: active)[exercise]!
+        let repsReference = references.first { $0.unit == .reps }!
+        let timedReference = references.first { $0.unit == .seconds }!
+        let source = repsReference.reusableSet(for: active.sets[2], in: active)!
+        precondition(source.set.id == "source-2", "completed current rows occupy their ordinal and mixed units count separately")
+        precondition(timedReference.reusableSet(for: active.sets[1], in: active)?.set.id == "source-time-1", "timed rows reuse the newest timed source")
+        precondition(repsReference.reusableSet(for: active.sets[0], in: active) == nil, "completed current rows have no reuse action")
+        precondition(repsReference.reusableSet(for: active.sets[3], in: active) == nil, "out-of-range source weight cannot be applied")
+        precondition(timedReference.reusableSet(for: active.sets[4], in: active) == nil, "out-of-range source target cannot be applied")
+        precondition(repsReference.reusableSet(for: active.sets[5], in: active) == nil, "missing source ordinal has no fallback")
+
+        let file = directory.appendingPathComponent("reuse-previous.json")
+        try JSONEncoder().encode(fixture).write(to: file)
+        let store = TrainingStore(fileURL: file)
+        try store.reusePreviousSet(workoutId: active.id, setId: "rep-2", source: source)
+        let applied = store.activeWorkout!.sets[2]
+        precondition(applied.weight == 80 && applied.reps == 6 && !applied.completed && applied.unit == nil && applied.restSeconds == 35,
+                     "reuse changes only weight and target while leaving plan rest, unit and completion intact")
+        precondition(store.state.workouts[0] == sourceReps && store.state.workouts[1] == sourceTimed, "applying previous values preserves history")
+        precondition(TrainingStore(fileURL: file).activeWorkout?.sets[2] == applied, "applied values persist after relaunch")
+        let timedSource = timedReference.reusableSet(for: active.sets[1], in: active)!
+        try store.reusePreviousSet(workoutId: active.id, setId: "time-1", source: timedSource)
+        let appliedTime = store.activeWorkout!.sets[1]
+        precondition(appliedTime.weight == 7 && appliedTime.reps == 60 && appliedTime.restSeconds == 25 && !appliedTime.completed,
+                     "weighted timed sources apply both fields while preserving current rest")
+        store.updateSet("rep-2", completed: true)
+        try expectStale { try store.reusePreviousSet(workoutId: active.id, setId: "rep-2", source: source) }
+        store.updateSet("rep-2", completed: false)
+        try expectStale { try store.reusePreviousSet(workoutId: active.id, setId: "time-1", source: source) }
+        store.deleteSet("done")
+        try expectStale { try store.reusePreviousSet(workoutId: active.id, setId: "rep-2", source: source) }
+
+        var changed = fixture
+        changed.workouts[0].sets[0].weight = 85
+        try JSONEncoder().encode(changed).write(to: file)
+        let changedStore = TrainingStore(fileURL: file)
+        try expectStale { try changedStore.reusePreviousSet(workoutId: active.id, setId: "rep-2", source: source) }
+        changedStore.deleteWorkout(sourceReps.id)
+        try expectStale { try changedStore.reusePreviousSet(workoutId: active.id, setId: "rep-2", source: source) }
+
+        try JSONEncoder().encode(fixture).write(to: file)
+        let failingStore = TrainingStore(fileURL: file)
+        try FileManager.default.removeItem(at: file)
+        try FileManager.default.createDirectory(at: file, withIntermediateDirectories: false)
+        do {
+            try failingStore.reusePreviousSet(workoutId: active.id, setId: "rep-2", source: source)
+            preconditionFailure("failed persistence must not apply previous values")
+        } catch is CocoaError {}
+        precondition(failingStore.state.workouts == fixture.workouts, "a failed write preserves the current group and history")
     }
 
 }

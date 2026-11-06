@@ -228,6 +228,21 @@ final class TrainingStore: ObservableObject {
         }
     }
 
+    func reusePreviousSet(workoutId: String, setId: String, source: PreviousSetReference) throws {
+        guard let workoutIndex = state.workouts.firstIndex(where: { $0.id == workoutId && $0.endedAt == nil }),
+              state.workouts[workoutIndex].id == activeWorkout?.id else { throw ReusePreviousSetError.staleReference }
+        let current = state.workouts[workoutIndex]
+        guard let setIndex = current.sets.firstIndex(where: { $0.id == setId }) else { throw ReusePreviousSetError.staleReference }
+        let set = current.sets[setIndex]
+        let references = TrainingComparison(workouts: state.workouts).previousExerciseSets(for: current, exerciseId: set.exerciseId)
+        guard let previous = references[set.exerciseId]?.first(where: { $0.unit == (set.unit ?? .reps) }),
+              previous.reusableSet(for: set, in: current) == source else { throw ReusePreviousSetError.staleReference }
+        var next = state
+        next.workouts[workoutIndex].sets[setIndex].weight = source.set.weight
+        next.workouts[workoutIndex].sets[setIndex].reps = source.set.reps
+        try commit(next)
+    }
+
     func deleteSet(_ id: String) { mutateActive { $0.sets.removeAll { $0.id == id } } }
     func updateNote(_ note: String) { mutateActive { $0.note = note } }
     func finishWorkout() { mutateActive { $0.endedAt = .now } }
@@ -303,6 +318,14 @@ final class TrainingStore: ObservableObject {
 
 enum PlanReuseError: Error {
     case missingPlan
+}
+
+enum ReusePreviousSetError: LocalizedError {
+    case staleReference
+
+    var errorDescription: String? {
+        "当前组或上次记录已变化，请重新查看后重试。"
+    }
 }
 
 enum WeeklyGoalError: Error {

@@ -63,6 +63,29 @@ export function findPreviousExerciseSets(current: Workout, workouts: Workout[], 
   return byExercise;
 }
 
+export function findPreviousSetMatches(current: Workout, workouts: Workout[], sets: WorkoutSet[]) {
+  const matches = new Map<string, WorkoutSet>();
+  if (current.endedAt) return matches;
+  const references = findPreviousExerciseSets(current, workouts, sets);
+  const positions = new Map<string, number>();
+  const currentSets = sets.filter(set => set.workoutId === current.id)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.setNumber - b.setNumber || a.id.localeCompare(b.id));
+
+  for (const set of currentSets) {
+    const unit: TrainingUnit = set.unit === 'seconds' ? 'seconds' : 'reps';
+    const key = `${set.exerciseId}:${unit}`;
+    const position = positions.get(key) ?? 0;
+    positions.set(key, position + 1);
+    const previous = references.get(set.exerciseId)?.[unit]?.sets[position];
+    if (!set.completed && previous &&
+        Number.isFinite(previous.weight) && previous.weight >= 0 && previous.weight <= 2000 &&
+        Number.isInteger(previous.reps) && previous.reps > 0 && previous.reps <= 1000) {
+      matches.set(set.id, previous);
+    }
+  }
+  return matches;
+}
+
 function totals(sets: WorkoutSet[]): WorkoutTotals {
   return {
     completedSets: sets.length,

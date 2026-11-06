@@ -1,4 +1,5 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { findPreviousSetMatches } from './training-comparison';
 import { id, type Plan, type PlanItem, type Workout, type WorkoutSet } from './types';
 
 export type FinishedWorkoutEdit = {
@@ -93,6 +94,39 @@ export async function editFinishedWorkout(db: SQLiteDatabase, workoutId: string,
       await transaction.runAsync('UPDATE workout_sets SET weight = ?, reps = ?, completed = ? WHERE id = ? AND workoutId = ?', set.weight, set.reps, set.completed, set.id, workoutId);
     }
   });
+}
+
+export async function reusePreviousWorkoutSet(db: SQLiteDatabase, setId: string, sourceSetId: string) {
+  let copied = { weight: 0, reps: 0 };
+  await db.withExclusiveTransactionAsync(async transaction => {
+    const target = await transaction.getFirstAsync<WorkoutSet>('SELECT * FROM workout_sets WHERE id = ?', setId);
+    if (!target) throw new Error('找不到这组训练，请重新打开训练。');
+    const current = await transaction.getFirstAsync<Workout>('SELECT * FROM workouts WHERE id = ? AND endedAt IS NULL', target.workoutId);
+    if (!current) throw new Error('只能在进行中的训练里沿用上次组次。');
+    if (target.completed) throw new Error('这组训练已完成，请先取消勾选。');
+
+    const [workouts, sets] = await Promise.all([
+      transaction.getAllAsync<Workout>(`
+        SELECT * FROM workouts WHERE endedAt IS NOT NULL AND id IN (
+          SELECT workoutId FROM workout_sets WHERE exerciseId = ?
+        )
+      `, target.exerciseId),
+      transaction.getAllAsync<WorkoutSet>(`
+        SELECT workout_sets.* FROM workout_sets JOIN workouts ON workouts.id = workout_sets.workoutId
+        WHERE workout_sets.exerciseId = ? AND (workouts.id = ? OR workouts.endedAt IS NOT NULL)
+      `, target.exerciseId, current.id),
+    ]);
+    const source = findPreviousSetMatches(current, workouts, sets).get(setId);
+    if (!source || source.id !== sourceSetId) throw new Error('上次组次已变更，请重新查看后再沿用。');
+    if (!Number.isFinite(source.weight) || source.weight < 0 || source.weight > 2000 ||
+        !Number.isInteger(source.reps) || source.reps < 1 || source.reps > 1000) {
+      throw new Error('上次组次超出可填写范围，请手动填写。');
+    }
+
+    copied = { weight: source.weight, reps: source.reps };
+    await transaction.runAsync('UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?', copied.weight, copied.reps, setId);
+  });
+  return copied;
 }
 
 export async function appendWorkoutSet(db: SQLiteDatabase, workoutId: string, exerciseId: string) {

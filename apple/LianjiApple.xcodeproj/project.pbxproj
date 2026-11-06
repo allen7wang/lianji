@@ -66,6 +66,7 @@
 		5A77A7A68B1253276E2F5248 /* mountain_climber.gif in Resources */ = {isa = PBXBuildFile; fileRef = 79EE20FCB8048198D4D87DC3 /* mountain_climber.gif */; };
 		5AC138562054458F7FD4915D /* overhead_press.gif in Resources */ = {isa = PBXBuildFile; fileRef = 322765885DF4DDEA05A86B2D /* overhead_press.gif */; };
 		5D7F85FB3BECB18509B3A634 /* TrainingBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0466B66CFB8F6CA9E7F930F /* TrainingBackup.swift */; };
+		5F65CBD6CF1B7A782D2C77AE /* ReusePreviousSetButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4EA0E701DC605CB86177FFB /* ReusePreviousSetButton.swift */; };
 		60C7D68103EE23B7B19C9DA8 /* triceps_pushdown.gif in Resources */ = {isa = PBXBuildFile; fileRef = 03095F3431037FADE95BCE5C /* triceps_pushdown.gif */; };
 		62364D4F418520AB687657D2 /* barbell_row.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5182D5DB509271C8787BB739 /* barbell_row.gif */; };
 		623B3B4260DBB3F2FD2692CE /* TrainingScheduleActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703CFE310733C617DD542319 /* TrainingScheduleActions.swift */; };
@@ -108,6 +109,7 @@
 		A8A825472882BD7391A1122F /* TrainingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D352C1F134477A0F087710F1 /* TrainingStore.swift */; };
 		A932A03913948B52A14EE2EB /* mountain_climber.gif in Resources */ = {isa = PBXBuildFile; fileRef = 79EE20FCB8048198D4D87DC3 /* mountain_climber.gif */; };
 		AB3C16AC138533D413D201C4 /* TrainingScheduleActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703CFE310733C617DD542319 /* TrainingScheduleActions.swift */; };
+		ACF5B89F5629420B542E3070 /* ReusePreviousSetButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4EA0E701DC605CB86177FFB /* ReusePreviousSetButton.swift */; };
 		AE0285A4A1DA8C0BEFA82ECF /* dumbbell_step_up.gif in Resources */ = {isa = PBXBuildFile; fileRef = 43801193CCDEA8AFAB1CDD8E /* dumbbell_step_up.gif */; };
 		B0EDE424E48EB5CC0248EADA /* plank.gif in Resources */ = {isa = PBXBuildFile; fileRef = 64607564DA60D6BE8097A832 /* plank.gif */; };
 		B213AA10FC12D8E7190E7E7F /* TrainingComparisonViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE0136DBD812BEF60F36B7DC /* TrainingComparisonViews.swift */; };
@@ -239,6 +241,7 @@
 		D93D3B9271E7357C8EE98D13 /* seated_row.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = seated_row.gif; sourceTree = "<group>"; };
 		DAF3424BDD1540C9D1949420 /* leg_extension.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = leg_extension.gif; sourceTree = "<group>"; };
 		DDAC8F15FBB099211B11B240 /* calf_raise.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = calf_raise.gif; sourceTree = "<group>"; };
+		E4EA0E701DC605CB86177FFB /* ReusePreviousSetButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReusePreviousSetButton.swift; sourceTree = "<group>"; };
 		E9E75F6DB8051B73D4194999 /* LianjiMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LianjiMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC2CD8D5B45C9BB8116681A5 /* Breathing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Breathing.swift; sourceTree = "<group>"; };
 		F22D759DEEFED7FB19582A11 /* bulgarian_split_squat.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = bulgarian_split_squat.gif; sourceTree = "<group>"; };
@@ -371,6 +374,7 @@
 				0FB085FD94011B679FA718FC /* ExerciseGuide.swift */,
 				3ADC71A24848B83E7819EBAA /* Models.swift */,
 				537D8A0EC5B1B441A8869D99 /* PlanReuseControls.swift */,
+				E4EA0E701DC605CB86177FFB /* ReusePreviousSetButton.swift */,
 				F7490F816BD48F2846757A3F /* SaveWorkoutPlanButton.swift */,
 				B0466B66CFB8F6CA9E7F930F /* TrainingBackup.swift */,
 				4DC205D8C46AE2CD32639907 /* TrainingBackupActions.swift */,
@@ -608,6 +612,7 @@
 				48599EFD0FF72AAB997EF8C1 /* LianjiWatchApp.swift in Sources */,
 				C6F636AFA4847DA6841C4B86 /* Models.swift in Sources */,
 				8AA05D2D06DA029569EC41C3 /* PlanReuseControls.swift in Sources */,
+				5F65CBD6CF1B7A782D2C77AE /* ReusePreviousSetButton.swift in Sources */,
 				0104512D8A5F551E054E5BE1 /* SaveWorkoutPlanButton.swift in Sources */,
 				DF9AE4E76C1234E766540452 /* TrainingBackup.swift in Sources */,
 				3EC16F1C9318587C109A1860 /* TrainingBackupActions.swift in Sources */,
@@ -634,6 +639,7 @@
 				8E20829A843E5763AB42505D /* MacViews.swift in Sources */,
 				D395FE80936B36273E43D668 /* Models.swift in Sources */,
 				59AC4CA4E2B940C9051788AC /* PlanReuseControls.swift in Sources */,
+				ACF5B89F5629420B542E3070 /* ReusePreviousSetButton.swift in Sources */,
 				9EFD727F72C4FDDF6CF8E503 /* SaveWorkoutPlanButton.swift in Sources */,
 				5D7F85FB3BECB18509B3A634 /* TrainingBackup.swift in Sources */,
 				044C7521A97E27471F5582CB /* TrainingBackupActions.swift in Sources */,
@@ -684,7 +690,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -697,7 +703,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.7.0;
+				MARKETING_VERSION = 2.8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -742,7 +748,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -761,7 +767,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.7.0;
+				MARKETING_VERSION = 2.8.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

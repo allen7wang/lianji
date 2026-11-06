@@ -221,6 +221,22 @@ struct PreviousExerciseSets: Identifiable {
     let sets: [TrainingSet]
 
     var id: TrainingUnit { unit }
+
+    func reusableSet(for set: TrainingSet, in current: Workout) -> PreviousSetReference? {
+        guard current.endedAt == nil, !set.completed, (set.unit ?? .reps) == unit else { return nil }
+        let rows = current.sets.filter { $0.exerciseId == set.exerciseId && ($0.unit ?? .reps) == unit }
+        guard let ordinal = rows.firstIndex(where: { $0.id == set.id }), sets.indices.contains(ordinal) else { return nil }
+        let previous = sets[ordinal]
+        guard previous.completed, previous.exerciseId == set.exerciseId, (previous.unit ?? .reps) == unit,
+              previous.weight.isFinite,
+              (0...2000).contains(previous.weight), (1...1000).contains(previous.reps) else { return nil }
+        return PreviousSetReference(workoutId: workout.id, set: previous)
+    }
+}
+
+struct PreviousSetReference: Equatable {
+    let workoutId: String
+    let set: TrainingSet
 }
 
 struct WorkoutComparisonTotals {

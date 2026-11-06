@@ -522,29 +522,35 @@ private struct MacActiveWorkout: View {
                                 PreviousExerciseSetsView(reference: reference)
                             }
                             ForEach(workout.sets.filter { $0.exerciseId == exerciseId }) { set in
-                                HStack(spacing: 12) {
-                                    Text("第 \(set.setNumber) 组").foregroundStyle(Palette.muted).frame(width: 75, alignment: .leading)
-                                    if BreathingProfile.find(store.exercise(exerciseId)) == nil {
-                                        TextField("重量", value: Binding(get: { set.weight }, set: { store.updateSet(set.id, weight: $0) }), format: .number).frame(width: 70)
-                                        Text("kg")
-                                    }
-                                    TextField(set.unit == .seconds ? "秒数" : "次数", value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), format: .number)
-                                        .frame(width: 70)
-                                    Text(set.unit == .seconds ? "秒" : "次")
-                                    if set.unit == .seconds && !set.completed {
-                                        Button(BreathingProfile.find(store.exercise(exerciseId)) == nil ? "计时" : "呼吸引导") {
-                                            if let profile = BreathingProfile.find(store.exercise(exerciseId)) {
-                                                restUntil = nil; breathGuide = BreathGuideRequest(profile: profile, seconds: set.reps)
-                                            } else { timerLabel = "动作计时"; restUntil = .now.addingTimeInterval(Double(set.reps)) }
+                                VStack(alignment: .leading, spacing: 5) {
+                                    HStack(spacing: 12) {
+                                        Text("第 \(set.setNumber) 组").foregroundStyle(Palette.muted).frame(width: 75, alignment: .leading)
+                                        if BreathingProfile.find(store.exercise(exerciseId)) == nil {
+                                            TextField("重量", value: Binding(get: { set.weight }, set: { store.updateSet(set.id, weight: $0) }), format: .number).frame(width: 70)
+                                            Text("kg")
                                         }
+                                        TextField(set.unit == .seconds ? "秒数" : "次数", value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), format: .number)
+                                            .frame(width: 70)
+                                        Text(set.unit == .seconds ? "秒" : "次")
+                                        if set.unit == .seconds && !set.completed {
+                                            Button(BreathingProfile.find(store.exercise(exerciseId)) == nil ? "计时" : "呼吸引导") {
+                                                if let profile = BreathingProfile.find(store.exercise(exerciseId)) {
+                                                    restUntil = nil; breathGuide = BreathGuideRequest(profile: profile, seconds: set.reps)
+                                                } else { timerLabel = "动作计时"; restUntil = .now.addingTimeInterval(Double(set.reps)) }
+                                            }
+                                        }
+                                        Toggle("完成", isOn: Binding(get: { set.completed }, set: {
+                                            store.updateSet(set.id, completed: $0)
+                                            if $0 { timerLabel = "组间休息"; restUntil = .now.addingTimeInterval(Double(set.restSeconds ?? 90)) }
+                                        }))
+                                            .toggleStyle(.checkbox)
+                                        Button(role: .destructive) { store.deleteSet(set.id) } label: { Image(systemName: "minus.circle") }
+                                            .buttonStyle(.plain)
                                     }
-                                    Toggle("完成", isOn: Binding(get: { set.completed }, set: {
-                                        store.updateSet(set.id, completed: $0)
-                                        if $0 { timerLabel = "组间休息"; restUntil = .now.addingTimeInterval(Double(set.restSeconds ?? 90)) }
-                                    }))
-                                        .toggleStyle(.checkbox)
-                                    Button(role: .destructive) { store.deleteSet(set.id) } label: { Image(systemName: "minus.circle") }
-                                        .buttonStyle(.plain)
+                                    if let reference = references[exerciseId]?.first(where: { $0.unit == (set.unit ?? .reps) }),
+                                       let source = reference.reusableSet(for: set, in: workout) {
+                                        ReusePreviousSetButton(workoutId: workout.id, setId: set.id, source: source)
+                                    }
                                 }
                             }
                             Button("添加一组", systemImage: "plus") { store.addSet(for: exerciseId) }
