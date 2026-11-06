@@ -70,6 +70,11 @@ struct WatchHomeView: View {
                         Label("数据备份", systemImage: "externaldrive.fill")
                     }
                     NavigationLink {
+                        WatchWellnessView()
+                    } label: {
+                        Label("身体饮食", systemImage: "scalemass")
+                    }
+                    NavigationLink {
                         WatchDemoLibrary()
                     } label: {
                         Label("动作动图", systemImage: "play.circle")
@@ -497,6 +502,61 @@ private struct WatchBackupView: View {
                 .padding(.vertical, 4)
         }
         .navigationTitle("数据备份")
+    }
+}
+
+private struct WatchWellnessView: View {
+    @EnvironmentObject private var store: TrainingStore
+
+    var body: some View {
+        let trend = WellnessTrend.bodyTrend(store.state.bodyEntries)
+        let today = ScheduledTraining.localDay(.now)
+        let todayCalories = WellnessTrend.nutritionTrend(store.state.foodEntries).first { $0.day == today }?.calories
+        List {
+            Section("最近体重") {
+                if let latest = trend.latest {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(latest.weight.formatted()) kg")
+                            .font(.headline).foregroundStyle(lime)
+                        if let delta = trend.weightDelta {
+                            Text(weightChange(delta))
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
+                        Text(latest.recordedAt.formatted(date: .abbreviated, time: .omitted))
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                } else {
+                    Text("还没有体重记录。").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Section("今日热量") {
+                Text("\((todayCalories ?? 0).formatted()) 千卡")
+                    .font(.headline).foregroundStyle(lime)
+                if todayCalories == nil {
+                    Text("今天还没有饮食记录。").font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            if !trend.points.isEmpty {
+                Section("近期体重") {
+                    ForEach(Array(trend.points.suffix(8).reversed())) { point in
+                        HStack {
+                            Text(point.recordedAt.formatted(date: .abbreviated, time: .omitted))
+                                .font(.caption2)
+                            Spacer()
+                            Text("\(point.weight.formatted()) kg")
+                                .font(.caption).foregroundStyle(lime)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("身体饮食")
+    }
+
+    private func weightChange(_ delta: Double) -> String {
+        if delta == 0 { return "与上次相同" }
+        if delta > 0 { return "+\(delta.formatted()) kg" }
+        return "−\(abs(delta).formatted()) kg"
     }
 }
 

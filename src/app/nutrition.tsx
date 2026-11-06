@@ -5,8 +5,10 @@ import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useData } from '@/lib/data';
 import { dateLabel } from '@/lib/types';
+import { buildNutritionTrend } from '@/lib/wellness-trend';
 import { Badge, Button, Card, Empty, Field, Header, IconButton, Metric, Page, SectionTitle } from '@/ui/components';
 import { C } from '@/ui/theme';
+import { WellnessTrendChart } from '@/ui/wellness-trend-chart';
 
 const meals = ['早餐', '午餐', '晚餐', '加餐'];
 const parse = (value: string) => Number(value.replace(',', '.'));
@@ -26,6 +28,7 @@ export default function Nutrition() {
   selectedDate.setDate(selectedDate.getDate() - offset);
   const entries = foodEntries.filter(entry => new Date(entry.loggedAt).toDateString() === selectedDate.toDateString());
   const sum = (field: 'calories' | 'protein' | 'carbs' | 'fat') => Math.round(entries.reduce((total, entry) => total + entry[field], 0) * 10) / 10;
+  const caloriePoints = buildNutritionTrend(foodEntries).map(day => ({ id: day.day, date: day.day, value: day.calories }));
   const openAdd = () => { setOffset(0); setModal(true); };
 
   async function save() {
@@ -42,6 +45,7 @@ export default function Nutrition() {
     <View style={styles.dateSwitch}><IconButton icon="chevron-back" onPress={() => setOffset(value => Math.min(30, value + 1))} /><Text style={styles.dateText}>{offset === 0 ? '今天' : offset === 1 ? '昨天' : dateLabel(selectedDate.toISOString())}</Text><IconButton icon="chevron-forward" onPress={() => setOffset(value => Math.max(0, value - 1))} color={offset === 0 ? C.faint : C.text} /></View>
     <Card style={styles.calorieCard}><View style={{ flex: 1 }}><Text style={styles.calorieLabel}>{offset === 0 ? '今日摄入' : '当日摄入'}</Text><Text style={styles.calorie}>{sum('calories')} <Text style={styles.calorieUnit}>千卡</Text></Text><Text style={styles.calorieHint}>手动记录，按包装或实际食材数据填写</Text></View><Ionicons name="nutrition-outline" size={34} color={C.accent} /></Card>
     <Card style={styles.macroCard}><Metric value={`${sum('protein')}g`} label="蛋白质" accent /><Metric value={`${sum('carbs')}g`} label="碳水" /><Metric value={`${sum('fat')}g`} label="脂肪" /></Card>
+    {caloriePoints.length ? <WellnessTrendChart description="近期摄入" points={caloriePoints} unit="千卡" /> : null}
     <SectionTitle title={offset === 0 ? '今天吃了什么' : '当天吃了什么'} action="新增" onAction={openAdd} />
     {entries.length ? meals.map(mealName => {
       const mealEntries = entries.filter(entry => entry.meal === mealName);

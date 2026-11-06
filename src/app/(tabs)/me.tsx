@@ -8,8 +8,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { parseBackup } from '@/lib/backup';
 import { useData } from '@/lib/data';
 import { dateLabel } from '@/lib/types';
+import { buildBodyTrend } from '@/lib/wellness-trend';
 import { Button, Card, Empty, Field, Header, IconButton, Page, SectionTitle } from '@/ui/components';
 import { C } from '@/ui/theme';
+import { WellnessTrendChart } from '@/ui/wellness-trend-chart';
+
+function weightDeltaLabel(delta: number) {
+  const rounded = Math.round(delta * 10) / 10;
+  if (rounded === 0) return '与上次相同';
+  return `${rounded > 0 ? '+' : '−'}${Math.abs(rounded).toFixed(1)} kg`;
+}
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
 
@@ -53,9 +61,16 @@ export default function Me() {
       Alert.alert('无法读取备份', errorMessage(error));
     }
   }
+  const bodyTrend = buildBodyTrend(bodyEntries);
+  const weightPoints = bodyTrend.points.map(entry => ({ id: entry.id, date: entry.recordedAt, value: entry.weight }));
+  const fatChartPoints = bodyTrend.fatPoints.map(entry => ({ id: entry.id, date: entry.recordedAt, value: entry.bodyFat }));
+  const roundedDelta = bodyTrend.weightDelta === null ? null : Math.round(bodyTrend.weightDelta * 10) / 10;
   return <Page>
     <Header eyebrow="YOUR BODY" title="我的数据" right={<IconButton icon="add" onPress={() => setModal(true)} />} />
-    <Card style={styles.summary}><View><Text style={styles.summaryLabel}>最近体重</Text><Text style={styles.weight}>{bodyEntries[0]?.weight ?? '—'} <Text style={styles.unit}>kg</Text></Text><Text style={styles.summarySub}>{bodyEntries[0] ? dateLabel(bodyEntries[0].recordedAt) + ' 更新' : '还没有记录'}</Text></View><View style={styles.summaryIcon}><Ionicons name="body-outline" size={33} color={C.accent} /></View></Card>
+    <Card style={styles.summary}><View><Text style={styles.summaryLabel}>最近体重</Text><Text style={styles.weight}>{bodyTrend.latest?.weight ?? '—'} <Text style={styles.unit}>kg</Text></Text><Text style={styles.summarySub}>{bodyTrend.latest ? dateLabel(bodyTrend.latest.recordedAt) + ' 更新' : '还没有记录'}</Text></View><View style={styles.summaryIcon}><Ionicons name="body-outline" size={33} color={C.accent} /></View></Card>
+    {roundedDelta === null ? null : <Text style={[styles.delta, roundedDelta > 0 ? styles.deltaUp : roundedDelta < 0 ? styles.deltaDown : styles.deltaSame]}>{weightDeltaLabel(bodyTrend.weightDelta ?? 0)}</Text>}
+    {weightPoints.length >= 2 ? <WellnessTrendChart description="体重趋势" points={weightPoints} unit="kg" /> : null}
+    {fatChartPoints.length >= 2 ? <WellnessTrendChart description="体脂率趋势" points={fatChartPoints} unit="%" /> : null}
     <View style={styles.tiles}><Card style={{ flex: 1 }}><Text style={styles.tileValue}>{workouts.filter(item => item.endedAt).length}</Text><Text style={styles.tileLabel}>累计训练</Text></Card><Card style={{ flex: 1 }}><Text style={styles.tileValue}>{bodyEntries.length}</Text><Text style={styles.tileLabel}>身体记录</Text></Card></View>
     <SectionTitle title="身体记录" action="新增" onAction={() => setModal(true)} />
     {bodyEntries.length ? bodyEntries.map(entry => <View key={entry.id} style={styles.row}><View><Text style={styles.rowDate}>{dateLabel(entry.recordedAt)}</Text><Text style={styles.rowSub}>{entry.bodyFat === null ? '未记录体脂率' : `体脂率 ${entry.bodyFat}%`}</Text></View><View style={styles.rowRight}><Text style={styles.rowWeight}>{entry.weight} kg</Text><Pressable onPress={() => Alert.alert('删除记录', '确定删除这条身体数据？', [{ text: '取消', style: 'cancel' }, { text: '删除', style: 'destructive', onPress: () => deleteBodyEntry(entry.id) }])} hitSlop={10}><Ionicons name="trash-outline" size={17} color={C.faint} /></Pressable></View></View>) : <Empty icon="body-outline" title="记录身体变化" subtitle="添加体重和体脂率，观察训练带来的改变" />}
@@ -71,6 +86,7 @@ export default function Me() {
 
 const styles = StyleSheet.create({
   summary: { minHeight: 145, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#253B1D' }, summaryLabel: { color: '#B6CCA9', fontSize: 13 }, weight: { color: C.text, fontWeight: '800', fontSize: 38, marginTop: 8 }, unit: { fontSize: 18, fontWeight: '600' }, summarySub: { color: '#B6CCA9', fontSize: 12, marginTop: 5 }, summaryIcon: { width: 70, height: 70, borderRadius: 22, backgroundColor: '#36542A', alignItems: 'center', justifyContent: 'center' },
+  delta: { fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] }, deltaUp: { color: C.orange }, deltaDown: { color: C.accent }, deltaSame: { color: C.muted },
   tiles: { flexDirection: 'row', gap: 12 }, tileValue: { color: C.accent, fontSize: 25, fontWeight: '800' }, tileLabel: { color: C.muted, fontSize: 12, marginTop: 6 },
   row: { paddingVertical: 16, borderBottomColor: C.line, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, rowDate: { color: C.text, fontSize: 15, fontWeight: '700' }, rowSub: { color: C.muted, fontSize: 12, marginTop: 5 }, rowRight: { flexDirection: 'row', alignItems: 'center', gap: 18 }, rowWeight: { color: C.accent, fontSize: 16, fontWeight: '700' },
   localTitle: { color: C.text, fontSize: 14, fontWeight: '700' }, localCopy: { color: C.muted, fontSize: 12, lineHeight: 20, marginTop: 6 }, backupActions: { flexDirection: 'row', gap: 10, marginTop: 6 }, modal: { flex: 1, backgroundColor: C.bg }, modalHeader: { paddingHorizontal: 20, paddingTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, modalTitle: { color: C.text, fontSize: 24, fontWeight: '800' },

@@ -91,7 +91,8 @@ struct AppleProgramChecks {
         try checkSchedule(in: directory)
         checkComparisons()
         try checkBackup(in: directory)
-        print("Passed: 34 programs / 69 days; legacy data, timed targets, workout persistence, progress, copying history to plans, weekly goals, schedules, training comparisons and cross-platform backup.")
+        checkWellnessTrends()
+        print("Passed: 34 programs / 69 days; legacy data, timed targets, workout persistence, progress, copying history to plans, weekly goals, schedules, training comparisons, body and nutrition trends and cross-platform backup.")
     }
 
     static func checkProgress() {
@@ -443,5 +444,57 @@ struct AppleProgramChecks {
             ["id": "plan-a", "name": "乙", "note": "", "createdAt": "2026-11-01T00:00:00Z"],
         ]
         reject(try JSONSerialization.data(withJSONObject: duplicate), "重复 id")
+    }
+
+    static func checkWellnessTrends() {
+        func date(_ seconds: TimeInterval) -> Date { Date(timeIntervalSince1970: seconds) }
+        let tied = date(800)
+        let earlierTie = date(300)
+        let entries = [
+            BodyEntry(id: "z", recordedAt: tied, weight: 72.5, bodyFat: nil),
+            BodyEntry(id: "0", recordedAt: date(100), weight: 50, bodyFat: 10),
+            BodyEntry(id: "c-tie", recordedAt: earlierTie, weight: 53, bodyFat: 12),
+            BodyEntry(id: "1", recordedAt: date(200), weight: 51, bodyFat: nil),
+            BodyEntry(id: "m", recordedAt: tied, weight: 70, bodyFat: 16),
+            BodyEntry(id: "b-tie", recordedAt: earlierTie, weight: 52, bodyFat: nil),
+            BodyEntry(id: "5", recordedAt: date(500), weight: 55, bodyFat: nil),
+            BodyEntry(id: "4", recordedAt: date(400), weight: 54, bodyFat: 13),
+            BodyEntry(id: "7", recordedAt: date(700), weight: 57, bodyFat: 15),
+            BodyEntry(id: "6", recordedAt: date(600), weight: 56, bodyFat: 14),
+        ]
+        let trend = WellnessTrend.bodyTrend(entries)
+        precondition(trend.points.map(\.id) == ["b-tie", "c-tie", "4", "5", "6", "7", "m", "z"], "body window of 8 is chronological after recordedAt then id")
+        precondition(trend.points.map(\.bodyFat) == [nil, 12, 13, nil, 14, 15, 16, nil], "window keeps nil body fat")
+        precondition(trend.latest?.id == "z" && trend.previous?.id == "m" && trend.weightDelta == 2.5, "delta uses the full list, tie-broken by id")
+        precondition(trend.fatPoints.map(\.id) == ["0", "c-tie", "4", "6", "7", "m"], "fat points use their own window and omit nil body fat")
+        precondition(!trend.points.contains { $0.id == "0" || $0.id == "1" }, "window of 8 drops older records")
+        let latestOnly = WellnessTrend.bodyTrend(entries, limit: 1)
+        precondition(latestOnly.points.map(\.id) == ["z"] && latestOnly.fatPoints.map(\.id) == ["m"], "weight and fat windows are independent")
+        precondition(latestOnly.latest?.id == "z" && latestOnly.previous?.id == "m" && latestOnly.weightDelta == 2.5, "latest, previous and delta ignore the window")
+        precondition(WellnessTrend.bodyTrend([]).latest == nil && WellnessTrend.bodyTrend([]).weightDelta == nil, "empty body trend has no delta")
+        precondition(WellnessTrend.bodyTrend([BodyEntry(id: "only", recordedAt: date(1), weight: 60)]).previous == nil, "one record has no previous")
+
+        let zone = TimeZone(identifier: "America/Los_Angeles")!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        func local(_ day: Int, _ hour: Int, _ minute: Int) -> Date {
+            calendar.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute))!
+        }
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(secondsFromGMT: 0)!
+        let morning = local(6, 0, 30)
+        let evening = local(6, 23, 30)
+        precondition(utc.component(.day, from: morning) != utc.component(.day, from: evening), "same local day must cross UTC midnight")
+        let foods = [
+            FoodEntry(id: "later", loggedAt: local(8, 0, 15), meal: "午餐", name: "米饭", portion: "1碗", calories: 200, protein: 4, carbs: 45, fat: 1),
+            FoodEntry(id: "evening", loggedAt: evening, meal: "晚餐", name: "鱼", portion: "1份", calories: 20.22, protein: 1.11, carbs: 0.11, fat: 1.09),
+            FoodEntry(id: "morning", loggedAt: morning, meal: "早餐", name: "燕麦", portion: "1碗", calories: 10.14, protein: 1.14, carbs: 0.14, fat: 1.06),
+            FoodEntry(id: "older", loggedAt: local(5, 12, 0), meal: "加餐", name: "酸奶", portion: "1杯", calories: 1, protein: 1, carbs: 1, fat: 1),
+        ]
+        let days = WellnessTrend.nutritionTrend(foods, timeZone: zone)
+        precondition(days.map(\.day) == ["2026-11-05", "2026-11-06", "2026-11-08"], "nutrition days sort ascending and do not fill empty days")
+        let summed = days[1]
+        precondition(summed.calories == 30.4 && summed.protein == 2.3 && summed.carbs == 0.3 && summed.fat == 2.2, "two Los Angeles entries on the same local day sum to one decimal")
+        precondition(WellnessTrend.nutritionTrend(foods, limit: 2, timeZone: zone).map(\.day) == ["2026-11-06", "2026-11-08"], "nutrition window keeps the latest days with entries")
     }
 }

@@ -30,7 +30,7 @@ jobs:
           fi
           swiftc -module-cache-path "$RUNNER_TEMP/lianji-check/module-cache" \
             apple/Shared/Models.swift apple/Shared/Breathing.swift apple/Shared/TrainingPrograms.swift \
-            apple/Shared/TrainingStore.swift apple/Shared/TrainingBackup.swift "${progress_sources[@]}" scripts/verify-apple-programs.swift \
+            apple/Shared/TrainingStore.swift apple/Shared/TrainingBackup.swift apple/Shared/WellnessTrend.swift "${progress_sources[@]}" scripts/verify-apple-programs.swift \
             -o "$RUNNER_TEMP/lianji-check/verify"
           "$RUNNER_TEMP/lianji-check/verify"
       - name: Build macOS universal

@@ -714,4 +714,77 @@ assert.equal(findWorkoutComparison(sourceDraft, comparisonWorkouts, comparisonSe
 assert.equal(findWorkoutComparison({ ...sourceWorkout, planId: null }, comparisonWorkouts, comparisonSets), null);
 assert.equal(findWorkoutComparison({ ...sourceWorkout, planId: 'missing' }, comparisonWorkouts, comparisonSets), null);
 
-console.log(`Passed: 34 programs / 69 days / ${media.length} demos with offline teaching / ${media.filter(demo => demo.asset).length} bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import, workout repeat and history edits; saved workouts converted to plans; backup, training schedule and weekly goal round-trip, validation and rollback; calendar, weekly activity, personal-record and training comparison metrics.`);
+// Body and nutrition trends: id tie-break, full-list delta, 8-entry window, finite body fat, local-noon sums.
+const { buildBodyTrend, buildNutritionTrend } = loadSource(path.join(root, 'src/lib/wellness-trend.ts'));
+const atNoon = day => new Date(2026, 10, day, 12).toISOString();
+const bodyEntry = (id, day, weight, bodyFat) => ({ id, recordedAt: atNoon(day), weight, bodyFat });
+const bodyEntries = [
+  bodyEntry('b', 12, 81.5, null),
+  bodyEntry('11', 11, 81, 15),
+  bodyEntry('10', 10, 80.5, 15.5),
+  bodyEntry('09', 9, 80, 16),
+  bodyEntry('08', 8, 79.5, null),
+  bodyEntry('07', 7, 79, 16.5),
+  bodyEntry('06', 6, 78.5, 17),
+  bodyEntry('05', 5, 78, Number.POSITIVE_INFINITY),
+  bodyEntry('04', 4, 77.5, 17.5),
+  bodyEntry('03', 3, 77, 18),
+  bodyEntry('02', 2, 76.5, 18.5),
+  bodyEntry('01', 1, 70, 22),
+  bodyEntry('a', 12, 81, Number.NaN),
+];
+const bodyTrend = buildBodyTrend(bodyEntries);
+assert.equal(bodyTrend.latest.id, 'b', 'equal recordedAt breaks ties by id ascending');
+assert.equal(bodyTrend.previous.id, 'a');
+assert.equal(bodyTrend.weightDelta, 0.5);
+assert.deepEqual(bodyTrend.points.map(point => point.id), ['06', '07', '08', '09', '10', '11', 'a', 'b']);
+assert.equal(bodyTrend.points.length, 8);
+assert.ok(!bodyTrend.points.some(point => point.id === '01'));
+assert.deepEqual(bodyTrend.fatPoints, [
+  { id: '02', recordedAt: atNoon(2), bodyFat: 18.5 },
+  { id: '03', recordedAt: atNoon(3), bodyFat: 18 },
+  { id: '04', recordedAt: atNoon(4), bodyFat: 17.5 },
+  { id: '06', recordedAt: atNoon(6), bodyFat: 17 },
+  { id: '07', recordedAt: atNoon(7), bodyFat: 16.5 },
+  { id: '09', recordedAt: atNoon(9), bodyFat: 16 },
+  { id: '10', recordedAt: atNoon(10), bodyFat: 15.5 },
+  { id: '11', recordedAt: atNoon(11), bodyFat: 15 },
+], 'null, NaN and infinite bodyFat are excluded from fat points');
+assert.equal(buildBodyTrend([bodyEntry('only', 1, 70, null)]).weightDelta, null);
+assert.equal(buildBodyTrend([bodyEntry('earlier', 1, 70, 18), bodyEntry('later', 2, 69.75, null)]).weightDelta, -0.25);
+
+const foodEntry = (id, day, calories, protein, carbs, fat) => ({
+  id,
+  loggedAt: new Date(2026, 10, day, 12).toISOString(),
+  meal: '午餐',
+  name: id,
+  portion: '1 份',
+  calories,
+  protein,
+  carbs,
+  fat,
+});
+const nutritionDays = buildNutritionTrend([
+  foodEntry('d1', 1, 500, 20, 40, 10),
+  foodEntry('d2', 2, 1, 1, 1, 1),
+  foodEntry('d3', 3, 1, 1, 1, 1),
+  foodEntry('d4', 4, 1, 1, 1, 1),
+  foodEntry('d5', 5, 1, 1, 1, 1),
+  foodEntry('noon-a', 6, 1.04, 1.06, 2.24, 0.14),
+  foodEntry('noon-b', 6, 1.04, 1.06, 2.24, 0.14),
+  foodEntry('d8', 8, 2, 2, 2, 2),
+  foodEntry('d9', 9, 3, 3, 3, 3),
+]);
+assert.deepEqual(nutritionDays.map(day => day.day), [
+  '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-08', '2026-11-09',
+], 'only the last 7 recorded local days are returned, with no empty day inserted');
+assert.equal(nutritionDays.find(day => day.day === '2026-11-06').day, localDayKey(new Date(2026, 10, 6, 12)));
+assert.deepEqual(nutritionDays.find(day => day.day === '2026-11-06'), {
+  day: '2026-11-06',
+  calories: 2.1,
+  protein: 2.1,
+  carbs: 4.5,
+  fat: 0.3,
+}, 'two meals on one local noon day are summed, then rounded to one decimal');
+
+console.log(`Passed: 34 programs / 69 days / ${media.length} demos with offline teaching / ${media.filter(demo => demo.asset).length} bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import, workout repeat and history edits; saved workouts converted to plans; backup, training schedule and weekly goal round-trip, validation and rollback; calendar, weekly activity, personal-record and training comparison metrics; body and nutrition trends.`);

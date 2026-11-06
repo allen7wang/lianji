@@ -816,6 +816,8 @@ private struct MacNutritionView: View {
     @State private var carbs = 0.0
     @State private var fat = 0.0
     private var today: [FoodEntry] { store.state.foodEntries.filter { Calendar.current.isDateInToday($0.loggedAt) } }
+    private var recentIntake: [NutritionDay] { WellnessTrend.nutritionTrend(store.state.foodEntries) }
+    private var intakePeak: Double { recentIntake.map(\.calories).max() ?? 0 }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -825,6 +827,39 @@ private struct MacNutritionView: View {
                     Surface { Stat(value: "\(Int(today.reduce(0) { $0 + $1.protein })) g", label: "蛋白质") }
                     Surface { Stat(value: "\(Int(today.reduce(0) { $0 + $1.carbs })) g", label: "碳水") }
                     Surface { Stat(value: "\(Int(today.reduce(0) { $0 + $1.fat })) g", label: "脂肪") }
+                }
+                if !recentIntake.isEmpty {
+                    Surface {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("近期摄入").font(.headline)
+                            ForEach(recentIntake) { day in
+                                HStack(spacing: 12) {
+                                    Text(monthDayLabel(day.day))
+                                        .font(.subheadline.monospacedDigit())
+                                        .foregroundStyle(Palette.muted)
+                                        .frame(width: 48, alignment: .leading)
+                                    GeometryReader { proxy in
+                                        let fraction = intakePeak > 0 ? day.calories / intakePeak : 0
+                                        let width = proxy.size.width * CGFloat(fraction)
+                                        ZStack(alignment: .leading) {
+                                            RoundedRectangle(cornerRadius: 4)
+                                                .fill(Palette.accent.opacity(0.15))
+                                            RoundedRectangle(cornerRadius: 4)
+                                                .fill(Palette.accent)
+                                                .frame(width: max(width, CGFloat(fraction > 0 ? 4 : 0)))
+                                        }
+                                    }
+                                    .frame(height: 10)
+                                    Text("\(day.calories.formatted()) 千卡")
+                                        .font(.subheadline.monospacedDigit())
+                                        .foregroundStyle(Palette.accent)
+                                        .frame(minWidth: 84, alignment: .trailing)
+                                }
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel("\(monthDayLabel(day.day))，\(day.calories.formatted()) 千卡")
+                            }
+                        }
+                    }
                 }
                 Surface {
                     VStack(alignment: .leading, spacing: 12) {
@@ -862,6 +897,12 @@ private struct MacNutritionView: View {
             .padding(30).frame(maxWidth: 1000)
         }
     }
+
+    private func monthDayLabel(_ day: String) -> String {
+        let parts = day.split(separator: "-")
+        guard parts.count == 3, let month = Int(parts[1]), let dayNumber = Int(parts[2]) else { return day }
+        return "\(month)/\(dayNumber)"
+    }
 }
 
 private struct MacBackupView: View {
@@ -881,11 +922,34 @@ private struct MacBodyView: View {
     @State private var weight = 0.0
     @State private var bodyFat = 0.0
     var body: some View {
+        let trend = WellnessTrend.bodyTrend(store.state.bodyEntries)
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 PageHeader(eyebrow: "YOUR BODY", title: "身体数据")
-                if let latest = store.state.bodyEntries.max(by: { $0.recordedAt < $1.recordedAt }) {
-                    Surface { Stat(value: "\(latest.weight.formatted()) kg", label: "最近体重 · \(latest.recordedAt.formatted(date: .abbreviated, time: .omitted))") }
+                if let latest = trend.latest {
+                    Surface {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                Text("\(latest.weight.formatted()) kg")
+                                    .font(.system(size: 26, weight: .bold))
+                                    .foregroundStyle(Palette.accent)
+                                if let delta = trend.weightDelta {
+                                    Text(weightDeltaLabel(delta))
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(delta == 0 ? Palette.muted : Palette.accent)
+                                }
+                            }
+                            Text("最近体重 · \(latest.recordedAt.formatted(date: .abbreviated, time: .omitted))")
+                                .font(.caption)
+                                .foregroundStyle(Palette.muted)
+                        }
+                    }
+                }
+                if trend.points.count >= 2 {
+                    MacMetricChart(title: "体重趋势", unit: "kg", samples: trend.points) { $0.weight }
+                }
+                if trend.fatPoints.count >= 2 {
+                    MacMetricChart(title: "体脂率趋势", unit: "%", samples: trend.fatPoints) { $0.bodyFat ?? 0 }
                 }
                 Surface {
                     HStack {
@@ -907,6 +971,48 @@ private struct MacBodyView: View {
                 }
             }
             .padding(30).frame(maxWidth: 1000)
+        }
+    }
+
+    private func weightDeltaLabel(_ delta: Double) -> String {
+        if delta == 0 { return "与上次相同" }
+        let magnitude = abs(delta).formatted(.number.precision(.fractionLength(0...2)))
+        return delta > 0 ? "+\(magnitude) kg" : "-\(magnitude) kg"
+    }
+}
+
+private struct MacMetricChart: View {
+    let title: String
+    let unit: String
+    let samples: [BodyTrendPoint]
+    let value: (BodyTrendPoint) -> Double
+
+    var body: some View {
+        let ordered = samples.sorted { lhs, rhs in
+            if lhs.recordedAt != rhs.recordedAt { return lhs.recordedAt < rhs.recordedAt }
+            return lhs.id < rhs.id
+        }
+        Surface {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(title).font(.headline)
+                Chart(ordered) { point in
+                    BarMark(
+                        x: .value("日期", point.recordedAt),
+                        y: .value(title, value(point))
+                    )
+                    .foregroundStyle(Palette.accent)
+                    .accessibilityLabel(point.recordedAt.formatted(date: .abbreviated, time: .omitted))
+                    .accessibilityValue("\(value(point).formatted()) \(unit)")
+                }
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                        AxisGridLine()
+                        AxisValueLabel(format: .dateTime.month().day())
+                    }
+                }
+                .chartYAxisLabel(unit)
+                .frame(height: 150)
+            }
         }
     }
 }
