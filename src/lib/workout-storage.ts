@@ -173,6 +173,38 @@ export async function replaceWorkoutExercise(db: SQLiteDatabase, workoutId: stri
   });
 }
 
+export async function moveWorkoutExercise(db: SQLiteDatabase, workoutId: string, exerciseId: string, direction: -1 | 1, expectedExerciseIds: string[]) {
+  if (direction !== -1 && direction !== 1) throw new Error('请选择向上或向下移动动作。');
+  await db.withExclusiveTransactionAsync(async transaction => {
+    const workout = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workouts WHERE id = ? AND endedAt IS NULL', workoutId);
+    if (!workout) throw new Error('只能调整进行中训练的动作顺序。');
+    const sets = await transaction.getAllAsync<WorkoutSet>('SELECT * FROM workout_sets WHERE workoutId = ? ORDER BY sortOrder, setNumber, id', workoutId);
+    const groups = new Map<string, WorkoutSet[]>();
+    for (const set of sets) {
+      const group = groups.get(set.exerciseId);
+      if (group) group.push(set);
+      else groups.set(set.exerciseId, [set]);
+    }
+    const exerciseIds = Array.from(groups.keys());
+    if (expectedExerciseIds.length !== exerciseIds.length || expectedExerciseIds.some((id, index) => id !== exerciseIds[index])) {
+      throw new Error('动作列表已变更，请重新查看后移动。');
+    }
+    const source = exerciseIds.indexOf(exerciseId);
+    if (source < 0) throw new Error('找不到要移动的动作，请重新查看训练。');
+    const destination = source + direction;
+    if (destination < 0 || destination >= exerciseIds.length) throw new Error(direction === -1 ? '这个动作已经在最前面。' : '这个动作已经在最后面。');
+
+    exerciseIds[source] = exerciseIds[destination];
+    exerciseIds[destination] = exerciseId;
+    let sortOrder = 0;
+    for (const exercise of exerciseIds) {
+      for (const set of groups.get(exercise)!) {
+        await transaction.runAsync('UPDATE workout_sets SET sortOrder = ? WHERE id = ? AND workoutId = ?', sortOrder++, set.id, workoutId);
+      }
+    }
+  });
+}
+
 export async function appendWorkoutSet(db: SQLiteDatabase, workoutId: string, exerciseId: string) {
   await db.withExclusiveTransactionAsync(async transaction => {
     const workout = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workouts WHERE id = ? AND endedAt IS NULL', workoutId);

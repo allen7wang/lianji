@@ -246,6 +246,24 @@ final class TrainingStore: ObservableObject {
         try commit(next)
     }
 
+    func moveWorkoutExercise(workoutId: String, exerciseId: String, direction: Int, orderedExerciseIds: [String]) throws {
+        guard direction == -1 || direction == 1 else { throw ExerciseOrderError.invalidDirection }
+        guard let current = activeWorkout, current.id == workoutId,
+              current.exerciseIds == orderedExerciseIds,
+              let source = orderedExerciseIds.firstIndex(of: exerciseId),
+              let workoutIndex = state.workouts.firstIndex(where: { $0.id == workoutId }) else {
+            throw ExerciseOrderError.unavailable
+        }
+        let destination = source + direction
+        guard orderedExerciseIds.indices.contains(destination) else { throw ExerciseOrderError.boundary }
+        var order = orderedExerciseIds
+        order.swapAt(source, destination)
+        let groups = Dictionary(grouping: current.sets, by: \.exerciseId)
+        var next = state
+        next.workouts[workoutIndex].sets = order.flatMap { groups[$0, default: []] }
+        try commit(next)
+    }
+
     func addSet(for exerciseId: String) {
         guard let previous = activeWorkout?.sets.last(where: { $0.exerciseId == exerciseId }) else { return }
         mutateActive { $0.sets.append(TrainingSet(exerciseId: exerciseId, setNumber: previous.setNumber + 1, weight: previous.weight, reps: previous.reps, unit: previous.unit, restSeconds: previous.restSeconds)) }
@@ -368,6 +386,20 @@ enum ExerciseReplacementError: LocalizedError {
         switch self {
         case .unavailable: "训练或待练组已变化，请重新选择。"
         case .invalidTarget: "请选择训练中尚未添加的其他动作。"
+        }
+    }
+}
+
+enum ExerciseOrderError: LocalizedError {
+    case invalidDirection
+    case unavailable
+    case boundary
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidDirection: "请选择上移或下移。"
+        case .unavailable: "训练或动作顺序已变化，请重新查看后重试。"
+        case .boundary: "这个动作已在当前顺序的边界。"
         }
     }
 }

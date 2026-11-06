@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
@@ -32,8 +33,8 @@ function loadSource(filename) {
   return module.exports;
 }
 
-function database() {
-  const native = new DatabaseSync(':memory:');
+function database(filename = ':memory:') {
+  const native = new DatabaseSync(filename);
   const transaction = async task => {
     native.exec('BEGIN IMMEDIATE');
     try { await task(); native.exec('COMMIT'); }
@@ -53,7 +54,7 @@ function database() {
 const { migrate, readWeeklyGoal, writeWeeklyGoal, readTrainingSchedule, insertScheduledTraining, removeScheduledTraining, readFavoritePlanIds, writePlanFavorite } = loadSource(path.join(root, 'src/lib/database.ts'));
 const { trainingPrograms, templatePlanId } = loadSource(path.join(root, 'src/lib/plan-templates.ts'));
 const { importPlanTemplate } = loadSource(path.join(root, 'src/lib/import-plan-template.ts'));
-const { startWorkoutFromPlan, repeatWorkoutFromHistory, addWorkoutExercise, appendWorkoutSet, editFinishedWorkout, reusePreviousWorkoutSet, replaceWorkoutExercise } = loadSource(path.join(root, 'src/lib/workout-storage.ts'));
+const { startWorkoutFromPlan, repeatWorkoutFromHistory, addWorkoutExercise, appendWorkoutSet, editFinishedWorkout, reusePreviousWorkoutSet, replaceWorkoutExercise, moveWorkoutExercise } = loadSource(path.join(root, 'src/lib/workout-storage.ts'));
 const { volumeOf } = loadSource(path.join(root, 'src/lib/types.ts'));
 const media = loadSource(path.join(root, 'assets/exercises/exercise-demos.json'));
 const { breathingProfiles, breathingProfileFor, breathingPhases, breathingPhaseAt, newBreathingSession, breathingElapsedMs, pauseBreathingSession, resumeBreathingSession } = loadSource(path.join(root, 'src/lib/breathing.ts'));
@@ -1013,5 +1014,77 @@ const addedCustom = replacementRows().filter(set => set.exerciseId === 'replacem
 assert.equal(addedCustom.length, 1, 'an add that commits first remains a single independent group');
 assert.deepEqual([addedCustom[0].sortOrder, addedCustom[0].setNumber, addedCustom[0].weight, addedCustom[0].reps, addedCustom[0].unit, addedCustom[0].restSeconds], [5, 1, 0, 10, 'reps', 90]);
 replacement.native.close();
+
+// Moving groups persists one normalized order while retaining every set's other fields.
+const moveDirectory = fs.mkdtempSync(path.join(tmpdir(), 'lianji-reorder-'));
+const moveFile = path.join(moveDirectory, 'training.db');
+const move = database(moveFile);
+await migrate(move.db);
+const [moveA, moveB, moveC, moveD] = move.native.prepare('SELECT id FROM exercises ORDER BY id LIMIT 4').all().map(exercise => exercise.id);
+const movePlan = move.native.prepare('SELECT id FROM plans LIMIT 1').get().id;
+const insertMoveWorkout = move.native.prepare('INSERT INTO workouts VALUES (?, ?, ?, ?, ?, ?)');
+insertMoveWorkout.run('move-active', movePlan, '保留训练', '2026-11-07T10:00:00Z', null, '保留笔记');
+insertMoveWorkout.run('move-history', movePlan, '保留历史', '2026-11-06T10:00:00Z', '2026-11-06T11:00:00Z', '历史笔记');
+const insertMoveSet = move.native.prepare('INSERT INTO workout_sets VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+insertMoveSet.run('move-a-1', 'move-active', moveA, 5, 7, 45, 8, 1, 'reps', 0);
+insertMoveSet.run('move-a-2', 'move-active', moveA, 9, 3, 0, 45, 0, 'seconds', 120);
+insertMoveSet.run('move-b-1', 'move-active', moveB, 12, 2, 0, 30, 1, 'seconds', 60);
+insertMoveSet.run('move-c-1', 'move-active', moveC, 30, 1, 10, 12, 0, 'reps', 90);
+insertMoveSet.run('move-c-2', 'move-active', moveC, 30, 4, 12, 10, 1, 'reps', 150);
+insertMoveSet.run('move-past', 'move-history', moveA, 17, 1, 30, 10, 1, 'reps', 90);
+const moveRows = () => move.native.prepare('SELECT * FROM workout_sets WHERE workoutId = ? ORDER BY sortOrder, setNumber, id').all('move-active');
+const moveOrder = () => [...new Set(moveRows().map(set => set.exerciseId))];
+const moveBefore = moveRows();
+const movePreserved = move.native.prepare('SELECT * FROM workout_sets WHERE workoutId = ? ORDER BY id').all('move-history');
+const moveWorkouts = move.native.prepare('SELECT * FROM workouts ORDER BY id').all();
+const movePlans = move.native.prepare('SELECT * FROM plans ORDER BY id').all();
+const moveItems = move.native.prepare('SELECT * FROM plan_items ORDER BY id').all();
+const originalMoveOrder = [moveA, moveB, moveC];
+await assert.rejects(moveWorkoutExercise(move.db, 'move-active', moveB, 0, originalMoveOrder), /向上或向下/);
+await assert.rejects(moveWorkoutExercise(move.db, 'missing', moveB, -1, originalMoveOrder), /进行中/);
+await assert.rejects(moveWorkoutExercise(move.db, 'move-history', moveB, -1, [moveA]), /进行中/);
+await assert.rejects(moveWorkoutExercise(move.db, 'move-active', 'missing', -1, originalMoveOrder), /找不到要移动/);
+await assert.rejects(moveWorkoutExercise(move.db, 'move-active', moveA, -1, originalMoveOrder), /最前面/);
+await assert.rejects(moveWorkoutExercise(move.db, 'move-active', moveC, 1, originalMoveOrder), /最后面/);
+for (const expectedIds of [[moveA, moveC, moveB], [moveA, moveA, moveC], [moveA, moveB], [...originalMoveOrder, moveD]]) {
+  await assert.rejects(moveWorkoutExercise(move.db, 'move-active', moveB, -1, expectedIds), /列表已变更/);
+}
+assert.deepEqual(moveRows(), moveBefore, 'failed guards preserve the sparse source order');
+move.native.exec(`CREATE TRIGGER fail_move BEFORE UPDATE OF sortOrder ON workout_sets WHEN OLD.id = 'move-a-1'
+  BEGIN SELECT RAISE(ABORT, 'forced failure'); END;`);
+await assert.rejects(moveWorkoutExercise(move.db, 'move-active', moveB, -1, originalMoveOrder), /forced failure/);
+assert.deepEqual(moveRows(), moveBefore, 'a later group update failure rolls back every earlier order write');
+move.native.exec('DROP TRIGGER fail_move');
+await moveWorkoutExercise(move.db, 'move-active', moveB, -1, originalMoveOrder);
+const firstMoveOrder = [moveB, moveA, moveC];
+assert.deepEqual(moveOrder(), firstMoveOrder);
+assert.deepEqual(moveRows().map(set => set.sortOrder), [0, 1, 2, 3, 4]);
+assert.deepEqual(moveRows().filter(set => set.exerciseId === moveA).map(set => set.id), ['move-a-1', 'move-a-2'], 'different legacy sort orders retain internal display order even when set numbers run backward');
+const unchangedSetFields = rows => rows.map(({ sortOrder, ...set }) => set).sort((a, b) => a.id.localeCompare(b.id));
+assert.deepEqual(unchangedSetFields(moveRows()), unchangedSetFields(moveBefore), 'mixed units, completed sets, IDs, targets, numbering and rest remain intact');
+const moveAfterAddDb = {
+  ...move.db,
+  withExclusiveTransactionAsync: async task => {
+    await addWorkoutExercise(move.db, 'move-active', moveD);
+    await move.db.withExclusiveTransactionAsync(task);
+  },
+};
+await assert.rejects(moveWorkoutExercise(moveAfterAddDb, 'move-active', moveA, 1, firstMoveOrder), /列表已变更/);
+assert.deepEqual(moveOrder(), [...firstMoveOrder, moveD], 'a pending move rejects an intervening added group');
+await appendWorkoutSet(move.db, 'move-active', moveA);
+await moveWorkoutExercise(move.db, 'move-active', moveA, 1, [...firstMoveOrder, moveD]);
+assert.deepEqual(moveOrder(), [moveB, moveC, moveA, moveD]);
+assert.equal(moveRows().filter(set => set.exerciseId === moveA).length, 3);
+assert.deepEqual(moveRows().filter(set => set.exerciseId === moveA).map(set => set.sortOrder), [3, 4, 5], 'an appended row follows its group into the new order');
+assert.deepEqual(move.native.prepare('SELECT * FROM workout_sets WHERE workoutId = ? ORDER BY id').all('move-history'), movePreserved);
+assert.deepEqual(move.native.prepare('SELECT * FROM workouts ORDER BY id').all(), moveWorkouts);
+assert.deepEqual(move.native.prepare('SELECT * FROM plans ORDER BY id').all(), movePlans);
+assert.deepEqual(move.native.prepare('SELECT * FROM plan_items ORDER BY id').all(), moveItems);
+const persistedMove = moveRows();
+move.native.close();
+const reopenedMove = new DatabaseSync(moveFile);
+assert.deepEqual(reopenedMove.prepare('SELECT * FROM workout_sets WHERE workoutId = ? ORDER BY sortOrder, setNumber, id').all('move-active'), persistedMove, 'reordered groups survive closing and reopening SQLite');
+reopenedMove.close();
+fs.rmSync(moveDirectory, { recursive: true, force: true });
 
 console.log(`Passed: 34 programs / 69 days / ${media.length} demos with offline teaching / ${media.filter(demo => demo.asset).length} bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import, workout repeat and history edits; independent plan copies and favorite ordering; backup, training schedule, favorites and weekly goal round-trip, validation and rollback; calendar, weekly activity, personal-record and training comparison metrics; body and nutrition trends.`);

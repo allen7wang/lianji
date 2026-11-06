@@ -95,7 +95,8 @@ struct AppleProgramChecks {
         try checkPlanReuse(in: directory)
         try checkReusePreviousSet(in: directory)
         try checkExerciseReplacement(in: directory)
-        print("Passed: 34 programs / 69 days; legacy data, persistence, progress, plans, goals, schedules, comparisons, wellness, backup, plan reuse, previous groups and pending exercise replacement.")
+        try checkExerciseOrder(in: directory)
+        print("Passed: 34 programs / 69 days; legacy data, persistence, progress, plans, goals, schedules, comparisons, wellness, backup, plan reuse, previous groups, replacement and exercise ordering.")
     }
 
     static func checkProgress() {
@@ -763,6 +764,99 @@ struct AppleProgramChecks {
         } catch is CocoaError {}
         precondition(failingStore.state.workouts == fixture.workouts && failingStore.state.plans == fixture.plans,
                      "a failed atomic write preserves pending groups and all source data")
+    }
+
+    @MainActor
+    static func checkExerciseOrder(in directory: URL) throws {
+        func expectUnavailable(_ action: () throws -> Void) throws {
+            do {
+                try action()
+                preconditionFailure("stale or missing exercise groups must reject moves")
+            } catch ExerciseOrderError.unavailable {}
+        }
+        let first = "barbell_bench"
+        let second = "plank"
+        let third = "pull_up"
+        var fixture = AppState.starter()
+        let history = Workout(id: "order-history", planId: fixture.plans[0].id, name: "历史", endedAt: .now, sets: [
+            TrainingSet(id: "order-history-set", exerciseId: first, setNumber: 1, weight: 30, reps: 10, completed: true)
+        ])
+        let current = Workout(id: "order-current", planId: fixture.plans[0].id, name: "当前", note: "保留训练笔记", sets: [
+            TrainingSet(id: "a1", exerciseId: first, setNumber: 1, weight: 40, reps: 8, completed: true, restSeconds: 15),
+            TrainingSet(id: "b1", exerciseId: second, setNumber: 1, weight: 0, reps: 45, unit: .seconds, restSeconds: 0),
+            TrainingSet(id: "a2", exerciseId: first, setNumber: 4, weight: 45, reps: 6, unit: .reps),
+            TrainingSet(id: "c1", exerciseId: third, setNumber: 1, weight: 0, reps: 3, completed: true, unit: .reps, restSeconds: 30),
+            TrainingSet(id: "b2", exerciseId: second, setNumber: 2, weight: 3, reps: 60, completed: true, unit: .seconds, restSeconds: 10),
+            TrainingSet(id: "a3", exerciseId: first, setNumber: 7, weight: 0, reps: 30, unit: .seconds, restSeconds: 90)
+        ])
+        fixture.workouts = [history, current]
+        let file = directory.appendingPathComponent("exercise-order.json")
+        try JSONEncoder().encode(fixture).write(to: file)
+        let store = TrainingStore(fileURL: file)
+        let snapshot = current.exerciseIds
+        try store.moveWorkoutExercise(workoutId: current.id, exerciseId: second, direction: -1, orderedExerciseIds: snapshot)
+        let moved = store.activeWorkout!
+        precondition(moved.exerciseIds == [second, first, third], "up moves exactly one exercise group")
+        precondition(moved.sets.map(\.id) == ["b1", "b2", "a1", "a2", "a3", "c1"], "interleaved rows are grouped while preserving internal row order")
+        precondition(Dictionary(uniqueKeysWithValues: moved.sets.map { ($0.id, $0) }) == Dictionary(uniqueKeysWithValues: current.sets.map { ($0.id, $0) }),
+                     "all row IDs, units, targets, rests and completed flags remain identical")
+        var context = moved
+        context.sets = current.sets
+        precondition(context == current && store.state.workouts[0] == history && store.state.plans == fixture.plans,
+                     "workout context, history and saved plans remain intact")
+        precondition(TrainingStore(fileURL: file).activeWorkout == moved, "group ordering persists after relaunch")
+        try expectUnavailable {
+            try store.moveWorkoutExercise(workoutId: current.id, exerciseId: second, direction: 1, orderedExerciseIds: snapshot)
+        }
+        try store.moveWorkoutExercise(workoutId: current.id, exerciseId: second, direction: 1, orderedExerciseIds: moved.exerciseIds)
+        precondition(store.activeWorkout!.exerciseIds == snapshot, "down moves exactly one exercise group")
+        for request in [(first, -1), (third, 1)] {
+            do {
+                try store.moveWorkoutExercise(workoutId: current.id, exerciseId: request.0, direction: request.1, orderedExerciseIds: snapshot)
+                preconditionFailure("a boundary move must be rejected")
+            } catch ExerciseOrderError.boundary {}
+        }
+        for direction in [0, 2, Int.min, Int.max] {
+            do {
+                try store.moveWorkoutExercise(workoutId: current.id, exerciseId: second, direction: direction, orderedExerciseIds: snapshot)
+                preconditionFailure("only adjacent directions are accepted")
+            } catch ExerciseOrderError.invalidDirection {}
+        }
+        try expectUnavailable {
+            try store.moveWorkoutExercise(workoutId: "missing", exerciseId: first, direction: 1, orderedExerciseIds: snapshot)
+        }
+        try expectUnavailable {
+            try store.moveWorkoutExercise(workoutId: current.id, exerciseId: "missing", direction: 1, orderedExerciseIds: snapshot)
+        }
+        try expectUnavailable {
+            try store.moveWorkoutExercise(workoutId: current.id, exerciseId: first, direction: 1, orderedExerciseIds: [first, second])
+        }
+        store.addSet(for: first)
+        let appended = store.activeWorkout!.sets.last!
+        try store.moveWorkoutExercise(workoutId: current.id, exerciseId: first, direction: 1, orderedExerciseIds: snapshot)
+        precondition(store.activeWorkout!.sets.filter { $0.exerciseId == first }.map(\.id) == ["a1", "a2", "a3", appended.id],
+                     "an appended group row is retained without invalidating an unchanged exercise-order snapshot")
+        let beforeNewGroup = store.activeWorkout!.exerciseIds
+        store.addWorkoutExercise("overhead_press")
+        try expectUnavailable {
+            try store.moveWorkoutExercise(workoutId: current.id, exerciseId: first, direction: 1, orderedExerciseIds: beforeNewGroup)
+        }
+        let beforeFinish = store.activeWorkout!.exerciseIds
+        store.finishWorkout()
+        try expectUnavailable {
+            try store.moveWorkoutExercise(workoutId: current.id, exerciseId: first, direction: 1, orderedExerciseIds: beforeFinish)
+        }
+
+        try JSONEncoder().encode(fixture).write(to: file)
+        let failingStore = TrainingStore(fileURL: file)
+        try FileManager.default.removeItem(at: file)
+        try FileManager.default.createDirectory(at: file, withIntermediateDirectories: false)
+        do {
+            try failingStore.moveWorkoutExercise(workoutId: current.id, exerciseId: second, direction: -1, orderedExerciseIds: snapshot)
+            preconditionFailure("failed persistence must reject a group move")
+        } catch is CocoaError {}
+        precondition(failingStore.state.workouts == fixture.workouts && failingStore.state.plans == fixture.plans,
+                     "failed atomic writes preserve the original interleaved order and all source data")
     }
 
 }

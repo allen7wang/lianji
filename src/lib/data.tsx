@@ -4,7 +4,7 @@ import { exportBackup, importBackup, type BackupFile } from './backup';
 import { insertScheduledTraining, readFavoritePlanIds, readTrainingSchedule, readWeeklyGoal, removeScheduledTraining, writePlanFavorite, writeWeeklyGoal } from './database';
 import { importPlanTemplate } from './import-plan-template';
 import type { ScheduledTraining } from './training-schedule';
-import { addWorkoutExercise as addExerciseToWorkout, appendWorkoutSet, editFinishedWorkout as saveWorkoutEdit, repeatWorkoutFromHistory, replaceWorkoutExercise as replaceExercise, reusePreviousWorkoutSet, startWorkoutFromPlan, type FinishedWorkoutEdit } from './workout-storage';
+import { addWorkoutExercise as addExerciseToWorkout, appendWorkoutSet, editFinishedWorkout as saveWorkoutEdit, moveWorkoutExercise as moveExercise, repeatWorkoutFromHistory, replaceWorkoutExercise as replaceExercise, reusePreviousWorkoutSet, startWorkoutFromPlan, type FinishedWorkoutEdit } from './workout-storage';
 import { id, type BodyEntry, type Exercise, type FoodEntry, type Plan, type PlanDraftItem, type PlanItem, type Workout, type WorkoutSet } from './types';
 
 type Data = {
@@ -32,6 +32,7 @@ type Data = {
   repeatWorkout: (workoutId: string) => Promise<string | null>;
   addWorkoutExercise: (workoutId: string, exerciseId: string) => Promise<void>;
   replaceWorkoutExercise: (workoutId: string, exerciseId: string, replacementId: string, expectedSetIds?: string[]) => Promise<void>;
+  moveWorkoutExercise: (workoutId: string, exerciseId: string, direction: -1 | 1, expectedExerciseIds: string[]) => Promise<void>;
   addSet: (workoutId: string, exerciseId: string) => Promise<void>;
   updateSet: (setId: string, patch: Partial<Pick<WorkoutSet, 'weight' | 'reps' | 'completed'>>) => Promise<void>;
   reusePreviousSet: (setId: string, sourceSetId: string) => Promise<{ weight: number; reps: number }>;
@@ -71,7 +72,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       db.getAllAsync<Plan>('SELECT * FROM plans ORDER BY createdAt DESC'),
       db.getAllAsync<PlanItem>('SELECT * FROM plan_items ORDER BY sortOrder'),
       db.getAllAsync<Workout>('SELECT * FROM workouts ORDER BY startedAt DESC'),
-      db.getAllAsync<WorkoutSet>('SELECT * FROM workout_sets ORDER BY sortOrder, setNumber'),
+      db.getAllAsync<WorkoutSet>('SELECT * FROM workout_sets ORDER BY sortOrder, setNumber, id'),
       db.getAllAsync<BodyEntry>('SELECT * FROM body_entries ORDER BY recordedAt DESC'),
       db.getAllAsync<FoodEntry>('SELECT * FROM food_entries ORDER BY loggedAt DESC'),
     ]);
@@ -170,6 +171,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     },
     async replaceWorkoutExercise(workoutId, exerciseId, replacementId, expectedSetIds) {
       await replaceExercise(db, workoutId, exerciseId, replacementId, expectedSetIds);
+      await refresh();
+    },
+    async moveWorkoutExercise(workoutId, exerciseId, direction, expectedExerciseIds) {
+      await moveExercise(db, workoutId, exerciseId, direction, expectedExerciseIds);
       await refresh();
     },
     async addSet(workoutId, exerciseId) {

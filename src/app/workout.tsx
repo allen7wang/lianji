@@ -8,6 +8,7 @@ import { findPreviousExerciseSets, findPreviousSetMatches } from '@/lib/training
 import { defaultSetTarget } from '@/lib/training-target';
 import { durationLabel, targetLabel, volumeOf, type Exercise, type TrainingUnit, type Workout, type WorkoutSet } from '@/lib/types';
 import { Button, Card, ExercisePicker, IconButton, Metric } from '@/ui/components';
+import { ExerciseOrderControls } from '@/ui/exercise-order-controls';
 import { PreviousTraining } from '@/ui/previous-training';
 import { C } from '@/ui/theme';
 import { demoFor } from '@/lib/exercise-demos';
@@ -15,11 +16,12 @@ import { ExerciseDemoModal } from '@/ui/exercise-demo';
 import { breathingProfileFor } from '@/lib/breathing';
 import { BreathingGuideModal, type BreathGuideRequest } from '@/ui/breathing-guide';
 
-function SetRow({ item, breathing, previous, locked = false, onUpdate, onReuse, onDelete, onComplete, onTimer }: {
+function SetRow({ item, breathing, previous, locked = false, reuseBlocked = false, onUpdate, onReuse, onDelete, onComplete, onTimer }: {
   item: WorkoutSet;
   breathing: boolean;
   previous?: WorkoutSet;
   locked?: boolean;
+  reuseBlocked?: boolean;
   onUpdate: (setId: string, patch: Partial<WorkoutSet>) => Promise<void>;
   onReuse: (setId: string, sourceSetId: string, pendingWrites: Promise<void>) => Promise<{ weight: number; reps: number }>;
   onDelete: (setId: string) => void;
@@ -59,7 +61,7 @@ function SetRow({ item, breathing, previous, locked = false, onUpdate, onReuse, 
   }
 
   async function reuse() {
-    if (locked || !previous || item.completed || applyInFlight.current) return;
+    if (locked || reuseBlocked || !previous || item.completed || applyInFlight.current) return;
     applyInFlight.current = true;
     // A late blur from the old focus must stay invalid after the copy completes.
     draftGeneration.current += 1;
@@ -96,7 +98,7 @@ function SetRow({ item, breathing, previous, locked = false, onUpdate, onReuse, 
       <Text style={styles.unit}>{item.unit === 'seconds' ? '秒' : '次'}</Text>
       <Pressable accessibilityRole="checkbox" accessibilityLabel={`完成第 ${item.setNumber} 组`} accessibilityState={{ checked: !!item.completed, disabled: busy }} disabled={busy} onPress={() => { if (!locked && !applyInFlight.current) onComplete(item.id, Date.now()); }} style={[styles.check, item.completed ? styles.checked : null]}><Ionicons name="checkmark" size={20} color={item.completed ? C.bg : C.faint} /></Pressable>
     </View>
-    {!item.completed && previous ? <Pressable accessibilityRole="button" accessibilityLabel={`第 ${item.setNumber} 组沿用上次第 ${previous.setNumber} 组，${previousValue}`} accessibilityState={{ disabled: busy, busy: applying }} disabled={busy} onPress={() => { void reuse(); }} style={({ pressed }) => [styles.reuse, pressed && styles.reusePressed]}>
+    {!item.completed && previous ? <Pressable accessibilityRole="button" accessibilityLabel={`第 ${item.setNumber} 组沿用上次第 ${previous.setNumber} 组，${previousValue}`} accessibilityState={{ disabled: busy || reuseBlocked, busy: applying }} disabled={busy || reuseBlocked} onPress={() => { void reuse(); }} style={({ pressed }) => [styles.reuse, reuseBlocked && styles.actionDisabled, pressed && styles.reusePressed]}>
       <Ionicons name="arrow-down-circle-outline" color={C.accent} size={17} />
       <Text style={styles.reuseLabel}>{applying ? '正在沿用…' : `沿用上次第 ${previous.setNumber} 组`}<Text style={styles.reuseValue}>{applying ? '' : ` · ${previousValue}`}</Text></Text>
     </Pressable> : null}
@@ -113,7 +115,7 @@ export default function WorkoutScreen() {
 }
 
 function ActiveWorkout({ workout }: { workout: Workout }) {
-  const { workoutSets, exercises, workouts, addWorkoutExercise, addSet, updateSet, reusePreviousSet, replaceWorkoutExercise, deleteSet, finishWorkout, deleteWorkout, updateWorkoutNote } = useData();
+  const { workoutSets, exercises, workouts, addWorkoutExercise, addSet, updateSet, reusePreviousSet, replaceWorkoutExercise, moveWorkoutExercise, deleteSet, finishWorkout, deleteWorkout, updateWorkoutNote } = useData();
   const sets = useMemo(() => workoutSets.filter(item => item.workoutId === workout.id), [workout.id, workoutSets]);
   const completed = sets.filter(item => item.completed).length;
   const [picker, setPicker] = useState(false);
@@ -121,6 +123,9 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
   const [replacing, setReplacing] = useState<string | null>(null);
   const replaceInFlight = useRef<string | null>(null);
   const [replacementError, setReplacementError] = useState<{ exerciseId: string; message: string } | null>(null);
+  const [moving, setMoving] = useState<string | null>(null);
+  const moveInFlight = useRef<string | null>(null);
+  const [moveError, setMoveError] = useState('');
   const [demoExercise, setDemoExercise] = useState<Exercise | null>(null);
   const [breathGuide, setBreathGuide] = useState<BreathGuideRequest | null>(null);
   const [note, setNote] = useState(workout.note);
@@ -156,6 +161,23 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
     });
   }, [sets, exercises, previousByExercise]);
 
+  const moveExercise = async (exerciseId: string, direction: -1 | 1) => {
+    if (saveInFlight.current || replaceInFlight.current || reuseInFlight.current > 0 || moveInFlight.current) return;
+    const index = groups.findIndex(group => group.exerciseId === exerciseId);
+    if (index < 0 || index + direction < 0 || index + direction >= groups.length) return;
+    const expectedExerciseIds = groups.map(group => group.exerciseId);
+    moveInFlight.current = exerciseId;
+    setMoving(exerciseId);
+    setMoveError('');
+    try {
+      await moveWorkoutExercise(workout.id, exerciseId, direction, expectedExerciseIds);
+    } catch (cause) {
+      setMoveError(cause instanceof Error ? cause.message : '调整动作顺序失败，请重试。');
+    } finally {
+      moveInFlight.current = null;
+      setMoving(null);
+    }
+  };
   const update = (setId: string, patch: Partial<WorkoutSet>) => updateSet(setId, patch);
   const closePicker = () => {
     if (replaceInFlight.current) return;
@@ -165,6 +187,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
   const reuse = async (setId: string, sourceSetId: string, pendingWrites: Promise<void>) => {
     if (saveInFlight.current) throw new Error('训练正在保存，请稍后重试。');
     if (replaceInFlight.current) throw new Error('正在更换动作，请稍后重试。');
+    if (moveInFlight.current) throw new Error('正在调整动作顺序，请稍后重试。');
     reuseInFlight.current += 1;
     setReusing(true);
     try {
@@ -176,7 +199,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
     }
   };
   const replaceExercise = async (exerciseId: string, replacementId: string, expectedSetIds: string[]) => {
-    if (saveInFlight.current || replaceInFlight.current || reuseInFlight.current > 0) return;
+    if (saveInFlight.current || replaceInFlight.current || reuseInFlight.current > 0 || moveInFlight.current) return;
     replaceInFlight.current = exerciseId;
     setReplacing(exerciseId);
     setReplacementError(null);
@@ -193,7 +216,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
     }
   };
   const confirmReplacement = (exerciseId: string, replacement: Exercise) => {
-    if (saveInFlight.current || replaceInFlight.current || reuseInFlight.current > 0) return;
+    if (saveInFlight.current || replaceInFlight.current || reuseInFlight.current > 0 || moveInFlight.current) return;
     const sourceSets = sets.filter(set => set.exerciseId === exerciseId);
     if (!sourceSets.length) {
       setReplacementError({ exerciseId, message: '原动作已变更，请重新选择。' });
@@ -221,12 +244,12 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
     if (!set.completed) startTimer(set.restSeconds ?? 90, '组间休息', now, set.exerciseId);
   };
   const finish = () => {
-    if (saveInFlight.current || replaceInFlight.current || reuseInFlight.current > 0) return;
+    if (saveInFlight.current || replaceInFlight.current || reuseInFlight.current > 0 || moveInFlight.current) return;
     if (!completed) return Alert.alert('还没有完成的组数', '至少完成一组训练后再结束。');
     Alert.alert('结束训练', `已完成 ${completed} 组，训练容量 ${Math.round(volumeOf(sets))} kg。`, [
       { text: '继续训练', style: 'cancel' },
       { text: '完成', onPress: async () => {
-        if (saveInFlight.current || replaceInFlight.current || reuseInFlight.current > 0) return;
+        if (saveInFlight.current || replaceInFlight.current || reuseInFlight.current > 0 || moveInFlight.current) return;
         saveInFlight.current = true;
         setSaving(true);
         try {
@@ -252,20 +275,23 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
     <View style={styles.header}><IconButton icon="chevron-back" onPress={() => router.back()} /><View style={{ alignItems: 'center' }}><Text style={styles.headerLabel}>正在训练</Text><Text style={styles.headerName} numberOfLines={1}>{workout.name}</Text></View><IconButton icon="ellipsis-horizontal" onPress={discard} /></View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
       <Card style={styles.summary}><Metric value={durationLabel(workout.startedAt, null)} label="训练时长" accent /><Metric value={`${completed}/${sets.length}`} label="已完成组" /><Metric value={`${Math.round(volumeOf(sets))}`} label="容量 · kg" /></Card>
+      {moveError ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" style={styles.setError}>{moveError}</Text> : null}
       {replacementError && !groups.some(group => group.exerciseId === replacementError.exerciseId) ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" style={styles.setError}>{replacementError.message}</Text> : null}
       {timer ? <Pressable onPress={() => setTimer(null)} style={styles.timer}><Ionicons name="timer-outline" size={17} color={C.accent} /><Text style={styles.timerText}>{seconds > 0 ? `${timer.label} ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : timer.label === '动作计时' ? '动作计时结束，请按实际完成情况勾选' : '休息结束，可以开始下一组'}</Text><Text style={styles.timerSkip}>{seconds > 0 ? '停止' : '关闭'}</Text></Pressable> : null}
       {groups.map((group, index) => <Card key={group.exerciseId} style={{ gap: 14 }}>
         <View style={styles.exerciseHeader}><View style={styles.exerciseIndex}><Text style={styles.exerciseIndexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{group.exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta} numberOfLines={1}>{group.exercise?.muscle} · {group.exercise?.equipment}</Text></View><Text style={styles.exerciseCount}>{group.sets.filter(set => set.completed).length}/{group.sets.length}</Text></View>
+        <ExerciseOrderControls name={group.exercise?.name ?? '未知动作'} index={index} total={groups.length} disabled={saving || reusing || !!replacing || !!moving} onMove={direction => { void moveExercise(group.exerciseId, direction); }} />
+        {moving === group.exerciseId ? <Text accessibilityLiveRegion="polite" style={styles.hint}>正在调整动作顺序…</Text> : null}
         <PreviousTraining exerciseName={group.exercise?.name ?? '未知动作'} entries={group.previous} />
         {group.exercise && demoFor(group.exercise) ? <Button label="查看动图" icon="play-circle-outline" variant="ghost" onPress={() => setDemoExercise(group.exercise!)} /> : null}
-        {group.sets.every(set => !set.completed) ? <Button label={replacing === group.exerciseId ? '正在更换…' : '更换动作'} icon="swap-horizontal-outline" variant="ghost" disabled={saving || reusing || !!replacing} onPress={() => {
-          if (saveInFlight.current || replaceInFlight.current || reuseInFlight.current > 0) return;
+        {group.sets.every(set => !set.completed) ? <Button label={replacing === group.exerciseId ? '正在更换…' : '更换动作'} icon="swap-horizontal-outline" variant="ghost" disabled={saving || reusing || !!replacing || !!moving} onPress={() => {
+          if (saveInFlight.current || replaceInFlight.current || reuseInFlight.current > 0 || moveInFlight.current) return;
           setReplacementError(null);
           setReplacementTarget(group.exerciseId);
         }} /> : null}
         {replacementError?.exerciseId === group.exerciseId ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" style={styles.setError}>{replacementError.message}</Text> : null}
         <View style={styles.tableHead}><Text style={styles.headNumber}>组</Text>{!breathingProfileFor(group.exercise) ? <Text style={styles.headCell}>重量</Text> : null}<Text style={styles.headCell}>{group.sets[0]?.unit === 'seconds' ? '时长 · 秒' : '次数'}</Text><Text style={styles.headCheck}>完成</Text></View>
-        {group.sets.map(item => <SetRow key={item.id} item={item} locked={replacing === group.exerciseId} breathing={!!breathingProfileFor(group.exercise)} previous={previousSetMatches.get(item.id)} onUpdate={update} onReuse={reuse} onDelete={setId => Alert.alert('删除组数', '确定删除这一组？', [{ text: '取消', style: 'cancel' }, { text: '删除', style: 'destructive', onPress: () => { if (replaceInFlight.current !== group.exerciseId) void deleteSet(setId); } }])} onComplete={toggle} onTimer={(duration, now) => {
+        {group.sets.map(item => <SetRow key={item.id} item={item} locked={replacing === group.exerciseId} reuseBlocked={!!moving} breathing={!!breathingProfileFor(group.exercise)} previous={previousSetMatches.get(item.id)} onUpdate={update} onReuse={reuse} onDelete={setId => Alert.alert('删除组数', '确定删除这一组？', [{ text: '取消', style: 'cancel' }, { text: '删除', style: 'destructive', onPress: () => { if (replaceInFlight.current !== group.exerciseId) void deleteSet(setId); } }])} onComplete={toggle} onTimer={(duration, now) => {
           const profile = breathingProfileFor(group.exercise);
           if (profile) { setTimer(null); setBreathGuide({ profile, seconds: duration }); }
           else startTimer(duration, '动作计时', now, group.exerciseId);
@@ -276,14 +302,14 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
           void addSet(workout.id, group.exerciseId).catch(cause => Alert.alert('添加组数失败', cause instanceof Error ? cause.message : '请重试。'));
         }} />
       </Card>)}
-      <Button label="添加动作" icon="add-circle-outline" variant="secondary" disabled={!!replacing} onPress={() => { if (!replaceInFlight.current) setPicker(true); }} />
+      <Button label="添加动作" icon="add-circle-outline" variant="secondary" disabled={!!replacing || !!moving} onPress={() => { if (!replaceInFlight.current && !moveInFlight.current) setPicker(true); }} />
       <View style={{ gap: 8 }}><Text style={styles.noteLabel}>训练笔记</Text><TextInput multiline placeholder="今天的状态、动作感受…" placeholderTextColor={C.faint} value={note} onChangeText={setNote} onBlur={() => updateWorkoutNote(workout.id, note)} style={styles.note} /></View>
       <Text style={styles.hint}>长按组号可删除该组。</Text>
     </ScrollView>
-    <View style={styles.footer}><Button label={saving ? '正在保存…' : replacing ? '正在更换动作…' : reusing ? '正在沿用上次…' : '结束训练'} icon="checkmark-circle-outline" onPress={finish} disabled={saving || reusing || !!replacing} /></View>
+    <View style={styles.footer}><Button label={saving ? '正在保存…' : replacing ? '正在更换动作…' : moving ? '正在调整顺序…' : reusing ? '正在沿用上次…' : '结束训练'} icon="checkmark-circle-outline" onPress={finish} disabled={saving || reusing || !!replacing || !!moving} /></View>
     <ExercisePicker visible={picker || replacementTarget !== null} replacing={replacementTarget !== null} busy={!!replacing} autoClose={replacementTarget === null} onClose={closePicker} onSelect={exercise => {
       if (replacementTarget) confirmReplacement(replacementTarget, exercise);
-      else if (!replaceInFlight.current) void addWorkoutExercise(workout.id, exercise.id).catch(cause => Alert.alert('添加动作失败', cause instanceof Error ? cause.message : '请重试。'));
+      else if (!replaceInFlight.current && !moveInFlight.current) void addWorkoutExercise(workout.id, exercise.id).catch(cause => Alert.alert('添加动作失败', cause instanceof Error ? cause.message : '请重试。'));
     }} excluded={groups.map(item => item.exerciseId)} />
     <ExerciseDemoModal exercise={demoExercise} onClose={() => setDemoExercise(null)} />
     <BreathingGuideModal request={breathGuide} onClose={() => setBreathGuide(null)} />
@@ -298,6 +324,7 @@ const styles = StyleSheet.create({
   setRow: { flexDirection: 'row', gap: 5, alignItems: 'center', padding: 4, borderRadius: 12 }, setDone: { backgroundColor: '#223320' }, setNumber: { width: 30, alignItems: 'center' }, setNumberText: { color: C.muted, fontWeight: '700' }, setInput: { flex: 1, minWidth: 30, height: 42, borderRadius: 10, backgroundColor: C.elevated, color: C.text, textAlign: 'center', fontSize: 15, fontWeight: '700' }, unit: { color: C.faint, fontSize: 11 }, check: { width: 37, height: 37, borderRadius: 11, borderWidth: 1, borderColor: C.line, alignItems: 'center', justifyContent: 'center', marginLeft: 5 }, checked: { backgroundColor: C.accent, borderColor: C.accent },
   reuse: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 9, paddingVertical: 7, borderRadius: 11, backgroundColor: C.accentDark },
   reusePressed: { opacity: 0.7 },
+  actionDisabled: { opacity: 0.45 },
   reuseLabel: { color: C.accent, fontSize: 12, lineHeight: 17, fontWeight: '700', flex: 1 },
   reuseValue: { color: C.muted, fontWeight: '500' },
   setError: { color: C.danger, fontSize: 12, lineHeight: 17, paddingHorizontal: 4 },

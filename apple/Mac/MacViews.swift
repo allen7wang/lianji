@@ -388,7 +388,16 @@ private struct MacPlanEditor: View {
             List {
                 ForEach($draft.items) { $item in
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(store.exercise(item.exerciseId)?.name ?? "未知动作").font(.headline)
+                        HStack {
+                            Text(store.exercise(item.exerciseId)?.name ?? "未知动作").font(.headline)
+                            Spacer()
+                            Button("上移", systemImage: "arrow.up") { moveDraftItem(item.id, direction: -1) }
+                                .disabled(draft.items.first?.id == item.id)
+                                .accessibilityLabel("上移\(store.exercise(item.exerciseId)?.name ?? "当前动作")")
+                            Button("下移", systemImage: "arrow.down") { moveDraftItem(item.id, direction: 1) }
+                                .disabled(draft.items.last?.id == item.id)
+                                .accessibilityLabel("下移\(store.exercise(item.exerciseId)?.name ?? "当前动作")")
+                        }
                         HStack(spacing: 8) {
                         Stepper("\(item.sets) 组", value: $item.sets, in: 1...20).frame(width: 110)
                         Picker("记录", selection: Binding(get: { item.unit ?? .reps }, set: { item.unit = $0 })) {
@@ -415,6 +424,12 @@ private struct MacPlanEditor: View {
         }
         .padding(24)
         .frame(width: 660, height: 520)
+    }
+
+    private func moveDraftItem(_ id: String, direction: Int) {
+        guard let index = draft.items.firstIndex(where: { $0.id == id }),
+              draft.items.indices.contains(index + direction) else { return }
+        draft.items.swapAt(index, index + direction)
     }
 }
 
@@ -519,6 +534,7 @@ private struct MacActiveWorkout: View {
                                     Button("查看动图", systemImage: "play.circle") { demoExercise = exercise }
                                 }
                             }
+                            WorkoutExerciseOrderControls(workoutId: workout.id, exerciseId: exerciseId, orderedExerciseIds: workout.exerciseIds)
                             ReplaceWorkoutExerciseButton(workoutId: workout.id, exerciseId: exerciseId) { _ in
                                 if timerExerciseId == exerciseId {
                                     restUntil = nil

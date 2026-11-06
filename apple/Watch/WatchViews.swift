@@ -361,6 +361,7 @@ private struct WatchExerciseView: View {
                 Text(store.exercise(exerciseId)?.name ?? "未知动作")
                     .font(.headline).lineLimit(2)
                 if let workout {
+                    WorkoutExerciseOrderControls(workoutId: workout.id, exerciseId: exerciseId, orderedExerciseIds: workout.exerciseIds)
                     ReplaceWorkoutExerciseButton(workoutId: workout.id, exerciseId: exerciseId) { exercise in
                         exerciseId = exercise.id
                         restUntil = nil

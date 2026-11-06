@@ -4,15 +4,17 @@ import { useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useData } from '@/lib/data';
-import type { PlanDraftItem } from '@/lib/types';
+import { id, type PlanDraftItem } from '@/lib/types';
 import { defaultSetTarget } from '@/lib/training-target';
 import { availablePlanName, draftPlanCopy } from '@/lib/plan-library';
 import { draftPlanFromWorkout, planLimits } from '@/lib/workout-plan';
 import { breathingProfileFor } from '@/lib/breathing';
 import { Badge, Button, Card, Empty, ExercisePicker, Field, IconButton, Page } from '@/ui/components';
+import { ExerciseOrderControls } from '@/ui/exercise-order-controls';
 import { C } from '@/ui/theme';
 
 type EditorItem = Omit<PlanDraftItem, 'sets' | 'reps' | 'weight' | 'restSeconds'> & {
+  draftId: string;
   sets: string;
   reps: string;
   weight: string;
@@ -20,7 +22,7 @@ type EditorItem = Omit<PlanDraftItem, 'sets' | 'reps' | 'weight' | 'restSeconds'
 };
 
 function editorItem(item: PlanDraftItem): EditorItem {
-  return { ...item, sets: String(item.sets), reps: String(item.reps), weight: String(item.weight), restSeconds: String(item.restSeconds ?? 90) };
+  return { ...item, draftId: id(), sets: String(item.sets), reps: String(item.reps), weight: String(item.weight), restSeconds: String(item.restSeconds ?? 90) };
 }
 
 function NumberField({ label, value, onChange, suffix }: { label: string; value: string; onChange: (value: string) => void; suffix: string }) {
@@ -66,11 +68,22 @@ function PlanEditorContent({ routeId, fromWorkout = false, copiedPlan = false, i
   const [note, setNote] = useState(initialNote);
   const [items, setItems] = useState(() => initialItems.map(editorItem));
   const [picker, setPicker] = useState(false);
-  const [replacingIndex, setReplacingIndex] = useState<number | null>(null);
+  const [replacingId, setReplacingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const saveInFlight = useRef(false);
 
-  const change = (index: number, patch: Partial<EditorItem>) => setItems(current => current.map((item, i) => i === index ? { ...item, ...patch } : item));
+  const change = (draftId: string, patch: Partial<EditorItem>) => setItems(current => current.map(item => item.draftId === draftId ? { ...item, ...patch } : item));
+  const move = (draftId: string, direction: -1 | 1) => {
+    if (saveInFlight.current) return;
+    setItems(current => {
+      const index = current.findIndex(item => item.draftId === draftId);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
   async function save() {
     if (saveInFlight.current) return;
     if (!name.trim()) return Alert.alert('请输入计划名称');
@@ -113,23 +126,24 @@ function PlanEditorContent({ routeId, fromWorkout = false, copiedPlan = false, i
       <View style={styles.section}><Text style={styles.sectionTitle}>训练动作</Text><Text style={styles.sectionCount}>{items.length} 个动作</Text></View>
       {items.map((item, index) => {
         const exercise = exercises.find(ex => ex.id === item.exerciseId);
-        return <Card key={`${item.exerciseId}-${index}`} style={{ gap: 15 }}><View style={styles.exerciseHeader}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta}>{exercise?.muscle} · {exercise?.equipment}</Text></View><Pressable onPress={() => setItems(current => current.filter((_, i) => i !== index))} hitSlop={12}><Ionicons name="close-circle-outline" size={22} color={C.faint} /></Pressable></View>
-          <Button label="更换动作" icon="swap-horizontal-outline" variant="secondary" onPress={() => { setReplacingIndex(index); setPicker(true); }} />
-          <View style={{ flexDirection: 'row', gap: 8 }}><Badge label="按次数" active={item.unit !== 'seconds'} onPress={() => change(index, { unit: 'reps' })} /><Badge label="按秒" active={item.unit === 'seconds'} onPress={() => change(index, { unit: 'seconds' })} /></View>
-          <View style={styles.fields}><View style={styles.field}><Text style={styles.fieldLabel}>组数</Text><NumberField label="组数" value={item.sets} suffix="组" onChange={sets => change(index, { sets })} /></View><View style={styles.field}><Text style={styles.fieldLabel}>{item.unit === 'seconds' ? '时长' : '次数'}</Text><NumberField label={item.unit === 'seconds' ? '时长（秒）' : '次数'} value={item.reps} suffix={item.unit === 'seconds' ? '秒' : '次'} onChange={reps => change(index, { reps })} /></View>{!breathingProfileFor(exercise) ? <View style={styles.field}><Text style={styles.fieldLabel}>目标重量</Text><NumberField label="目标重量（kg）" value={item.weight} suffix="kg" onChange={weight => change(index, { weight })} /></View> : null}</View>
-          <View style={{ gap: 6 }}><Text style={styles.fieldLabel}>每组结束后的休息</Text><NumberField label="每组休息时间（秒）" value={item.restSeconds} suffix="秒" onChange={restSeconds => change(index, { restSeconds })} /></View>
+        return <Card key={item.draftId} style={{ gap: 15 }}><View style={styles.exerciseHeader}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta}>{exercise?.muscle} · {exercise?.equipment}</Text></View><Pressable onPress={() => setItems(current => current.filter(candidate => candidate.draftId !== item.draftId))} hitSlop={12}><Ionicons name="close-circle-outline" size={22} color={C.faint} /></Pressable></View>
+          <ExerciseOrderControls name={exercise?.name ?? '未知动作'} index={index} total={items.length} disabled={saving} onMove={direction => move(item.draftId, direction)} />
+          <Button label="更换动作" icon="swap-horizontal-outline" variant="secondary" onPress={() => { setReplacingId(item.draftId); setPicker(true); }} />
+          <View style={{ flexDirection: 'row', gap: 8 }}><Badge label="按次数" active={item.unit !== 'seconds'} onPress={() => change(item.draftId, { unit: 'reps' })} /><Badge label="按秒" active={item.unit === 'seconds'} onPress={() => change(item.draftId, { unit: 'seconds' })} /></View>
+          <View style={styles.fields}><View style={styles.field}><Text style={styles.fieldLabel}>组数</Text><NumberField label="组数" value={item.sets} suffix="组" onChange={sets => change(item.draftId, { sets })} /></View><View style={styles.field}><Text style={styles.fieldLabel}>{item.unit === 'seconds' ? '时长' : '次数'}</Text><NumberField label={item.unit === 'seconds' ? '时长（秒）' : '次数'} value={item.reps} suffix={item.unit === 'seconds' ? '秒' : '次'} onChange={reps => change(item.draftId, { reps })} /></View>{!breathingProfileFor(exercise) ? <View style={styles.field}><Text style={styles.fieldLabel}>目标重量</Text><NumberField label="目标重量（kg）" value={item.weight} suffix="kg" onChange={weight => change(item.draftId, { weight })} /></View> : null}</View>
+          <View style={{ gap: 6 }}><Text style={styles.fieldLabel}>每组结束后的休息</Text><NumberField label="每组休息时间（秒）" value={item.restSeconds} suffix="秒" onChange={restSeconds => change(item.draftId, { restSeconds })} /></View>
         </Card>;
       })}
-      <Button label="添加动作" icon="add-circle-outline" variant="secondary" onPress={() => { setReplacingIndex(null); setPicker(true); }} />
-      <Text style={styles.hint}>更换动作会预填 0 kg 和新动作的默认次数或时长。正式训练时可以按实际情况修改。</Text>
+      <Button label="添加动作" icon="add-circle-outline" variant="secondary" onPress={() => { setReplacingId(null); setPicker(true); }} />
+      <Text style={styles.hint}>上移或下移可调整训练顺序。更换动作会预填 0 kg 和新动作的默认次数或时长，正式训练时可再调整。</Text>
     </ScrollView>
     <View style={styles.footer}><Button label={saving ? '保存中…' : '保存计划'} onPress={save} disabled={saving} /></View>
-    <ExercisePicker visible={picker} replacing={replacingIndex !== null} onClose={() => { setPicker(false); setReplacingIndex(null); }} excluded={items.map(item => item.exerciseId)} onSelect={exercise => {
+    <ExercisePicker visible={picker} replacing={replacingId !== null} onClose={() => { setPicker(false); setReplacingId(null); }} excluded={items.map(item => item.exerciseId)} onSelect={exercise => {
       const target = defaultSetTarget(exercise);
-      if (replacingIndex === null) {
+      if (replacingId === null) {
         setItems(current => [...current, editorItem({ exerciseId: exercise.id, sets: 3, ...target, restSeconds: 90 })]);
       } else {
-        change(replacingIndex, { exerciseId: exercise.id, unit: target.unit, reps: String(target.reps), weight: String(target.weight) });
+        change(replacingId, { exerciseId: exercise.id, unit: target.unit, reps: String(target.reps), weight: String(target.weight) });
       }
     }} />
   </SafeAreaView>;
