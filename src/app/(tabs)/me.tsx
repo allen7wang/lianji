@@ -62,7 +62,7 @@ export default function Me() {
     <SectionTitle title="数据与备份" />
     <Card style={{ gap: 12 }}>
       <Text style={styles.localTitle}>备份保存在「文件」</Text>
-      <Text style={styles.localCopy}>导出全部计划、训练记录、身体和饮食数据为一个 JSON 文件，可存到 iCloud Drive 或其他位置；恢复时会用备份整体替换本机当前数据。Mac 与 Apple Watch 的数据各自独立，不在手机备份内。</Text>
+      <Text style={styles.localCopy}>导出全部计划、训练记录、身体和饮食数据为一个 JSON 文件，可存到 iCloud Drive 或其他位置。手机、Android 和 Mac 可以互相恢复，也可以恢复 Apple Watch 分享出来的备份。恢复会替换该设备的当前数据，各端不会自动同步。</Text>
       <View style={styles.backupActions}><Button label="导出备份" icon="share-outline" onPress={exportFlow} style={{ flex: 1 }} /><Button label="从备份恢复" icon="download-outline" variant="secondary" onPress={importFlow} style={{ flex: 1 }} /></View>
     </Card>
     <Modal visible={modal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModal(false)}><SafeAreaView style={styles.modal} edges={['top', 'bottom']}><View style={styles.modalHeader}><Text style={styles.modalTitle}>记录身体数据</Text><IconButton icon="close" onPress={() => setModal(false)} /></View><View style={{ padding: 20, gap: 20 }}><Field label="体重 · kg" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder="例如 70.5" /><Field label="体脂率 · %（可选）" value={bodyFat} onChangeText={setBodyFat} keyboardType="decimal-pad" placeholder="例如 18.2" /><Button label="保存记录" onPress={save} /></View></SafeAreaView></Modal>

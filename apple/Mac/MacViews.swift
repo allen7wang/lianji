@@ -15,6 +15,7 @@ private enum Section: String, CaseIterable, Identifiable {
     case exercises = "动作库"
     case progress = "训练进度"
     case history = "训练历史"
+    case backup = "数据备份"
     case nutrition = "饮食记录"
     case body = "身体数据"
 
@@ -27,6 +28,7 @@ private enum Section: String, CaseIterable, Identifiable {
         case .exercises: "dumbbell.fill"
         case .progress: "chart.bar.fill"
         case .history: "clock.arrow.circlepath"
+        case .backup: "externaldrive.fill"
         case .nutrition: "fork.knife"
         case .body: "figure.strengthtraining.traditional"
         }
@@ -54,6 +56,7 @@ struct MacRootView: View {
                 case .exercises: MacExercisesView()
                 case .progress: MacProgressView()
                 case .history: MacHistoryView()
+                case .backup: MacBackupView()
                 case .nutrition: MacNutritionView()
                 case .body: MacBodyView()
                 }
@@ -857,6 +860,18 @@ private struct MacNutritionView: View {
                 }
             }
             .padding(30).frame(maxWidth: 1000)
+        }
+    }
+}
+
+private struct MacBackupView: View {
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                PageHeader(eyebrow: "YOUR DATA", title: "数据备份")
+                Surface { TrainingBackupActions() }
+            }
+            .padding(30).frame(maxWidth: 760)
         }
     }
 }

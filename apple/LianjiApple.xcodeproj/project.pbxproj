@@ -11,6 +11,7 @@
 		017C34D894EF08F81D0150F7 /* ExerciseDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F8EBC3FB208CEAD7E562CF /* ExerciseDemo.swift */; };
 		01B61AEB9BA2ACD63092C790 /* WeeklyGoalControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEEB3E09CB0B217027C48B50 /* WeeklyGoalControl.swift */; };
 		03ECB50B2795D1073C633656 /* single_arm_row.gif in Resources */ = {isa = PBXBuildFile; fileRef = 04ADAA270425E0E78534C91E /* single_arm_row.gif */; };
+		044C7521A97E27471F5582CB /* TrainingBackupActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC205D8C46AE2CD32639907 /* TrainingBackupActions.swift */; };
 		04F7B319DE69E0B4FE77A7E5 /* original-demos.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DA9478017DED8B389ABA882 /* original-demos.json */; };
 		056109F1131B91A93BEDCC3A /* pull_up.gif in Resources */ = {isa = PBXBuildFile; fileRef = 7E8DCD52E59814E4D1824036 /* pull_up.gif */; };
 		08F6E19E3507C83CD8DA26B0 /* breathing-profiles.json in Resources */ = {isa = PBXBuildFile; fileRef = 037A331FB6BC72B0C8DDCF46 /* breathing-profiles.json */; };
@@ -42,6 +43,7 @@
 		3974DFC02809FD8C6B27DED9 /* ExerciseDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F8EBC3FB208CEAD7E562CF /* ExerciseDemo.swift */; };
 		3AA90D432C788FE7E0C39409 /* training-programs.json in Resources */ = {isa = PBXBuildFile; fileRef = 11612D6026F5B76C63E66DE1 /* training-programs.json */; };
 		3DE2942BB41EE80D31A7593B /* deadlift.gif in Resources */ = {isa = PBXBuildFile; fileRef = 722F536546B49D7452BACBB1 /* deadlift.gif */; };
+		3EC16F1C9318587C109A1860 /* TrainingBackupActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC205D8C46AE2CD32639907 /* TrainingBackupActions.swift */; };
 		3FCB5205C7E3EE619936D26C /* plank.gif in Resources */ = {isa = PBXBuildFile; fileRef = 64607564DA60D6BE8097A832 /* plank.gif */; };
 		42320BDFBD2006323448ED70 /* BreathingGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D144AA910D30A000FA90F41 /* BreathingGuide.swift */; };
 		438AE7DAE5F9E644DC9D63FA /* incline_dumbbell_press.gif in Resources */ = {isa = PBXBuildFile; fileRef = CD9FA528C8C25094F8DC6B79 /* incline_dumbbell_press.gif */; };
@@ -61,6 +63,7 @@
 		589380E8534FCC2C8037A4B0 /* lateral_raise.gif in Resources */ = {isa = PBXBuildFile; fileRef = 6F7F579601897A28DF215A83 /* lateral_raise.gif */; };
 		5A77A7A68B1253276E2F5248 /* mountain_climber.gif in Resources */ = {isa = PBXBuildFile; fileRef = 79EE20FCB8048198D4D87DC3 /* mountain_climber.gif */; };
 		5AC138562054458F7FD4915D /* overhead_press.gif in Resources */ = {isa = PBXBuildFile; fileRef = 322765885DF4DDEA05A86B2D /* overhead_press.gif */; };
+		5D7F85FB3BECB18509B3A634 /* TrainingBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0466B66CFB8F6CA9E7F930F /* TrainingBackup.swift */; };
 		60C7D68103EE23B7B19C9DA8 /* triceps_pushdown.gif in Resources */ = {isa = PBXBuildFile; fileRef = 03095F3431037FADE95BCE5C /* triceps_pushdown.gif */; };
 		62364D4F418520AB687657D2 /* barbell_row.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5182D5DB509271C8787BB739 /* barbell_row.gif */; };
 		623B3B4260DBB3F2FD2692CE /* TrainingScheduleActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 703CFE310733C617DD542319 /* TrainingScheduleActions.swift */; };
@@ -126,6 +129,7 @@
 		D9A12FE131907256346D1DDE /* dumbbell_rdl.gif in Resources */ = {isa = PBXBuildFile; fileRef = C3144ABD456C4F1F34BAAD42 /* dumbbell_rdl.gif */; };
 		DD493E30DFE3E86DD8868F35 /* TrainingPrograms.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD50B4EDA4214FFFC7890005 /* TrainingPrograms.swift */; };
 		DDF0F00DD1511F418D6B6169 /* hanging_leg_raise.gif in Resources */ = {isa = PBXBuildFile; fileRef = 53A9C015B3A7E35412821739 /* hanging_leg_raise.gif */; };
+		DF9AE4E76C1234E766540452 /* TrainingBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0466B66CFB8F6CA9E7F930F /* TrainingBackup.swift */; };
 		E2067E778BB9349A46C00569 /* burpee.gif in Resources */ = {isa = PBXBuildFile; fileRef = 4D845994850EAA6803344059 /* burpee.gif */; };
 		E22D2D6BE846979C88F827BE /* leg_press.gif in Resources */ = {isa = PBXBuildFile; fileRef = 7B737A8A6B4C5B86748D8E4D /* leg_press.gif */; };
 		E282482309F6E18B2503FCA0 /* cable_fly.gif in Resources */ = {isa = PBXBuildFile; fileRef = 5A6F30C057283301BA5411A4 /* cable_fly.gif */; };
@@ -181,6 +185,7 @@
 		480A570A9D24B1FFB2598736 /* reverse_fly.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = reverse_fly.gif; sourceTree = "<group>"; };
 		4AEAE1BF4C9D9C562BAB45E1 /* push_up.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = push_up.gif; sourceTree = "<group>"; };
 		4D845994850EAA6803344059 /* burpee.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = burpee.gif; sourceTree = "<group>"; };
+		4DC205D8C46AE2CD32639907 /* TrainingBackupActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingBackupActions.swift; sourceTree = "<group>"; };
 		502A6D58B5A0B27BA21D34C6 /* MacViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacViews.swift; sourceTree = "<group>"; };
 		5182D5DB509271C8787BB739 /* barbell_row.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = barbell_row.gif; sourceTree = "<group>"; };
 		53A9C015B3A7E35412821739 /* hanging_leg_raise.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = hanging_leg_raise.gif; sourceTree = "<group>"; };
@@ -213,6 +218,7 @@
 		AA7C9BEB7C0A0DA241115387 /* glute_bridge.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = glute_bridge.gif; sourceTree = "<group>"; };
 		AE0136DBD812BEF60F36B7DC /* TrainingComparisonViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingComparisonViews.swift; sourceTree = "<group>"; };
 		AEEB3E09CB0B217027C48B50 /* WeeklyGoalControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyGoalControl.swift; sourceTree = "<group>"; };
+		B0466B66CFB8F6CA9E7F930F /* TrainingBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingBackup.swift; sourceTree = "<group>"; };
 		B12B3BFEDB35A299BFEBCCB6 /* barbell_curl.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = barbell_curl.gif; sourceTree = "<group>"; };
 		B77EAF8F06BA6BBADD33F5FE /* bear_crawl.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = bear_crawl.gif; sourceTree = "<group>"; };
 		BD50B4EDA4214FFFC7890005 /* TrainingPrograms.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPrograms.swift; sourceTree = "<group>"; };
@@ -359,6 +365,8 @@
 				0FB085FD94011B679FA718FC /* ExerciseGuide.swift */,
 				3ADC71A24848B83E7819EBAA /* Models.swift */,
 				F7490F816BD48F2846757A3F /* SaveWorkoutPlanButton.swift */,
+				B0466B66CFB8F6CA9E7F930F /* TrainingBackup.swift */,
+				4DC205D8C46AE2CD32639907 /* TrainingBackupActions.swift */,
 				AE0136DBD812BEF60F36B7DC /* TrainingComparisonViews.swift */,
 				BD50B4EDA4214FFFC7890005 /* TrainingPrograms.swift */,
 				BE49D13BB2891D7DEB0277DD /* TrainingProgress.swift */,
@@ -592,6 +600,8 @@
 				48599EFD0FF72AAB997EF8C1 /* LianjiWatchApp.swift in Sources */,
 				C6F636AFA4847DA6841C4B86 /* Models.swift in Sources */,
 				0104512D8A5F551E054E5BE1 /* SaveWorkoutPlanButton.swift in Sources */,
+				DF9AE4E76C1234E766540452 /* TrainingBackup.swift in Sources */,
+				3EC16F1C9318587C109A1860 /* TrainingBackupActions.swift in Sources */,
 				85DD42B309E953D09B3F9C28 /* TrainingComparisonViews.swift in Sources */,
 				DD493E30DFE3E86DD8868F35 /* TrainingPrograms.swift in Sources */,
 				64A8CD907E0CD5E0AC3CE536 /* TrainingProgress.swift in Sources */,
@@ -614,6 +624,8 @@
 				8E20829A843E5763AB42505D /* MacViews.swift in Sources */,
 				D395FE80936B36273E43D668 /* Models.swift in Sources */,
 				9EFD727F72C4FDDF6CF8E503 /* SaveWorkoutPlanButton.swift in Sources */,
+				5D7F85FB3BECB18509B3A634 /* TrainingBackup.swift in Sources */,
+				044C7521A97E27471F5582CB /* TrainingBackupActions.swift in Sources */,
 				B213AA10FC12D8E7190E7E7F /* TrainingComparisonViews.swift in Sources */,
 				7156568FB8E33F00D02A4254 /* TrainingPrograms.swift in Sources */,
 				31635C89C00487FF5FAA8397 /* TrainingProgress.swift in Sources */,
@@ -660,7 +672,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -673,7 +685,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.4.0;
+				MARKETING_VERSION = 2.5.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -718,7 +730,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -737,7 +749,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2.4.0;
+				MARKETING_VERSION = 2.5.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

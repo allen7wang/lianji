@@ -90,7 +90,8 @@ struct AppleProgramChecks {
         try checkWeeklyGoal(in: directory)
         try checkSchedule(in: directory)
         checkComparisons()
-        print("Passed: 34 programs / 69 days; legacy data, timed targets, workout persistence, progress, copying history to plans, weekly goals, schedules and training comparisons.")
+        try checkBackup(in: directory)
+        print("Passed: 34 programs / 69 days; legacy data, timed targets, workout persistence, progress, copying history to plans, weekly goals, schedules, training comparisons and cross-platform backup.")
     }
 
     static func checkProgress() {
@@ -345,5 +346,102 @@ struct AppleProgramChecks {
         tiedEnd.id = "b"
         let ties = TrainingComparison(workouts: [tiedEnd, oldPlan, tiedStart]).previousExerciseSets(for: active)
         precondition(ties[exercise]?.first?.workout.id == "a", "same start uses latest end, then stable ID")
+    }
+
+    @MainActor
+    static func checkBackup(in directory: URL) throws {
+        func reject(_ data: Data, _ fragment: String) {
+            do {
+                _ = try TrainingBackup.parse(data)
+                preconditionFailure("backup must be rejected: \(fragment)")
+            } catch {
+                precondition(error.localizedDescription.contains(fragment), "expected \(fragment), got \(error.localizedDescription)")
+            }
+        }
+        let started = Date(timeIntervalSince1970: 1_762_387_200.125)
+        let ended = started.addingTimeInterval(3600)
+        var state = AppState.starter()
+        state.exercises.append(Exercise(id: "custom-bench", name: "杠铃卧推", muscle: "胸", equipment: "杠铃", isCustom: true))
+        state.plans = [Plan(id: "plan-a", name: "推日", note: "保留", createdAt: started, items: [
+            PlanItem(id: "later", exerciseId: "barbell_bench", sets: 1, reps: 5, weight: 20, unit: .reps, restSeconds: 30),
+            PlanItem(id: "first", exerciseId: "custom-bench", sets: 4, reps: 8, weight: 40, unit: .seconds, restSeconds: 0),
+        ])]
+        state.workouts = [Workout(id: "workout-a", planId: "plan-a", name: "推日", startedAt: started, endedAt: ended, note: "笔记", sets: [
+            TrainingSet(id: "set-b", exerciseId: "barbell_bench", setNumber: 2, weight: 50, reps: 6, completed: true),
+            TrainingSet(id: "set-a", exerciseId: "custom-bench", setNumber: 1, weight: 0, reps: 40, completed: false, unit: .seconds, restSeconds: 15),
+        ])]
+        state.bodyEntries = [BodyEntry(id: "body-a", recordedAt: started, weight: 70.5, bodyFat: nil)]
+        state.foodEntries = [FoodEntry(id: "food-a", loggedAt: ended, meal: "早餐", name: "鸡蛋", portion: "2个", calories: 140, protein: 12, carbs: 1, fat: 10)]
+        state.weeklyGoalDays = 4
+        state.trainingSchedule = [ScheduledTraining(planId: "plan-a", day: "2026-11-06")]
+        let exportedAt = Date(timeIntervalSince1970: 1_762_390_800.5)
+        let data = try TrainingBackup.encode(state, exportedAt: exportedAt)
+        let parsed = try TrainingBackup.parse(data)
+        precondition(parsed.preview.plans == 1 && parsed.preview.finishedWorkouts == 1 && parsed.preview.bodyEntries == 1 && parsed.preview.foodEntries == 1, "preview counts the exported records")
+        precondition(parsed.state.plans[0].items.map(\.id) == ["later", "first"], "plan items keep their saved order")
+        precondition(parsed.state.workouts[0].sets.map(\.id) == ["set-b", "set-a"], "sets keep their saved order")
+        precondition(parsed.state.exercises.contains { $0.id == "custom-bench" && $0.isCustom }, "same-name custom exercises stay custom")
+        precondition(parsed.state.workouts[0].sets[1].unit == .seconds && parsed.state.workouts[0].sets[1].restSeconds == 15, "timed sets keep unit and rest")
+        precondition(parsed.state.bodyEntries[0].bodyFat == nil && parsed.state.weeklyGoalDays == 4, "optional body fat and weekly goal round-trip")
+
+        let file = directory.appendingPathComponent("backup-store.json")
+        let store = TrainingStore(fileURL: file)
+        try store.setWeeklyGoal(2)
+        try store.scheduleTraining(planId: store.state.plans[0].id, on: Date.now)
+        let preservedGoal = try store.exportBackup()
+        let stripped = try JSONSerialization.jsonObject(with: preservedGoal, options: .mutableContainers) as! NSMutableDictionary
+        stripped.removeObject(forKey: "weeklyGoal")
+        stripped.removeObject(forKey: "schedule")
+        try store.restoreBackup(try JSONSerialization.data(withJSONObject: stripped))
+        precondition(store.state.weeklyGoalDays == 2, "old backups keep the current weekly goal")
+        precondition(store.state.trainingSchedule == nil, "old backups clear schedules tied to the replaced plans")
+
+        let phone = """
+        {"app":"lianji","version":1,"exportedAt":"2026-11-06T02:13:00Z","weeklyGoal":0,"schedule":[{"day":"2026-11-06","planId":"plan-a"}],"tables":{"exercises":[{"id":"ex-a","name":"杠铃卧推","muscle":"胸","equipment":"杠铃","isCustom":0},{"id":"ex-b","name":"自定义","muscle":"胸","equipment":"哑铃","isCustom":true}],"plans":[{"id":"plan-a","name":"推日","note":"","createdAt":"2026-11-01T00:00:00.000Z"}],"plan_items":[{"id":"item-a","planId":"plan-a","exerciseId":"ex-a","sortOrder":1,"sets":3,"reps":8,"weight":40},{"id":"item-b","planId":"plan-a","exerciseId":"ex-b","sortOrder":0,"sets":2,"reps":12,"weight":10,"unit":"seconds","restSeconds":45}],"workouts":[{"id":"wo-a","planId":null,"name":"自由训练","startedAt":"2026-11-06T01:00:00.000Z","endedAt":null,"note":""}],"workout_sets":[{"id":"set-a","workoutId":"wo-a","exerciseId":"ex-a","sortOrder":0,"setNumber":1,"weight":40,"reps":8,"completed":1}],"body_entries":[{"id":"body-a","recordedAt":"2026-11-06T00:00:00.000Z","weight":70,"bodyFat":null}],"food_entries":[{"id":"food-a","loggedAt":"2026-11-06T00:30:00.000Z","meal":"早餐","name":"鸡蛋","portion":"2个","calories":140,"protein":12,"carbs":1,"fat":10}]}}
+        """.data(using: .utf8)!
+        let restored = try store.restoreBackup(phone)
+        precondition(restored.finishedWorkouts == 0 && store.state.weeklyGoalDays == nil, "an explicit zero disables the goal and drafts are unfinished")
+        precondition(store.state.plans[0].items.map(\.id) == ["item-b", "item-a"], "sort order, not file order, restores plan items")
+        precondition(store.state.plans[0].items[1].unit == nil && store.state.plans[0].items[1].restSeconds == nil, "missing unit and rest stay optional")
+        precondition(store.state.workouts[0].planId == nil && store.state.workouts[0].endedAt == nil, "phone nulls stay empty")
+        precondition(store.state.exercises.contains { $0.id == "ex-b" && $0.isCustom }, "boolean custom flags are accepted")
+        let reopened = TrainingStore(fileURL: file)
+        precondition(reopened.state.plans.map(\.id) == ["plan-a"] && reopened.state.foodEntries.count == 1 && reopened.state.trainingSchedule == [ScheduledTraining(planId: "plan-a", day: "2026-11-06")], "restored backup persists")
+
+        try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: file.path)
+        defer { try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: file.path) }
+        do {
+            try store.restoreBackup(data)
+            preconditionFailure("a locked store file must reject restore before replacing memory")
+        } catch {}
+        precondition(store.state.plans.map(\.id) == ["plan-a"] && store.state.weeklyGoalDays == nil, "failed restore keeps the current memory state")
+        try FileManager.default.setAttributes([.immutable: false], ofItemAtPath: file.path)
+        precondition(TrainingStore(fileURL: file).state.foodEntries.count == 1, "failed restore does not replace the saved file")
+
+        reject(Data("not json".utf8), "JSON")
+        reject(Data("{\"app\":\"other\",\"version\":1,\"tables\":{}}".utf8), "练迹")
+        reject(Data("{\"app\":\"lianji\",\"version\":2,\"tables\":{}}".utf8), "不兼容")
+        let missingTable = try JSONSerialization.jsonObject(with: phone, options: .mutableContainers) as! NSMutableDictionary
+        let tables = missingTable["tables"] as! NSMutableDictionary
+        tables["plans"] = NSNull()
+        reject(try JSONSerialization.data(withJSONObject: missingTable), "缺少")
+        reject(Data("{\"app\":\"lianji\",\"version\":1,\"exportedAt\":\"2026-11-06T00:00:00Z\",\"tables\":{\"exercises\":[],\"plans\":[{\"name\":\"无 id\"}],\"plan_items\":[],\"workouts\":[],\"workout_sets\":[],\"body_entries\":[],\"food_entries\":[]}}".utf8), "缺少 id")
+        let badGoal = try JSONSerialization.jsonObject(with: phone, options: .mutableContainers) as! NSMutableDictionary
+        for goal in [-1, 8, 2.5, "4"] as [Any] {
+            badGoal["weeklyGoal"] = goal
+            reject(try JSONSerialization.data(withJSONObject: badGoal), "每周训练目标")
+        }
+        badGoal["weeklyGoal"] = 0
+        badGoal["schedule"] = [["day": "2026-02-29", "planId": "plan-a"]]
+        reject(try JSONSerialization.data(withJSONObject: badGoal), "训练日程")
+        badGoal["schedule"] = [["day": "2026-11-06", "planId": "plan-a"], ["day": "2026-11-06", "planId": "plan-a"]]
+        reject(try JSONSerialization.data(withJSONObject: badGoal), "重复")
+        let duplicate = try JSONSerialization.jsonObject(with: phone, options: .mutableContainers) as! NSMutableDictionary
+        let duplicateTables = duplicate["tables"] as! NSMutableDictionary
+        duplicateTables["plans"] = [
+            ["id": "plan-a", "name": "甲", "note": "", "createdAt": "2026-11-01T00:00:00Z"],
+            ["id": "plan-a", "name": "乙", "note": "", "createdAt": "2026-11-01T00:00:00Z"],
+        ]
+        reject(try JSONSerialization.data(withJSONObject: duplicate), "重复 id")
     }
 }

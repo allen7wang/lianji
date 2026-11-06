@@ -423,6 +423,28 @@ assert.deepEqual(await scheduleRows(restored.db), [], 'Old backups clear schedul
 assert.equal(restored.native.prepare('SELECT COUNT(*) AS count FROM food_entries').get().count, 1);
 await importBackup(restored.db, parseBackup(JSON.stringify({ ...backup, weeklyGoal: 0 })));
 assert.equal(await readWeeklyGoal(restored.db), 0, 'An explicit zero disables the goal');
+const appleBackup = {
+  app: 'lianji', version: 1, exportedAt: '2026-11-06T02:13:00.000Z', weeklyGoal: 0,
+  schedule: [{ day: '2026-11-06', planId: 'plan-a' }],
+  tables: {
+    exercises: [
+      { id: 'ex-a', name: '杠铃卧推', muscle: '胸', equipment: '杠铃', isCustom: 0 },
+      { id: 'ex-b', name: '自定义', muscle: '胸', equipment: '哑铃', isCustom: 1 },
+    ],
+    plans: [{ id: 'plan-a', name: '推日', note: '', createdAt: '2026-11-01T00:00:00.000Z' }],
+    plan_items: [{ id: 'item-a', planId: 'plan-a', exerciseId: 'ex-a', sortOrder: 0, sets: 3, reps: 8, weight: 40, unit: 'reps', restSeconds: 90 }],
+    workouts: [{ id: 'wo-a', planId: null, name: '自由训练', startedAt: '2026-11-06T01:00:00.000Z', endedAt: '2026-11-06T02:00:00.000Z', note: '' }],
+    workout_sets: [{ id: 'set-a', workoutId: 'wo-a', exerciseId: 'ex-a', sortOrder: 0, setNumber: 1, weight: 40, reps: 8, completed: 1, unit: 'reps', restSeconds: 90 }],
+    body_entries: [{ id: 'body-a', recordedAt: '2026-11-06T00:00:00.000Z', weight: 70, bodyFat: null }],
+    food_entries: [{ id: 'food-a', loggedAt: '2026-11-06T00:30:00.000Z', meal: '早餐', name: '鸡蛋', portion: '2个', calories: 140, protein: 12, carbs: 1, fat: 10 }],
+  },
+};
+await importBackup(restored.db, parseBackup(JSON.stringify(appleBackup)));
+assert.equal(await readWeeklyGoal(restored.db), 0);
+assert.deepEqual(await scheduleRows(restored.db), [{ day: '2026-11-06', planId: 'plan-a' }]);
+assert.equal(restored.native.prepare('SELECT planId FROM workouts WHERE id = ?').get('wo-a').planId, null);
+assert.equal(restored.native.prepare('SELECT bodyFat FROM body_entries WHERE id = ?').get('body-a').bodyFat, null);
+assert.equal(restored.native.prepare('SELECT isCustom FROM exercises WHERE id = ?').get('ex-b').isCustom, 1);
 restored.native.close();
 const rollback = database();
 await migrate(rollback.db);

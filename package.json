@@ -1,6 +1,6 @@
 {
   "name": "lianji",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

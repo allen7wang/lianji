@@ -215,6 +215,20 @@ final class TrainingStore: ObservableObject {
         updateState(next)
     }
 
+    func exportBackup(exportedAt: Date = .now) throws -> Data {
+        try TrainingBackup.encode(state, exportedAt: exportedAt)
+    }
+
+    @discardableResult
+    func restoreBackup(_ data: Data) throws -> TrainingBackupPreview {
+        let parsed = try TrainingBackup.parse(data)
+        var next = parsed.state
+        if !parsed.preview.hasWeeklyGoal { next.weeklyGoalDays = state.weeklyGoalDays }
+        next.addMissingExercises()
+        try commit(next)
+        return parsed.preview
+    }
+
     func addBodyEntry(weight: Double, bodyFat: Double?) {
         var next = state
         next.bodyEntries.append(BodyEntry(weight: weight, bodyFat: bodyFat))

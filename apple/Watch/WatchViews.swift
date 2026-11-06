@@ -65,6 +65,11 @@ struct WatchHomeView: View {
                         Label("训练历史", systemImage: "clock.arrow.circlepath")
                     }
                     NavigationLink {
+                        WatchBackupView()
+                    } label: {
+                        Label("数据备份", systemImage: "externaldrive.fill")
+                    }
+                    NavigationLink {
                         WatchDemoLibrary()
                     } label: {
                         Label("动作动图", systemImage: "play.circle")
@@ -482,6 +487,16 @@ private struct WatchExerciseProgressView: View {
             }
         }
         .navigationTitle(exercise.name)
+    }
+}
+
+private struct WatchBackupView: View {
+    var body: some View {
+        ScrollView {
+            TrainingBackupActions()
+                .padding(.vertical, 4)
+        }
+        .navigationTitle("数据备份")
     }
 }
 
