@@ -135,11 +135,12 @@ private struct MacDashboard: View {
                 }
                 if store.activeWorkout != nil { MacActiveWorkout() }
                 Text("训练计划").font(.title2.bold())
-                ForEach(store.state.plans) { plan in
+                ForEach(store.orderedPlans) { plan in
                     Surface {
                         HStack {
                             VStack(alignment: .leading, spacing: 5) {
-                                Text(plan.name).font(.headline)
+                                Label(plan.name, systemImage: store.isPlanFavorite(plan.id) ? "star.fill" : "dumbbell")
+                                    .font(.headline)
                                 Text("\(plan.items.count) 个动作 · \(plan.note)").font(.caption).foregroundStyle(Palette.muted)
                             }
                             Spacer()
@@ -186,7 +187,9 @@ private struct MacScheduleView: View {
                                     set: { planId = $0 }
                                 )) {
                                     Text("选择计划").tag("")
-                                    ForEach(store.state.plans) { plan in Text(plan.name).tag(plan.id) }
+                                    ForEach(store.orderedPlans) { plan in
+                                        Text(store.isPlanFavorite(plan.id) ? "★ \(plan.name)" : plan.name).tag(plan.id)
+                                    }
                                 }
                                 .frame(maxWidth: 260)
                                 Button(duplicate ? "已安排" : "添加安排", systemImage: "plus") {
@@ -270,7 +273,7 @@ private struct MacPlansView: View {
                             }
                         }
                     }
-                } else { ForEach(store.state.plans) { plan in
+                } else { ForEach(store.orderedPlans) { plan in
                     Surface {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
@@ -279,7 +282,11 @@ private struct MacPlansView: View {
                                     Text(plan.note).font(.caption).foregroundStyle(Palette.muted)
                                 }
                                 Spacer()
+                                PlanFavoriteButton(plan: plan)
+                            }
+                            HStack {
                                 Button("编辑") { editing = plan }
+                                DuplicatePlanButton(plan: plan)
                                 Button("开始训练") { store.startWorkout(planId: plan.id) }
                                     .disabled(store.activeWorkout != nil)
                             }

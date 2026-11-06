@@ -53,6 +53,24 @@ export async function removeScheduledTraining(db: SQLiteDatabase, day: string, p
   await db.runAsync('DELETE FROM training_schedule WHERE day = ? AND planId = ?', day, planId);
 }
 
+export async function readFavoritePlanIds(db: SQLiteDatabase) {
+  const favorites = await db.getAllAsync<{ planId: string }>('SELECT planId FROM plan_favorites ORDER BY planId');
+  return favorites.map(item => item.planId);
+}
+
+export async function writePlanFavorite(db: SQLiteDatabase, planId: string, favorite: boolean) {
+  if (typeof favorite !== 'boolean') throw new Error('收藏状态无效。');
+  await db.withExclusiveTransactionAsync(async transaction => {
+    const plan = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM plans WHERE id = ?', planId);
+    if (!plan) throw new Error('没有找到这个训练计划。');
+    if (favorite) {
+      await transaction.runAsync('INSERT INTO plan_favorites (planId) VALUES (?) ON CONFLICT(planId) DO NOTHING', planId);
+    } else {
+      await transaction.runAsync('DELETE FROM plan_favorites WHERE planId = ?', planId);
+    }
+  });
+}
+
 export async function migrate(db: SQLiteDatabase) {
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
@@ -68,6 +86,9 @@ export async function migrate(db: SQLiteDatabase) {
     CREATE TABLE IF NOT EXISTS training_schedule (
       day TEXT NOT NULL, planId TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
       PRIMARY KEY (day, planId)
+    );
+    CREATE TABLE IF NOT EXISTS plan_favorites (
+      planId TEXT PRIMARY KEY NOT NULL REFERENCES plans(id) ON DELETE CASCADE
     );
     CREATE TABLE IF NOT EXISTS plan_items (
       id TEXT PRIMARY KEY NOT NULL, planId TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,

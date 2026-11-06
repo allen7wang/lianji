@@ -132,6 +132,7 @@ struct AppState: Codable {
     var foodEntries: [FoodEntry]
     var weeklyGoalDays: Int? = nil
     var trainingSchedule: [ScheduledTraining]? = nil
+    var favoritePlanIds: [String]? = nil
 
     mutating func addMissingExercises() {
         for entry in ExtraExercise.catalog where !exercises.contains(where: { !$0.isCustom && $0.name == entry.name }) {

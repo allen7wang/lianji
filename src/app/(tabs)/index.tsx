@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useData } from '@/lib/data';
+import { prioritizePlans } from '@/lib/plan-library';
 import { buildWeeklyTrainingActivity, localDayKey } from '@/lib/training-progress';
 import { completedScheduleKeys, scheduleStatus } from '@/lib/training-schedule';
 import { dateLabel, durationLabel, volumeOf, type Plan } from '@/lib/types';
@@ -12,7 +13,9 @@ import { C } from '@/ui/theme';
 import { WeeklyTrainingGoal } from '@/ui/weekly-training-goal';
 
 export default function Today() {
-  const { ready, plans, planItems, exercises, workouts, workoutSets, schedule, startWorkout, deleteWorkout } = useData();
+  const { ready, plans, planItems, exercises, workouts, workoutSets, schedule, favoritePlanIds, startWorkout, deleteWorkout } = useData();
+  const favoritePlans = useMemo(() => new Set(favoritePlanIds), [favoritePlanIds]);
+  const quickPlans = useMemo(() => prioritizePlans(plans, favoritePlanIds).slice(0, 3), [plans, favoritePlanIds]);
   const active = workouts.find(item => !item.endedAt);
   const [starting, setStarting] = useState(false);
   const startInFlight = useRef(false);
@@ -122,10 +125,17 @@ export default function Today() {
     {ready ? <WeeklyTrainingGoal weeks={weeks} /> : null}
     <Card><View style={styles.metricRow}><Metric value={`${weekCount}`} label="训练次数" accent /><Metric value={`${Math.round(weekVolume).toLocaleString()}`} label="训练容量 · kg × 次" /></View><View style={styles.bars}>{daily.map((count, i) => <View key={i} style={styles.barColumn}><View style={[styles.bar, { height: Math.max(6, Math.min(50, count * 25)), backgroundColor: count ? C.accent : C.line }]} /><Text style={styles.barLabel}>{'一二三四五六日'[i]}</Text></View>)}</View></Card>
     <SectionTitle title="我的训练计划" action="全部计划" onAction={() => router.push('/plans')} />
-    {plans.slice(0, 3).map((plan, index) => {
+    {quickPlans.map((plan, index) => {
       const items = planItems.filter(item => item.planId === plan.id);
       const first = items.slice(0, 3).map(item => exercises.find(ex => ex.id === item.exerciseId)?.name).filter(Boolean).join(' · ');
-      return <Pressable key={plan.id} style={styles.plan} onPress={() => begin(plan.id, plan.name)}><View style={styles.planNumber}><Text style={styles.planNumberText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.planTitle}>{plan.name}</Text><Text style={styles.planSub} numberOfLines={1}>{items.length} 个动作 · {first}</Text></View><Ionicons name="arrow-forward-circle" color={C.accent} size={26} /></Pressable>;
+      const favorite = favoritePlans.has(plan.id);
+      return <Pressable key={plan.id} accessibilityRole="button" accessibilityLabel={`${favorite ? '常用计划，' : ''}开始「${plan.name}」训练`} style={styles.plan} onPress={() => begin(plan.id, plan.name)}>
+        <View style={[styles.planNumber, favorite && styles.favoritePlan]}>
+          {favorite ? <Ionicons name="star" size={20} color={C.accent} /> : <Text style={styles.planNumberText}>{String(index + 1).padStart(2, '0')}</Text>}
+        </View>
+        <View style={{ flex: 1 }}><Text style={styles.planTitle}>{plan.name}</Text><Text style={styles.planSub} numberOfLines={1}>{items.length} 个动作 · {first}</Text></View>
+        <Ionicons name="arrow-forward-circle" color={C.accent} size={26} />
+      </Pressable>;
     })}
     {finished[0] ? <><SectionTitle title="上次训练" action="全部历史" onAction={() => router.push('/history')} /><Pressable onPress={() => router.push({ pathname: '/history/[id]', params: { id: finished[0].id } })}><Card style={styles.recent}><View><Text style={styles.recentTitle}>{finished[0].name}</Text><Text style={styles.recentSub}>{dateLabel(finished[0].startedAt)} · {durationLabel(finished[0].startedAt, finished[0].endedAt)}</Text></View><Ionicons name="chevron-forward" size={20} color={C.muted} /></Card></Pressable></> : null}
     {!ready ? <Text style={{ color: C.muted }}>正在加载训练数据…</Text> : null}
@@ -150,6 +160,7 @@ const styles = StyleSheet.create({
   scheduleHint: { color: C.muted, fontSize: 12, lineHeight: 17 },
   plan: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, borderRadius: 17, padding: 15 },
   planNumber: { width: 42, height: 42, borderRadius: 12, backgroundColor: C.elevated, alignItems: 'center', justifyContent: 'center' }, planNumberText: { color: C.accent, fontSize: 14, fontWeight: '800' }, planTitle: { color: C.text, fontSize: 16, fontWeight: '700' }, planSub: { color: C.muted, fontSize: 11, marginTop: 5 },
+  favoritePlan: { backgroundColor: C.accentDark },
   recent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, recentTitle: { color: C.text, fontSize: 16, fontWeight: '700' }, recentSub: { color: C.muted, marginTop: 5, fontSize: 12 },
   nutrition: { flexDirection: 'row', alignItems: 'center', gap: 13, padding: 15, borderRadius: 17, backgroundColor: C.surface, borderColor: C.line, borderWidth: 1 }, nutritionIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: C.accentDark, alignItems: 'center', justifyContent: 'center' }, nutritionTitle: { color: C.text, fontWeight: '700', fontSize: 14 }, nutritionSub: { color: C.muted, fontSize: 11, marginTop: 4 },
 });

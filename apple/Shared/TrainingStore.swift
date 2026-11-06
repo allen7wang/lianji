@@ -23,8 +23,39 @@ final class TrainingStore: ObservableObject {
 
     var activeWorkout: Workout? { state.workouts.first { $0.endedAt == nil } }
     var finishedWorkouts: [Workout] { state.workouts.filter { $0.endedAt != nil }.sorted { $0.startedAt > $1.startedAt } }
+    var orderedPlans: [Plan] {
+        let favorites = Set(state.favoritePlanIds ?? [])
+        return state.plans.filter { favorites.contains($0.id) } + state.plans.filter { !favorites.contains($0.id) }
+    }
 
     func exercise(_ id: String) -> Exercise? { state.exercises.first { $0.id == id } }
+
+    func isPlanFavorite(_ id: String) -> Bool { state.favoritePlanIds?.contains(id) == true }
+
+    func togglePlanFavorite(_ id: String) throws {
+        guard state.plans.contains(where: { $0.id == id }) else { throw PlanReuseError.missingPlan }
+        var favorites = state.favoritePlanIds ?? []
+        if favorites.contains(id) { favorites.removeAll { $0 == id } }
+        else { favorites.append(id) }
+        var next = state
+        next.favoritePlanIds = favorites
+        try commit(next)
+    }
+
+    @discardableResult
+    func duplicatePlan(_ id: String) throws -> Plan {
+        guard let source = state.plans.first(where: { $0.id == id }) else { throw PlanReuseError.missingPlan }
+        let items = source.items.map { item in
+            var copy = item
+            copy.id = UUID().uuidString
+            return copy
+        }
+        let copy = Plan(name: uniquePlanName("\(source.name) · 副本"), note: source.note, items: items)
+        var next = state
+        next.plans.append(copy)
+        try commit(next)
+        return copy
+    }
 
     func setWeeklyGoal(_ days: Int?) throws {
         if let days, !(1...7).contains(days) { throw WeeklyGoalError.invalidDays }
@@ -75,15 +106,7 @@ final class TrainingStore: ObservableObject {
         }
         guard !items.isEmpty else { throw WorkoutPlanError.empty }
 
-        let baseName = "\(workout.name) · 复练计划"
-        let usedNames = Set(state.plans.map(\.name))
-        var name = baseName
-        var suffix = 2
-        while usedNames.contains(name) {
-            name = "\(baseName)（\(suffix)）"
-            suffix += 1
-        }
-        let plan = Plan(name: name, items: items)
+        let plan = Plan(name: uniquePlanName("\(workout.name) · 复练计划"), items: items)
         var next = state
         next.plans.append(plan)
         try commit(next)
@@ -105,6 +128,10 @@ final class TrainingStore: ObservableObject {
         var next = state
         next.plans.removeAll { $0.id == id }
         next.trainingSchedule?.removeAll { $0.planId == id }
+        next.favoritePlanIds?.removeAll { $0 == id }
+        for index in next.workouts.indices where next.workouts[index].planId == id {
+            next.workouts[index].planId = nil
+        }
         try commit(next)
     }
 
@@ -258,9 +285,24 @@ final class TrainingStore: ObservableObject {
         state = next
     }
 
+    private func uniquePlanName(_ base: String) -> String {
+        let names = Set(state.plans.map(\.name))
+        var name = base
+        var suffix = 2
+        while names.contains(name) {
+            name = "\(base)（\(suffix)）"
+            suffix += 1
+        }
+        return name
+    }
+
     private func persist(_ snapshot: AppState) throws {
         try JSONEncoder().encode(snapshot).write(to: fileURL, options: .atomic)
     }
+}
+
+enum PlanReuseError: Error {
+    case missingPlan
 }
 
 enum WeeklyGoalError: Error {

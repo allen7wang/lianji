@@ -92,7 +92,8 @@ struct AppleProgramChecks {
         checkComparisons()
         try checkBackup(in: directory)
         checkWellnessTrends()
-        print("Passed: 34 programs / 69 days; legacy data, timed targets, workout persistence, progress, copying history to plans, weekly goals, schedules, training comparisons, body and nutrition trends and cross-platform backup.")
+        try checkPlanReuse(in: directory)
+        print("Passed: 34 programs / 69 days; legacy data, timed targets, workout persistence, progress, copying history to plans, weekly goals, schedules, training comparisons, body and nutrition trends, cross-platform backup and plan reuse.")
     }
 
     static func checkProgress() {
@@ -281,7 +282,12 @@ struct AppleProgramChecks {
         try reopened.deletePlan(first.id)
         let afterDelete = TrainingStore(fileURL: file)
         precondition(afterDelete.state.trainingSchedule == [todaySecond], "deleting a plan removes only its schedule entries")
-        precondition(afterDelete.state.workouts == fixture.workouts, "cancellation and deletion leave training history unchanged")
+        let retainedHistory = fixture.workouts.map { workout in
+            var retained = workout
+            if retained.planId == first.id { retained.planId = nil }
+            return retained
+        }
+        precondition(afterDelete.state.workouts == retainedHistory, "deletion clears the plan reference and preserves the saved history")
 
         let now = Date.now
         try afterDelete.scheduleTraining(planId: third.id, on: now)
@@ -375,6 +381,7 @@ struct AppleProgramChecks {
         state.foodEntries = [FoodEntry(id: "food-a", loggedAt: ended, meal: "早餐", name: "鸡蛋", portion: "2个", calories: 140, protein: 12, carbs: 1, fat: 10)]
         state.weeklyGoalDays = 4
         state.trainingSchedule = [ScheduledTraining(planId: "plan-a", day: "2026-11-06")]
+        state.favoritePlanIds = ["plan-a"]
         let exportedAt = Date(timeIntervalSince1970: 1_762_390_800.5)
         let data = try TrainingBackup.encode(state, exportedAt: exportedAt)
         let parsed = try TrainingBackup.parse(data)
@@ -384,21 +391,25 @@ struct AppleProgramChecks {
         precondition(parsed.state.exercises.contains { $0.id == "custom-bench" && $0.isCustom }, "same-name custom exercises stay custom")
         precondition(parsed.state.workouts[0].sets[1].unit == .seconds && parsed.state.workouts[0].sets[1].restSeconds == 15, "timed sets keep unit and rest")
         precondition(parsed.state.bodyEntries[0].bodyFat == nil && parsed.state.weeklyGoalDays == 4, "optional body fat and weekly goal round-trip")
+        precondition(parsed.state.favoritePlanIds == ["plan-a"], "favorites round-trip in the shared backup format")
 
         let file = directory.appendingPathComponent("backup-store.json")
         let store = TrainingStore(fileURL: file)
         try store.setWeeklyGoal(2)
         try store.scheduleTraining(planId: store.state.plans[0].id, on: Date.now)
+        try store.togglePlanFavorite(store.state.plans[0].id)
         let preservedGoal = try store.exportBackup()
         let stripped = try JSONSerialization.jsonObject(with: preservedGoal, options: .mutableContainers) as! NSMutableDictionary
         stripped.removeObject(forKey: "weeklyGoal")
         stripped.removeObject(forKey: "schedule")
+        stripped.removeObject(forKey: "favoritePlanIds")
         try store.restoreBackup(try JSONSerialization.data(withJSONObject: stripped))
         precondition(store.state.weeklyGoalDays == 2, "old backups keep the current weekly goal")
         precondition(store.state.trainingSchedule == nil, "old backups clear schedules tied to the replaced plans")
+        precondition(store.state.favoritePlanIds == nil, "old backups clear favorites tied to the replaced plans")
 
         let phone = """
-        {"app":"lianji","version":1,"exportedAt":"2026-11-06T02:13:00Z","weeklyGoal":0,"schedule":[{"day":"2026-11-06","planId":"plan-a"}],"tables":{"exercises":[{"id":"ex-a","name":"杠铃卧推","muscle":"胸","equipment":"杠铃","isCustom":0},{"id":"ex-b","name":"自定义","muscle":"胸","equipment":"哑铃","isCustom":true}],"plans":[{"id":"plan-a","name":"推日","note":"","createdAt":"2026-11-01T00:00:00.000Z"}],"plan_items":[{"id":"item-a","planId":"plan-a","exerciseId":"ex-a","sortOrder":1,"sets":3,"reps":8,"weight":40},{"id":"item-b","planId":"plan-a","exerciseId":"ex-b","sortOrder":0,"sets":2,"reps":12,"weight":10,"unit":"seconds","restSeconds":45}],"workouts":[{"id":"wo-a","planId":null,"name":"自由训练","startedAt":"2026-11-06T01:00:00.000Z","endedAt":null,"note":""}],"workout_sets":[{"id":"set-a","workoutId":"wo-a","exerciseId":"ex-a","sortOrder":0,"setNumber":1,"weight":40,"reps":8,"completed":1}],"body_entries":[{"id":"body-a","recordedAt":"2026-11-06T00:00:00.000Z","weight":70,"bodyFat":null}],"food_entries":[{"id":"food-a","loggedAt":"2026-11-06T00:30:00.000Z","meal":"早餐","name":"鸡蛋","portion":"2个","calories":140,"protein":12,"carbs":1,"fat":10}]}}
+        {"app":"lianji","version":1,"exportedAt":"2026-11-06T02:13:00Z","weeklyGoal":0,"favoritePlanIds":["plan-a"],"schedule":[{"day":"2026-11-06","planId":"plan-a"}],"tables":{"exercises":[{"id":"ex-a","name":"杠铃卧推","muscle":"胸","equipment":"杠铃","isCustom":0},{"id":"ex-b","name":"自定义","muscle":"胸","equipment":"哑铃","isCustom":true}],"plans":[{"id":"plan-a","name":"推日","note":"","createdAt":"2026-11-01T00:00:00.000Z"}],"plan_items":[{"id":"item-a","planId":"plan-a","exerciseId":"ex-a","sortOrder":1,"sets":3,"reps":8,"weight":40},{"id":"item-b","planId":"plan-a","exerciseId":"ex-b","sortOrder":0,"sets":2,"reps":12,"weight":10,"unit":"seconds","restSeconds":45}],"workouts":[{"id":"wo-a","planId":null,"name":"自由训练","startedAt":"2026-11-06T01:00:00.000Z","endedAt":null,"note":""}],"workout_sets":[{"id":"set-a","workoutId":"wo-a","exerciseId":"ex-a","sortOrder":0,"setNumber":1,"weight":40,"reps":8,"completed":1}],"body_entries":[{"id":"body-a","recordedAt":"2026-11-06T00:00:00.000Z","weight":70,"bodyFat":null}],"food_entries":[{"id":"food-a","loggedAt":"2026-11-06T00:30:00.000Z","meal":"早餐","name":"鸡蛋","portion":"2个","calories":140,"protein":12,"carbs":1,"fat":10}]}}
         """.data(using: .utf8)!
         let restored = try store.restoreBackup(phone)
         precondition(restored.finishedWorkouts == 0 && store.state.weeklyGoalDays == nil, "an explicit zero disables the goal and drafts are unfinished")
@@ -406,8 +417,10 @@ struct AppleProgramChecks {
         precondition(store.state.plans[0].items[1].unit == nil && store.state.plans[0].items[1].restSeconds == nil, "missing unit and rest stay optional")
         precondition(store.state.workouts[0].planId == nil && store.state.workouts[0].endedAt == nil, "phone nulls stay empty")
         precondition(store.state.exercises.contains { $0.id == "ex-b" && $0.isCustom }, "boolean custom flags are accepted")
+        precondition(store.isPlanFavorite("plan-a"), "phone favorites restore on native platforms")
         let reopened = TrainingStore(fileURL: file)
         precondition(reopened.state.plans.map(\.id) == ["plan-a"] && reopened.state.foodEntries.count == 1 && reopened.state.trainingSchedule == [ScheduledTraining(planId: "plan-a", day: "2026-11-06")], "restored backup persists")
+        precondition(reopened.isPlanFavorite("plan-a"), "restored phone favorites survive relaunch")
 
         try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: file.path)
         defer { try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: file.path) }
@@ -416,8 +429,10 @@ struct AppleProgramChecks {
             preconditionFailure("a locked store file must reject restore before replacing memory")
         } catch {}
         precondition(store.state.plans.map(\.id) == ["plan-a"] && store.state.weeklyGoalDays == nil, "failed restore keeps the current memory state")
+        precondition(store.isPlanFavorite("plan-a"), "failed restore preserves favorites in memory")
         try FileManager.default.setAttributes([.immutable: false], ofItemAtPath: file.path)
         precondition(TrainingStore(fileURL: file).state.foodEntries.count == 1, "failed restore does not replace the saved file")
+        precondition(TrainingStore(fileURL: file).isPlanFavorite("plan-a"), "failed restore preserves favorites on disk")
 
         reject(Data("not json".utf8), "JSON")
         reject(Data("{\"app\":\"other\",\"version\":1,\"tables\":{}}".utf8), "练迹")
@@ -444,6 +459,14 @@ struct AppleProgramChecks {
             ["id": "plan-a", "name": "乙", "note": "", "createdAt": "2026-11-01T00:00:00Z"],
         ]
         reject(try JSONSerialization.data(withJSONObject: duplicate), "重复 id")
+        let badFavorites = try JSONSerialization.jsonObject(with: phone, options: .mutableContainers) as! NSMutableDictionary
+        for favorites in [NSNull(), [:], [NSNull()], [23], [""], ["missing"], ["plan-a", "plan-a"]] as [Any] {
+            badFavorites["favoritePlanIds"] = favorites
+            reject(try JSONSerialization.data(withJSONObject: badFavorites), "收藏计划")
+        }
+        badFavorites["favoritePlanIds"] = []
+        let noFavorites = try TrainingBackup.parse(JSONSerialization.data(withJSONObject: badFavorites))
+        precondition(noFavorites.state.favoritePlanIds == [], "an explicit empty favorite list remains empty")
     }
 
     static func checkWellnessTrends() {
@@ -497,4 +520,89 @@ struct AppleProgramChecks {
         precondition(summed.calories == 30.4 && summed.protein == 2.3 && summed.carbs == 0.3 && summed.fat == 2.2, "two Los Angeles entries on the same local day sum to one decimal")
         precondition(WellnessTrend.nutritionTrend(foods, limit: 2, timeZone: zone).map(\.day) == ["2026-11-06", "2026-11-08"], "nutrition window keeps the latest days with entries")
     }
+    @MainActor
+    static func checkPlanReuse(in directory: URL) throws {
+        let file = directory.appendingPathComponent("plan-reuse.json")
+        var fixture = AppState.starter()
+        fixture.plans[1].note = "保留备注\n按实际调整"
+        fixture.plans[1].items = [
+            PlanItem(exerciseId: "barbell_bench", sets: 4, reps: 8, weight: 45),
+            PlanItem(exerciseId: "plank", sets: 2, reps: 50, weight: 0, unit: .seconds, restSeconds: 0)
+        ]
+        let original = fixture.plans[1]
+        let today = Date.now
+        fixture.trainingSchedule = [ScheduledTraining(planId: original.id, day: ScheduledTraining.localDay(today))]
+        let trainingStart = Date(timeIntervalSince1970: 1_762_387_200)
+        fixture.workouts = [Workout(planId: original.id, name: original.name, startedAt: trainingStart, endedAt: trainingStart.addingTimeInterval(60), sets: [
+            TrainingSet(exerciseId: "barbell_bench", setNumber: 1, weight: 45, reps: 8, completed: true, unit: .reps, restSeconds: 90)
+        ])]
+        try JSONEncoder().encode(fixture).write(to: file)
+        let store = TrainingStore(fileURL: file)
+        let first = fixture.plans[0].id
+        let third = fixture.plans[2].id
+        try store.togglePlanFavorite(third)
+        try store.togglePlanFavorite(first)
+        precondition(store.orderedPlans.map(\.id) == [first, third, original.id], "favorites preserve source ordering within each group")
+        precondition(store.state.plans == fixture.plans, "favoriting changes presentation order only")
+        try store.togglePlanFavorite(first)
+        precondition(store.orderedPlans.map(\.id) == [third, first, original.id], "unfavoriting restores source position")
+        try store.togglePlanFavorite(original.id)
+
+        let copy = try store.duplicatePlan(original.id)
+        precondition(copy.id != original.id && copy.name == "\(original.name) · 副本" && copy.note == original.note, "copy creates a fresh named plan and preserves notes")
+        precondition(copy.createdAt >= original.createdAt, "copy has its own creation date")
+        precondition(Set(copy.items.map(\.id)).isDisjoint(with: Set(original.items.map(\.id))), "copied items have fresh IDs")
+        var copiedItems = copy.items
+        for index in copiedItems.indices { copiedItems[index].id = original.items[index].id }
+        precondition(copiedItems == original.items, "copy preserves exercise IDs, order, targets, legacy units, and zero rest")
+        let secondCopy = try store.duplicatePlan(original.id)
+        precondition(secondCopy.id != copy.id && secondCopy.name == "\(original.name) · 副本（2）", "repeated copies have unique IDs and names")
+        precondition(!store.isPlanFavorite(copy.id) && !store.isPlanFavorite(secondCopy.id), "copies do not inherit favorites")
+        precondition(store.state.trainingSchedule == fixture.trainingSchedule && store.state.workouts == fixture.workouts, "copies inherit no schedule or workout association")
+        var editedCopy = copy
+        editedCopy.items[0].weight = 60
+        store.savePlan(editedCopy)
+        precondition(store.state.plans.first { $0.id == original.id } == original, "editing a copied plan preserves its source")
+
+        let reopened = TrainingStore(fileURL: file)
+        precondition(reopened.isPlanFavorite(original.id) && reopened.isPlanFavorite(third) && !reopened.isPlanFavorite(first), "favorites survive relaunch")
+        precondition(reopened.state.plans.contains(editedCopy), "copied targets survive relaunch")
+        try reopened.deletePlan(original.id)
+        precondition(!reopened.isPlanFavorite(original.id) && reopened.isPlanFavorite(third), "deletion removes only the matching favorite")
+        var retainedHistory = fixture.workouts
+        retainedHistory[0].planId = nil
+        precondition(reopened.state.trainingSchedule?.isEmpty == true && reopened.state.workouts == retainedHistory, "deletion clears the source schedule and plan reference while preserving history")
+        precondition(reopened.state.plans.contains(editedCopy), "deleting the source preserves its copies")
+        let afterDeletion = try TrainingBackup.parse(reopened.exportBackup())
+        precondition(afterDeletion.state.workouts == retainedHistory && afterDeletion.preview.finishedWorkouts == 1,
+                     "a favorited plan can be deleted without making saved history impossible to restore")
+        let normalizedCopyItems = editedCopy.items.map { item in
+            var normalized = item
+            normalized.unit = item.unit ?? .reps
+            normalized.restSeconds = item.restSeconds ?? 90
+            return normalized
+        }
+        precondition(afterDeletion.state.favoritePlanIds == [third] && afterDeletion.state.plans.first(where: { $0.id == editedCopy.id })?.items == normalizedCopyItems,
+                     "backup after deletion preserves surviving favorites and independent copies")
+        do {
+            try reopened.duplicatePlan("missing")
+            preconditionFailure("copying a missing plan must fail")
+        } catch PlanReuseError.missingPlan {}
+
+        try FileManager.default.removeItem(at: file)
+        try FileManager.default.createDirectory(at: file, withIntermediateDirectories: false)
+        let plansBeforeFailure = reopened.state.plans
+        let favoritesBeforeFailure = reopened.state.favoritePlanIds
+        do {
+            try reopened.duplicatePlan(copy.id)
+            preconditionFailure("a failed copy cannot report success")
+        } catch is CocoaError {}
+        do {
+            try reopened.togglePlanFavorite(copy.id)
+            preconditionFailure("a failed favorite write cannot report success")
+        } catch is CocoaError {}
+        precondition(reopened.state.plans == plansBeforeFailure && reopened.state.favoritePlanIds == favoritesBeforeFailure,
+                     "failed copy and favorite writes preserve in-memory state")
+    }
+
 }

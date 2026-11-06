@@ -115,6 +115,8 @@ enum TrainingBackup {
         let schedule = (state.trainingSchedule ?? []).sorted {
             $0.day == $1.day ? $0.planId < $1.planId : $0.day < $1.day
         }.map { ["day": $0.day, "planId": $0.planId] as [String: Any] }
+        let planIds = Set(state.plans.map(\.id))
+        let favorites = Set(state.favoritePlanIds ?? []).filter { planIds.contains($0) }.sorted()
         let object: [String: Any] = [
             "app": "lianji",
             "version": version,
@@ -130,6 +132,7 @@ enum TrainingBackup {
             ],
             "weeklyGoal": state.weeklyGoalDays ?? 0,
             "schedule": schedule,
+            "favoritePlanIds": favorites,
         ]
         guard JSONSerialization.isValidJSONObject(object) else {
             throw TrainingBackupError.message("备份内容已损坏：无法导出。")
@@ -174,6 +177,7 @@ enum TrainingBackup {
         }
         let planIds = Set(try planRows.map { try identifier($0) })
         let schedule = try scheduleEntries(root["schedule"], planIds: planIds)
+        let favorites = try favoritePlanIds(root["favoritePlanIds"], planIds: planIds)
 
         let exercises = try exerciseRows.map { row -> Exercise in
             Exercise(
@@ -268,7 +272,8 @@ enum TrainingBackup {
             bodyEntries: bodyEntries,
             foodEntries: foodEntries,
             weeklyGoalDays: goal == 0 ? nil : goal,
-            trainingSchedule: schedule
+            trainingSchedule: schedule,
+            favoritePlanIds: favorites
         )
         let preview = TrainingBackupPreview(
             exportedAt: try date(root, "exportedAt"),
@@ -314,6 +319,23 @@ enum TrainingBackup {
             }
             return ScheduledTraining(planId: planId, day: day)
         }
+    }
+
+    private static func favoritePlanIds(_ value: Any?, planIds: Set<String>) throws -> [String]? {
+        if value == nil { return nil }
+        guard let list = value as? [String] else {
+            throw TrainingBackupError.message("备份中的收藏计划无效。")
+        }
+        var seen = Set<String>()
+        for id in list {
+            guard !id.isEmpty, planIds.contains(id) else {
+                throw TrainingBackupError.message("备份中的收藏计划不存在。")
+            }
+            guard seen.insert(id).inserted else {
+                throw TrainingBackupError.message("备份中有重复的收藏计划。")
+            }
+        }
+        return list
     }
 
     private static func isScheduleDay(_ value: String) -> Bool {

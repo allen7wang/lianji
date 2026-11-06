@@ -50,7 +50,7 @@ function database() {
   return { native, db };
 }
 
-const { migrate, readWeeklyGoal, writeWeeklyGoal, readTrainingSchedule, insertScheduledTraining, removeScheduledTraining } = loadSource(path.join(root, 'src/lib/database.ts'));
+const { migrate, readWeeklyGoal, writeWeeklyGoal, readTrainingSchedule, insertScheduledTraining, removeScheduledTraining, readFavoritePlanIds, writePlanFavorite } = loadSource(path.join(root, 'src/lib/database.ts'));
 const { trainingPrograms, templatePlanId } = loadSource(path.join(root, 'src/lib/plan-templates.ts'));
 const { importPlanTemplate } = loadSource(path.join(root, 'src/lib/import-plan-template.ts'));
 const { startWorkoutFromPlan, repeatWorkoutFromHistory, appendWorkoutSet, editFinishedWorkout } = loadSource(path.join(root, 'src/lib/workout-storage.ts'));
@@ -364,8 +364,27 @@ await insertScheduledTraining(db, scheduledDay, editedId);
 native.prepare('INSERT INTO plans VALUES (?, ?, ?, ?)').run('schedule-delete', '临时计划', '', '2026-11-04');
 await insertScheduledTraining(db, scheduledDay, 'schedule-delete');
 await insertScheduledTraining(db, nextScheduledDay, 'schedule-delete');
+await writePlanFavorite(db, 'schedule-delete', true);
 native.prepare('DELETE FROM plans WHERE id = ?').run('schedule-delete');
 assert.deepEqual(await scheduleRows(db), scheduleEntries, 'Deleting a plan only clears its scheduled days');
+assert.deepEqual(await readFavoritePlanIds(db), [], 'Deleting a plan clears its favorite status');
+
+// Favorites use plan IDs and keep repeated explicit add/remove operations idempotent.
+await writePlanFavorite(db, hiitId, true);
+await writePlanFavorite(db, hiitId, true);
+await writePlanFavorite(db, editedId, true);
+const favoritePlanIds = [editedId, hiitId].sort();
+assert.deepEqual(await readFavoritePlanIds(db), favoritePlanIds);
+await writePlanFavorite(db, editedId, false);
+await writePlanFavorite(db, editedId, false);
+assert.deepEqual(await readFavoritePlanIds(db), [hiitId]);
+await writePlanFavorite(db, editedId, true);
+native.exec('PRAGMA foreign_keys = OFF');
+await assert.rejects(writePlanFavorite(db, 'missing-plan', true), /没有找到/);
+await assert.rejects(writePlanFavorite(db, 'missing-plan', false), /没有找到/);
+native.exec('PRAGMA foreign_keys = ON');
+await assert.rejects(writePlanFavorite(db, hiitId, 'true'), /收藏状态/);
+assert.deepEqual(await readFavoritePlanIds(db), favoritePlanIds);
 
 // Backup export/import: full round-trip fidelity, validation errors and atomic rollback.
 const { exportBackup, parseBackup, importBackup, BACKUP_VERSION } = loadSource(path.join(root, 'src/lib/backup.ts'));
@@ -381,6 +400,7 @@ assert.equal(backup.app, 'lianji');
 assert.equal(backup.version, BACKUP_VERSION);
 assert.equal(backup.weeklyGoal, 4);
 assert.deepEqual(backup.schedule.map(entry => ({ ...entry })), scheduleEntries);
+assert.deepEqual(backup.favoritePlanIds, favoritePlanIds);
 assert.equal(backup.tables.plans.length, 72);
 assert.equal(backup.tables.body_entries.length, 1);
 assert.equal(backup.tables.food_entries.length, 1);
@@ -392,6 +412,7 @@ restored.native.exec('PRAGMA foreign_keys = OFF');
 await importBackup(restored.db, parseBackup(backupText));
 assert.equal(await readWeeklyGoal(restored.db), 4);
 assert.deepEqual(await scheduleRows(restored.db), scheduleEntries);
+assert.deepEqual(await readFavoritePlanIds(restored.db), favoritePlanIds);
 for (const table of ['exercises', 'plans', 'plan_items', 'workouts', 'workout_sets', 'body_entries', 'food_entries']) {
   assert.deepEqual(restored.native.prepare(`SELECT * FROM ${table} ORDER BY id`).all(), native.prepare(`SELECT * FROM ${table} ORDER BY id`).all(), `round-trip mismatch in ${table}`);
 }
@@ -412,20 +433,32 @@ const duplicateSchedule = { ...backup, schedule: [scheduleEntries[0], scheduleEn
 assert.throws(() => parseBackup(JSON.stringify(duplicateSchedule)), /重复/);
 await assert.rejects(importBackup(restored.db, duplicateSchedule), /重复/);
 assert.deepEqual(await scheduleRows(restored.db), scheduleEntries);
+for (const invalidFavoriteIds of [null, {}, [null], [''], [23], ['missing-plan'], [hiitId, hiitId]]) {
+  const invalid = { ...backup, favoritePlanIds: invalidFavoriteIds };
+  assert.throws(() => parseBackup(JSON.stringify(invalid)), /收藏计划/);
+  await assert.rejects(importBackup(restored.db, invalid), /收藏计划/);
+}
+assert.deepEqual(await readFavoritePlanIds(restored.db), favoritePlanIds);
 const oldBackup = { ...backup };
 delete oldBackup.weeklyGoal;
 delete oldBackup.schedule;
+delete oldBackup.favoritePlanIds;
 await writeWeeklyGoal(restored.db, 7);
 restored.native.prepare('DELETE FROM food_entries').run();
 await importBackup(restored.db, parseBackup(JSON.stringify(oldBackup)));
 assert.equal(await readWeeklyGoal(restored.db), 7, 'Old backups preserve the current goal');
 assert.deepEqual(await scheduleRows(restored.db), [], 'Old backups clear schedules tied to the replaced plans');
+assert.deepEqual(await readFavoritePlanIds(restored.db), [], 'Old backups clear favorites tied to the replaced plans');
 assert.equal(restored.native.prepare('SELECT COUNT(*) AS count FROM food_entries').get().count, 1);
 await importBackup(restored.db, parseBackup(JSON.stringify({ ...backup, weeklyGoal: 0 })));
 assert.equal(await readWeeklyGoal(restored.db), 0, 'An explicit zero disables the goal');
+assert.deepEqual(await readFavoritePlanIds(restored.db), favoritePlanIds);
+await importBackup(restored.db, parseBackup(JSON.stringify({ ...backup, favoritePlanIds: [] })));
+assert.deepEqual(await readFavoritePlanIds(restored.db), [], 'An explicit empty array clears favorites');
 const appleBackup = {
   app: 'lianji', version: 1, exportedAt: '2026-11-06T02:13:00.000Z', weeklyGoal: 0,
   schedule: [{ day: '2026-11-06', planId: 'plan-a' }],
+  favoritePlanIds: ['plan-a'],
   tables: {
     exercises: [
       { id: 'ex-a', name: '杠铃卧推', muscle: '胸', equipment: '杠铃', isCustom: 0 },
@@ -442,6 +475,8 @@ const appleBackup = {
 await importBackup(restored.db, parseBackup(JSON.stringify(appleBackup)));
 assert.equal(await readWeeklyGoal(restored.db), 0);
 assert.deepEqual(await scheduleRows(restored.db), [{ day: '2026-11-06', planId: 'plan-a' }]);
+assert.deepEqual(await readFavoritePlanIds(restored.db), ['plan-a']);
+assert.deepEqual((await exportBackup(restored.db)).favoritePlanIds, ['plan-a'], 'native favorites survive mobile restore and re-export');
 assert.equal(restored.native.prepare('SELECT planId FROM workouts WHERE id = ?').get('wo-a').planId, null);
 assert.equal(restored.native.prepare('SELECT bodyFat FROM body_entries WHERE id = ?').get('body-a').bodyFat, null);
 assert.equal(restored.native.prepare('SELECT isCustom FROM exercises WHERE id = ?').get('ex-b').isCustom, 1);
@@ -451,11 +486,13 @@ await migrate(rollback.db);
 await writeWeeklyGoal(rollback.db, 2);
 const originalSchedule = { day: scheduledDay, planId: rollback.native.prepare('SELECT id FROM plans LIMIT 1').get().id };
 await insertScheduledTraining(rollback.db, originalSchedule.day, originalSchedule.planId);
+await writePlanFavorite(rollback.db, originalSchedule.planId, true);
 rollback.native.exec('PRAGMA foreign_keys = OFF');
 rollback.native.exec(`CREATE TRIGGER fail_backup_body BEFORE INSERT ON body_entries BEGIN SELECT RAISE(ABORT, 'forced failure'); END;`);
 await assert.rejects(importBackup(rollback.db, parseBackup(backupText)), /forced failure/);
 assert.equal(await readWeeklyGoal(rollback.db), 2, 'Failed import must roll back the goal');
 assert.deepEqual(await scheduleRows(rollback.db), [originalSchedule], 'Failed import must roll back schedule replacement');
+assert.deepEqual(await readFavoritePlanIds(rollback.db), [originalSchedule.planId], 'Failed import must roll back favorites');
 assert.equal(rollback.native.prepare('SELECT COUNT(*) AS count FROM plans').get().count, 3, 'failed import must roll back to the original data');
 assert.equal(rollback.native.prepare('SELECT COUNT(*) AS count FROM exercises').get().count, 55);
 assert.equal(rollback.native.prepare('SELECT COUNT(*) AS count FROM body_entries').get().count, 0);
@@ -481,7 +518,7 @@ failure.native.close();
 // Upgrade a legacy database without touching plans, workouts or same-name custom exercises.
 const legacy = database();
 await migrate(legacy.db);
-legacy.native.exec('DROP TABLE training_preferences; DROP TABLE training_schedule');
+legacy.native.exec('DROP TABLE training_preferences; DROP TABLE training_schedule; DROP TABLE plan_favorites');
 legacy.native.exec("DELETE FROM exercises WHERE id LIKE 'builtin:%'");
 // Remove the new columns to reproduce an actual v1.0.2 schema.
 for (const table of ['plan_items', 'workout_sets']) {
@@ -499,11 +536,14 @@ const savedWorkouts = legacy.native.prepare('SELECT * FROM workouts ORDER BY id'
 await migrate(legacy.db);
 assert.equal(await readWeeklyGoal(legacy.db), 0);
 assert.deepEqual(await scheduleRows(legacy.db), []);
+assert.deepEqual(await readFavoritePlanIds(legacy.db), []);
 await insertScheduledTraining(legacy.db, scheduledDay, savedPlans[0].id);
+await writePlanFavorite(legacy.db, savedPlans[0].id, true);
 await writeWeeklyGoal(legacy.db, 5);
 await migrate(legacy.db);
 assert.equal(await readWeeklyGoal(legacy.db), 5);
 assert.deepEqual(await scheduleRows(legacy.db), [{ day: scheduledDay, planId: savedPlans[0].id }]);
+assert.deepEqual(await readFavoritePlanIds(legacy.db), [savedPlans[0].id]);
 assert.equal(legacy.native.prepare('SELECT COUNT(*) AS count FROM exercises WHERE isCustom = 0').get().count, 55);
 assert.equal(legacy.native.prepare('SELECT COUNT(*) AS count FROM exercises WHERE isCustom = 1').get().count, 1);
 assert.deepEqual(legacy.native.prepare('SELECT * FROM plans ORDER BY id').all(), savedPlans);
@@ -787,4 +827,29 @@ assert.deepEqual(nutritionDays.find(day => day.day === '2026-11-06'), {
   fat: 0.3,
 }, 'two meals on one local noon day are summed, then rounded to one decimal');
 
-console.log(`Passed: 34 programs / 69 days / ${media.length} demos with offline teaching / ${media.filter(demo => demo.asset).length} bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import, workout repeat and history edits; saved workouts converted to plans; backup, training schedule and weekly goal round-trip, validation and rollback; calendar, weekly activity, personal-record and training comparison metrics; body and nutrition trends.`);
+// Copying keeps independent targets, including repeated exercises and zero-rest timed work.
+const { draftPlanCopy, prioritizePlans } = loadSource(path.join(root, 'src/lib/plan-library.ts'));
+const sourcePlan = { id: 'copy-source', name: '我的计划', note: '说明', createdAt: '2026-11-07' };
+const libraryPlans = [
+  { ...sourcePlan, id: 'newer', name: '较新计划' },
+  sourcePlan,
+  { ...sourcePlan, id: 'existing-copy', name: '我的计划 · 副本' },
+];
+assert.deepEqual(prioritizePlans(libraryPlans, ['copy-source', 'newer', 'missing']).map(plan => plan.id), ['newer', 'copy-source', 'existing-copy']);
+const sourceTargets = [
+  { id: 'timed', planId: sourcePlan.id, exerciseId: 'repeat-exercise', sortOrder: 1, sets: 2, reps: 45, weight: 0, unit: 'seconds', restSeconds: 0 },
+  { id: 'legacy', planId: sourcePlan.id, exerciseId: 'repeat-exercise', sortOrder: 0, sets: 3, reps: 8, weight: 42.5 },
+  { id: 'other-plan', planId: 'newer', exerciseId: 'ignored', sortOrder: 0, sets: 1, reps: 10, weight: 10 },
+];
+const copiedDraft = draftPlanCopy(sourcePlan, sourceTargets, libraryPlans);
+assert.equal(copiedDraft.name, '我的计划 · 副本（2）');
+assert.equal(copiedDraft.note, sourcePlan.note);
+assert.deepEqual(copiedDraft.items, [
+  { exerciseId: 'repeat-exercise', sets: 3, reps: 8, weight: 42.5, unit: 'reps', restSeconds: 90 },
+  { exerciseId: 'repeat-exercise', sets: 2, reps: 45, weight: 0, unit: 'seconds', restSeconds: 0 },
+]);
+copiedDraft.items[0].weight = 50;
+assert.equal(sourceTargets[1].weight, 42.5, 'editing the draft must not mutate its source');
+assert.equal(sourceTargets[0].id, 'timed', 'copy preparation must not reorder source items');
+
+console.log(`Passed: 34 programs / 69 days / ${media.length} demos with offline teaching / ${media.filter(demo => demo.asset).length} bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import, workout repeat and history edits; independent plan copies and favorite ordering; backup, training schedule, favorites and weekly goal round-trip, validation and rollback; calendar, weekly activity, personal-record and training comparison metrics; body and nutrition trends.`);

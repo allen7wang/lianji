@@ -1,5 +1,5 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import { insertScheduledTraining, isWeeklyGoal, readTrainingSchedule, readWeeklyGoal, writeWeeklyGoal } from './database';
+import { insertScheduledTraining, isWeeklyGoal, readFavoritePlanIds, readTrainingSchedule, readWeeklyGoal, writeWeeklyGoal } from './database';
 import { isScheduleDay, scheduleKey, type ScheduledTraining } from './training-schedule';
 import type { BodyEntry, Exercise, FoodEntry, Plan, PlanItem, Workout, WorkoutSet } from './types';
 
@@ -22,11 +22,12 @@ export type BackupFile = {
   tables: BackupTables;
   weeklyGoal?: number;
   schedule?: ScheduledTraining[];
+  favoritePlanIds?: string[];
 };
 
 const TABLES = ['exercises', 'plans', 'plan_items', 'workouts', 'workout_sets', 'body_entries', 'food_entries'] as const;
 // Children first so foreign keys hold during the replace.
-const DELETE_ORDER = ['training_schedule', 'workout_sets', 'plan_items', 'food_entries', 'body_entries', 'workouts', 'plans', 'exercises'] as const;
+const DELETE_ORDER = ['plan_favorites', 'training_schedule', 'workout_sets', 'plan_items', 'food_entries', 'body_entries', 'workouts', 'plans', 'exercises'] as const;
 
 function validateSchedule(schedule: unknown, plans: Plan[]) {
   if (schedule === undefined) return;
@@ -43,8 +44,20 @@ function validateSchedule(schedule: unknown, plans: Plan[]) {
   }
 }
 
+function validateFavoritePlanIds(favorites: unknown, plans: Plan[]) {
+  if (favorites === undefined) return;
+  if (!Array.isArray(favorites)) throw new Error('备份中的收藏计划无效。');
+  const planIds = new Set(plans.map(plan => plan.id));
+  const seen = new Set<string>();
+  for (const planId of favorites) {
+    if (typeof planId !== 'string' || !planId || !planIds.has(planId)) throw new Error('备份中的收藏计划不存在。');
+    if (seen.has(planId)) throw new Error('备份中有重复的收藏计划。');
+    seen.add(planId);
+  }
+}
+
 export async function exportBackup(db: SQLiteDatabase): Promise<BackupFile> {
-  const [exercises, plans, plan_items, workouts, workout_sets, body_entries, food_entries, weeklyGoal, scheduleRows] = await Promise.all([
+  const [exercises, plans, plan_items, workouts, workout_sets, body_entries, food_entries, weeklyGoal, scheduleRows, favorites] = await Promise.all([
     db.getAllAsync<Exercise>('SELECT * FROM exercises'),
     db.getAllAsync<Plan>('SELECT * FROM plans'),
     db.getAllAsync<PlanItem>('SELECT * FROM plan_items'),
@@ -54,11 +67,13 @@ export async function exportBackup(db: SQLiteDatabase): Promise<BackupFile> {
     db.getAllAsync<FoodEntry>('SELECT * FROM food_entries'),
     readWeeklyGoal(db),
     readTrainingSchedule(db),
+    readFavoritePlanIds(db),
   ]);
   // Only include assignments whose plans were captured by the parallel reads.
   const planIds = new Set(plans.map(plan => plan.id));
   const schedule = scheduleRows.filter(entry => planIds.has(entry.planId));
-  return { app: 'lianji', version: BACKUP_VERSION, exportedAt: new Date().toISOString(), tables: { exercises, plans, plan_items, workouts, workout_sets, body_entries, food_entries }, weeklyGoal, schedule };
+  const favoritePlanIds = favorites.filter(planId => planIds.has(planId));
+  return { app: 'lianji', version: BACKUP_VERSION, exportedAt: new Date().toISOString(), tables: { exercises, plans, plan_items, workouts, workout_sets, body_entries, food_entries }, weeklyGoal, schedule, favoritePlanIds };
 }
 
 export function parseBackup(text: string): BackupFile {
@@ -80,11 +95,13 @@ export function parseBackup(text: string): BackupFile {
     }
   }
   validateSchedule(backup.schedule, backup.tables.plans);
+  validateFavoritePlanIds(backup.favoritePlanIds, backup.tables.plans);
   return backup as BackupFile;
 }
 
 export async function importBackup(db: SQLiteDatabase, backup: BackupFile): Promise<void> {
   validateSchedule(backup.schedule, backup.tables.plans);
+  validateFavoritePlanIds(backup.favoritePlanIds, backup.tables.plans);
   await db.withExclusiveTransactionAsync(async transaction => {
     if (backup.weeklyGoal !== undefined) await writeWeeklyGoal(transaction, backup.weeklyGoal);
     for (const table of DELETE_ORDER) await transaction.runAsync(`DELETE FROM ${table}`);
@@ -93,6 +110,9 @@ export async function importBackup(db: SQLiteDatabase, backup: BackupFile): Prom
     }
     for (const plan of backup.tables.plans) {
       await transaction.runAsync('INSERT INTO plans VALUES (?, ?, ?, ?)', plan.id, plan.name, plan.note, plan.createdAt);
+    }
+    for (const planId of backup.favoritePlanIds ?? []) {
+      await transaction.runAsync('INSERT INTO plan_favorites (planId) VALUES (?)', planId);
     }
     for (const entry of backup.schedule ?? []) {
       await insertScheduledTraining(transaction, entry.day, entry.planId);

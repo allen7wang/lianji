@@ -1,7 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
 import { exportBackup, importBackup, type BackupFile } from './backup';
-import { insertScheduledTraining, readTrainingSchedule, readWeeklyGoal, removeScheduledTraining, writeWeeklyGoal } from './database';
+import { insertScheduledTraining, readFavoritePlanIds, readTrainingSchedule, readWeeklyGoal, removeScheduledTraining, writePlanFavorite, writeWeeklyGoal } from './database';
 import { importPlanTemplate } from './import-plan-template';
 import type { ScheduledTraining } from './training-schedule';
 import { defaultUnit } from './training-target';
@@ -22,6 +22,8 @@ type Data = {
   schedule: ScheduledTraining[];
   schedulePlan: (day: string, planId: string) => Promise<void>;
   unschedulePlan: (day: string, planId: string) => Promise<void>;
+  favoritePlanIds: string[];
+  setPlanFavorite: (planId: string, favorite: boolean) => Promise<void>;
   refresh: () => Promise<void>;
   savePlan: (name: string, note: string, items: PlanDraftItem[], planId?: string) => Promise<string>;
   deletePlan: (planId: string) => Promise<void>;
@@ -59,6 +61,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
   const [weeklyGoal, updateWeeklyGoal] = useState(0);
   const [schedule, setSchedule] = useState<ScheduledTraining[]>([]);
+  const [favoritePlanIds, setFavoritePlanIds] = useState<string[]>([]);
+  const favoritesRequest = useRef(0);
 
   const refresh = useCallback(async () => {
     const [nextExercises, nextPlans, nextPlanItems, nextWorkouts, nextSets, nextBody, nextFood] = await Promise.all([
@@ -83,18 +87,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setSchedule(await readTrainingSchedule(db));
   }, [db]);
 
+  const refreshFavorites = useCallback(async () => {
+    const request = ++favoritesRequest.current;
+    const favorites = await readFavoritePlanIds(db);
+    if (request === favoritesRequest.current) setFavoritePlanIds(favorites);
+  }, [db]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      Promise.all([refresh(), readWeeklyGoal(db), refreshSchedule()]).then(([, goal]) => {
+      Promise.all([refresh(), readWeeklyGoal(db), refreshSchedule(), refreshFavorites()]).then(([, goal]) => {
         updateWeeklyGoal(goal);
         setReady(true);
       }).catch(console.error);
     }, 0);
     return () => clearTimeout(timer);
-  }, [db, refresh, refreshSchedule]);
+  }, [db, refresh, refreshSchedule, refreshFavorites]);
 
   const value = useMemo<Data>(() => ({
-    ready, exercises, plans, planItems, workouts, workoutSets, bodyEntries, foodEntries, weeklyGoal, schedule, refresh,
+    ready, exercises, plans, planItems, workouts, workoutSets, bodyEntries, foodEntries, weeklyGoal, schedule, favoritePlanIds, refresh,
     async setWeeklyGoal(days) {
       await writeWeeklyGoal(db, days);
       updateWeeklyGoal(days);
@@ -106,6 +116,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     async unschedulePlan(day, planId) {
       await removeScheduledTraining(db, day, planId);
       await refreshSchedule();
+    },
+    async setPlanFavorite(planId, favorite) {
+      await writePlanFavorite(db, planId, favorite);
+      await refreshFavorites();
     },
     async addProgramTemplate(programId) {
       const added = await importPlanTemplate(db, programId);
@@ -131,7 +145,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     },
     async deletePlan(planId) {
       await db.runAsync('DELETE FROM plans WHERE id = ?', planId);
-      await Promise.all([refresh(), refreshSchedule()]);
+      await Promise.all([refresh(), refreshSchedule(), refreshFavorites()]);
     },
     async addExercise(name, muscle, equipment) {
       const nextId = id();
@@ -207,9 +221,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     async restoreBackup(backup) {
       await importBackup(db, backup);
       if (backup.weeklyGoal !== undefined) updateWeeklyGoal(backup.weeklyGoal);
-      await Promise.all([refresh(), refreshSchedule()]);
+      await Promise.all([refresh(), refreshSchedule(), refreshFavorites()]);
     },
-  }), [ready, exercises, plans, planItems, workouts, workoutSets, bodyEntries, foodEntries, weeklyGoal, schedule, refresh, refreshSchedule, db]);
+  }), [ready, exercises, plans, planItems, workouts, workoutSets, bodyEntries, foodEntries, weeklyGoal, schedule, favoritePlanIds, refresh, refreshSchedule, refreshFavorites, db]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

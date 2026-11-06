@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useData } from '@/lib/data';
 import type { PlanDraftItem } from '@/lib/types';
 import { defaultUnit } from '@/lib/training-target';
+import { availablePlanName, draftPlanCopy } from '@/lib/plan-library';
 import { draftPlanFromWorkout, planLimits } from '@/lib/workout-plan';
 import { breathingProfileFor } from '@/lib/breathing';
 import { Badge, Button, Card, Empty, ExercisePicker, Field, IconButton, Page } from '@/ui/components';
@@ -27,11 +28,20 @@ function NumberField({ label, value, onChange, suffix }: { label: string; value:
 }
 
 export default function PlanEditor() {
-  const { id: routeId, workoutId } = useLocalSearchParams<{ id?: string; workoutId?: string }>();
+  const { id: routeId, workoutId, copyPlanId } = useLocalSearchParams<{ id?: string; workoutId?: string; copyPlanId?: string }>();
   const { ready, plans, planItems, workouts, workoutSets, exercises } = useData();
   const existing = plans.find(item => item.id === routeId);
   if (!ready) return <SafeAreaView style={styles.screen} edges={['top']} />;
 
+  if (copyPlanId && !routeId) {
+    const source = plans.find(plan => plan.id === copyPlanId);
+    if (!source) return <Page>
+      <Empty icon="calendar-outline" title="找不到要复制的计划" subtitle="可以从计划页选择其他训练计划。" />
+      <Button label="返回计划" onPress={() => router.navigate('/plans')} />
+    </Page>;
+    const draft = draftPlanCopy(source, planItems, plans);
+    return <PlanEditorContent key={`copy-${source.id}`} copiedPlan initialName={draft.name} initialNote={draft.note} initialItems={draft.items} />;
+  }
   if (workoutId && !routeId) {
     const source = workouts.find(workout => workout.id === workoutId && workout.endedAt);
     const exerciseIds = new Set(exercises.map(exercise => exercise.id));
@@ -40,10 +50,7 @@ export default function PlanEditor() {
       <Empty icon="barbell-outline" title="无法从这次训练创建计划" subtitle="请选择有完成组的训练记录。" />
       <Button label="返回训练记录" onPress={() => router.canGoBack() ? router.back() : router.navigate('/history')} />
     </Page>;
-    const baseName = `${source.name} · 复练计划`;
-    const usedNames = new Set(plans.map(plan => plan.name));
-    let name = baseName;
-    for (let suffix = 2; usedNames.has(name); suffix++) name = `${baseName}（${suffix}）`;
+    const name = availablePlanName(`${source.name} · 复练计划`, plans);
     return <PlanEditorContent key={source.id} fromWorkout initialName={name} initialNote="" initialItems={items} />;
   }
   if (routeId && !existing) return <Page>
@@ -53,7 +60,7 @@ export default function PlanEditor() {
   return <PlanEditorContent key={routeId ?? 'new'} routeId={routeId} initialName={existing?.name ?? ''} initialNote={existing?.note ?? ''} initialItems={planItems.filter(item => item.planId === routeId)} />;
 }
 
-function PlanEditorContent({ routeId, fromWorkout = false, initialName, initialNote, initialItems }: { routeId?: string; fromWorkout?: boolean; initialName: string; initialNote: string; initialItems: PlanDraftItem[] }) {
+function PlanEditorContent({ routeId, fromWorkout = false, copiedPlan = false, initialName, initialNote, initialItems }: { routeId?: string; fromWorkout?: boolean; copiedPlan?: boolean; initialName: string; initialNote: string; initialItems: PlanDraftItem[] }) {
   const { exercises, savePlan } = useData();
   const [name, setName] = useState(initialName);
   const [note, setNote] = useState(initialNote);
@@ -85,7 +92,7 @@ function PlanEditorContent({ routeId, fromWorkout = false, initialName, initialN
     setSaving(true);
     try {
       await savePlan(name, note, targets, routeId);
-      if (fromWorkout || !router.canGoBack()) router.navigate('/plans');
+      if (fromWorkout || copiedPlan || !router.canGoBack()) router.navigate('/plans');
       else router.back();
     }
     catch (error) { Alert.alert('保存失败', String(error)); }
@@ -96,15 +103,16 @@ function PlanEditorContent({ routeId, fromWorkout = false, initialName, initialN
   }
 
   return <SafeAreaView style={styles.screen} edges={['top']}>
-    <View style={styles.header}><IconButton icon="chevron-back" label="返回" onPress={() => router.canGoBack() ? router.back() : router.navigate('/plans')} /><Text style={styles.headerTitle}>{fromWorkout ? '存为训练计划' : routeId ? '编辑计划' : '创建计划'}</Text><View style={{ width: 39 }} /></View>
+    <View style={styles.header}><IconButton icon="chevron-back" label="返回" onPress={() => router.canGoBack() ? router.back() : router.navigate('/plans')} /><Text style={styles.headerTitle}>{copiedPlan ? '复制计划' : fromWorkout ? '存为训练计划' : routeId ? '编辑计划' : '创建计划'}</Text><View style={{ width: 39 }} /></View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+      {copiedPlan ? <Card><Text style={styles.copyHint}>已填入这份计划的动作和训练目标。调整后保存，即可添加一份新计划。</Text></Card> : null}
       {fromWorkout ? <Card><Text style={styles.copyHint}>按每个动作最后一个完成组填入目标，组数取同单位的完成组。超出计划上限的值已按上限预填，保存前可调整。</Text></Card> : null}
       <Field label="计划名称" value={name} onChangeText={setName} placeholder="例如：周一 · 推日" />
       <Field label="计划说明（可选）" value={note} onChangeText={setNote} placeholder="记录这个计划的训练重点" />
       <View style={styles.section}><Text style={styles.sectionTitle}>训练动作</Text><Text style={styles.sectionCount}>{items.length} 个动作</Text></View>
       {items.map((item, index) => {
         const exercise = exercises.find(ex => ex.id === item.exerciseId);
-        return <Card key={item.exerciseId} style={{ gap: 15 }}><View style={styles.exerciseHeader}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta}>{exercise?.muscle} · {exercise?.equipment}</Text></View><Pressable onPress={() => setItems(current => current.filter((_, i) => i !== index))} hitSlop={12}><Ionicons name="close-circle-outline" size={22} color={C.faint} /></Pressable></View>
+        return <Card key={`${item.exerciseId}-${index}`} style={{ gap: 15 }}><View style={styles.exerciseHeader}><View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={styles.exerciseName}>{exercise?.name ?? '未知动作'}</Text><Text style={styles.exerciseMeta}>{exercise?.muscle} · {exercise?.equipment}</Text></View><Pressable onPress={() => setItems(current => current.filter((_, i) => i !== index))} hitSlop={12}><Ionicons name="close-circle-outline" size={22} color={C.faint} /></Pressable></View>
           <View style={{ flexDirection: 'row', gap: 8 }}><Badge label="按次数" active={item.unit !== 'seconds'} onPress={() => change(index, { unit: 'reps' })} /><Badge label="按秒" active={item.unit === 'seconds'} onPress={() => change(index, { unit: 'seconds' })} /></View>
           <View style={styles.fields}><View style={styles.field}><Text style={styles.fieldLabel}>组数</Text><NumberField label="组数" value={item.sets} suffix="组" onChange={sets => change(index, { sets })} /></View><View style={styles.field}><Text style={styles.fieldLabel}>{item.unit === 'seconds' ? '时长' : '次数'}</Text><NumberField label={item.unit === 'seconds' ? '时长（秒）' : '次数'} value={item.reps} suffix={item.unit === 'seconds' ? '秒' : '次'} onChange={reps => change(index, { reps })} /></View>{!breathingProfileFor(exercise) ? <View style={styles.field}><Text style={styles.fieldLabel}>目标重量</Text><NumberField label="目标重量（kg）" value={item.weight} suffix="kg" onChange={weight => change(index, { weight })} /></View> : null}</View>
           <View style={{ gap: 6 }}><Text style={styles.fieldLabel}>每组结束后的休息</Text><NumberField label="每组休息时间（秒）" value={item.restSeconds} suffix="秒" onChange={restSeconds => change(index, { restSeconds })} /></View>

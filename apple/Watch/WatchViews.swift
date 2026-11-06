@@ -32,6 +32,11 @@ struct WatchHomeView: View {
                         }
                     }
                     NavigationLink {
+                        WatchPlansView()
+                    } label: {
+                        Label("训练计划", systemImage: "list.bullet.rectangle")
+                    }
+                    NavigationLink {
                         WatchScheduleView()
                     } label: {
                         Label("训练安排", systemImage: "calendar.badge.clock")
@@ -42,12 +47,13 @@ struct WatchHomeView: View {
                         Label("训练进度", systemImage: "chart.bar.fill")
                     }
                     if store.activeWorkout == nil {
-                        ForEach(store.state.plans) { plan in
+                        ForEach(store.orderedPlans) { plan in
                             Button {
                                 store.startWorkout(planId: plan.id)
                             } label: {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(plan.name).font(.subheadline.bold()).lineLimit(2)
+                                    Label(plan.name, systemImage: store.isPlanFavorite(plan.id) ? "star.fill" : "dumbbell")
+                                        .font(.subheadline.bold()).lineLimit(2)
                                     Text("\(plan.items.count) 个动作").font(.caption2).foregroundStyle(.secondary)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -83,6 +89,42 @@ struct WatchHomeView: View {
             }
             .navigationTitle("练迹")
         }
+    }
+}
+
+private struct WatchPlansView: View {
+    @EnvironmentObject private var store: TrainingStore
+    @State private var showWorkout = false
+
+    var body: some View {
+        List {
+            ForEach(store.orderedPlans) { plan in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(plan.name).font(.headline)
+                        Spacer(minLength: 3)
+                        PlanFavoriteButton(plan: plan)
+                    }
+                    Text("\(plan.items.count) 个动作").font(.caption2).foregroundStyle(.secondary)
+                    if !plan.note.isEmpty {
+                        Text(plan.note).font(.caption2).foregroundStyle(.secondary)
+                    }
+                    Button("开始训练", systemImage: "play.fill") {
+                        guard store.activeWorkout == nil else { return }
+                        store.startWorkout(planId: plan.id)
+                        showWorkout = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(store.activeWorkout != nil)
+                    DuplicatePlanButton(plan: plan)
+                }
+            }
+            if store.orderedPlans.isEmpty {
+                Text("先从计划模板添加一份计划。").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle("训练计划")
+        .navigationDestination(isPresented: $showWorkout) { WatchWorkoutView() }
     }
 }
 
@@ -149,7 +191,9 @@ private struct WatchScheduleEditor: View {
                     set: { planId = $0 }
                 )) {
                     Text("选择计划").tag("")
-                    ForEach(store.state.plans) { plan in Text(plan.name).tag(plan.id) }
+                    ForEach(store.orderedPlans) { plan in
+                        Text(store.isPlanFavorite(plan.id) ? "★ \(plan.name)" : plan.name).tag(plan.id)
+                    }
                 }
                 .pickerStyle(.navigationLink)
                 Button(duplicate ? "已安排" : "添加安排") {
