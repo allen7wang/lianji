@@ -54,18 +54,18 @@ export function Badge({ label, active = false, onPress }: { label: string; activ
   return <Pressable disabled={!onPress} onPress={onPress} style={[styles.badge, active && styles.badgeActive]}><Text style={[styles.badgeText, active && { color: C.bg }]}>{label}</Text></Pressable>;
 }
 
-export function ExercisePicker({ visible, onClose, onSelect, excluded = [] }: { visible: boolean; onClose: () => void; onSelect: (exercise: Exercise) => void; excluded?: string[] }) {
+export function ExercisePicker({ visible, onClose, onSelect, excluded = [], replacing = false, autoClose = true, busy = false }: { visible: boolean; onClose: () => void; onSelect: (exercise: Exercise) => void; excluded?: string[]; replacing?: boolean; autoClose?: boolean; busy?: boolean }) {
   const { exercises } = useData();
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState('全部');
   const muscles = ['全部', '胸', '背', '腿', '肩', '手臂', '核心', '全身', '呼吸'];
   const filtered = filterExercises(exercises, { query, muscle }).filter(exercise => !excluded.includes(exercise.id));
-  return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+  return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => { if (!busy) onClose(); }}>
     <SafeAreaView style={styles.modal} edges={['top', 'bottom']}>
-      <View style={styles.pickerHeader}><Text style={styles.pickerTitle}>选择动作</Text><IconButton icon="close" onPress={onClose} /></View>
+      <View style={styles.pickerHeader}><Text accessibilityLiveRegion="polite" style={styles.pickerTitle}>{busy ? '正在更换…' : replacing ? '更换动作' : '选择动作'}</Text>{!busy ? <IconButton icon="close" label="关闭动作选择" onPress={onClose} /> : null}</View>
       <View style={{ paddingHorizontal: 20 }}><Field value={query} onChangeText={setQuery} placeholder="搜索动作、器械或部位" /></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>{muscles.map(item => <Badge key={item} label={item} active={muscle === item} onPress={() => setMuscle(item)} />)}</ScrollView>
-      <FlatList data={filtered} keyExtractor={item => item.id} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }} renderItem={({ item }) => <Pressable onPress={() => { onSelect(item); onClose(); setQuery(''); }} style={styles.pickerRow}><View><Text style={styles.pickerRowTitle}>{item.name}</Text><Text style={styles.pickerRowSub}>{item.muscle} · {item.equipment}</Text></View><Ionicons name="add-circle" size={24} color={C.accent} /></Pressable>} ListEmptyComponent={<Empty icon="search-outline" title="没有找到动作" subtitle="试试其他关键词，或在动作库创建自定义动作" />} />
+      <FlatList data={filtered} keyExtractor={item => item.id} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }} renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={() => { if (busy) return; onSelect(item); if (autoClose) onClose(); setQuery(''); }} style={styles.pickerRow}><View><Text style={styles.pickerRowTitle}>{item.name}</Text><Text style={styles.pickerRowSub}>{item.muscle} · {item.equipment}</Text></View><Ionicons name={replacing ? 'swap-horizontal' : 'add-circle'} size={24} color={C.accent} /></Pressable>} ListEmptyComponent={<Empty icon="search-outline" title="没有找到动作" subtitle="试试其他关键词，或在动作库创建自定义动作" />} />
     </SafeAreaView>
   </Modal>;
 }

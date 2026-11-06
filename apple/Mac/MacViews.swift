@@ -479,6 +479,7 @@ private struct MacActiveWorkout: View {
     @EnvironmentObject private var store: TrainingStore
     @State private var selectedExercise = ""
     @State private var restUntil: Date?
+    @State private var timerExerciseId: String?
     @State private var timerLabel = "组间休息"
     @State private var demoExercise: Exercise?
     @State private var breathGuide: BreathGuideRequest?
@@ -507,7 +508,7 @@ private struct MacActiveWorkout: View {
                                 .font(.subheadline.bold())
                                 .foregroundStyle(Palette.accent)
                         }
-                        Button("停止计时") { self.restUntil = nil }
+                        Button("停止计时") { self.restUntil = nil; timerExerciseId = nil }
                     }
                     ForEach(workout.exerciseIds, id: \.self) { exerciseId in
                         VStack(alignment: .leading, spacing: 8) {
@@ -516,6 +517,12 @@ private struct MacActiveWorkout: View {
                                 Spacer()
                                 if let exercise = store.exercise(exerciseId), ExerciseDemo.find(exercise) != nil {
                                     Button("查看动图", systemImage: "play.circle") { demoExercise = exercise }
+                                }
+                            }
+                            ReplaceWorkoutExerciseButton(workoutId: workout.id, exerciseId: exerciseId) { _ in
+                                if timerExerciseId == exerciseId {
+                                    restUntil = nil
+                                    timerExerciseId = nil
                                 }
                             }
                             ForEach(references[exerciseId, default: []]) { reference in
@@ -534,14 +541,21 @@ private struct MacActiveWorkout: View {
                                         Text(set.unit == .seconds ? "秒" : "次")
                                         if set.unit == .seconds && !set.completed {
                                             Button(BreathingProfile.find(store.exercise(exerciseId)) == nil ? "计时" : "呼吸引导") {
+                                                guard store.activeWorkout?.sets.contains(where: { $0.id == set.id }) == true else { return }
                                                 if let profile = BreathingProfile.find(store.exercise(exerciseId)) {
-                                                    restUntil = nil; breathGuide = BreathGuideRequest(profile: profile, seconds: set.reps)
-                                                } else { timerLabel = "动作计时"; restUntil = .now.addingTimeInterval(Double(set.reps)) }
+                                                    restUntil = nil; timerExerciseId = nil; breathGuide = BreathGuideRequest(profile: profile, seconds: set.reps)
+                                                } else {
+                                                    timerLabel = "动作计时"; timerExerciseId = exerciseId
+                                                    restUntil = .now.addingTimeInterval(Double(set.reps))
+                                                }
                                             }
                                         }
                                         Toggle("完成", isOn: Binding(get: { set.completed }, set: {
                                             store.updateSet(set.id, completed: $0)
-                                            if $0 { timerLabel = "组间休息"; restUntil = .now.addingTimeInterval(Double(set.restSeconds ?? 90)) }
+                                            if $0, store.activeWorkout?.sets.contains(where: { $0.id == set.id && $0.completed }) == true {
+                                                timerLabel = "组间休息"; timerExerciseId = exerciseId
+                                                restUntil = .now.addingTimeInterval(Double(set.restSeconds ?? 90))
+                                            }
                                         }))
                                             .toggleStyle(.checkbox)
                                         Button(role: .destructive) { store.deleteSet(set.id) } label: { Image(systemName: "minus.circle") }

@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { findPreviousSetMatches } from './training-comparison';
-import { id, type Plan, type PlanItem, type Workout, type WorkoutSet } from './types';
+import { defaultSetTarget } from './training-target';
+import { id, type Exercise, type Plan, type PlanItem, type Workout, type WorkoutSet } from './types';
 
 export type FinishedWorkoutEdit = {
   name: string;
@@ -129,8 +130,55 @@ export async function reusePreviousWorkoutSet(db: SQLiteDatabase, setId: string,
   return copied;
 }
 
+export async function addWorkoutExercise(db: SQLiteDatabase, workoutId: string, exerciseId: string) {
+  await db.withExclusiveTransactionAsync(async transaction => {
+    const workout = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workouts WHERE id = ? AND endedAt IS NULL', workoutId);
+    if (!workout) throw new Error('只能在进行中的训练里添加动作。');
+    const exercise = await transaction.getFirstAsync<Exercise>('SELECT * FROM exercises WHERE id = ?', exerciseId);
+    if (!exercise) throw new Error('找不到这个动作，请重新选择。');
+    const existing = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workout_sets WHERE workoutId = ? AND exerciseId = ? LIMIT 1', workoutId, exerciseId);
+    if (existing) throw new Error('这个动作已在本次训练中，请选择其他动作。');
+
+    const nextOrder = (await transaction.getFirstAsync<{ n: number }>('SELECT COALESCE(MAX(sortOrder), -1) + 1 AS n FROM workout_sets WHERE workoutId = ?', workoutId))?.n ?? 0;
+    await createWorkoutSet(transaction, workoutId, { exerciseId, sortOrder: nextOrder, ...defaultSetTarget(exercise) }, 1);
+  });
+}
+
+export async function replaceWorkoutExercise(db: SQLiteDatabase, workoutId: string, exerciseId: string, replacementId: string, expectedSetIds?: string[]) {
+  await db.withExclusiveTransactionAsync(async transaction => {
+    const workout = await transaction.getFirstAsync<Workout>('SELECT * FROM workouts WHERE id = ? AND endedAt IS NULL', workoutId);
+    if (!workout) throw new Error('只能替换进行中训练的动作。');
+    const sets = await transaction.getAllAsync<WorkoutSet>('SELECT * FROM workout_sets WHERE workoutId = ? AND exerciseId = ? ORDER BY sortOrder, setNumber, id', workoutId, exerciseId);
+    if (!sets.length) throw new Error('找不到要替换的动作，请重新打开训练。');
+    if (expectedSetIds) {
+      const expected = [...expectedSetIds].sort();
+      const current = sets.map(set => set.id).sort();
+      if (expected.length !== current.length || expected.some((setId, index) => setId !== current[index])) {
+        throw new Error('这个动作的组数已变更，请重新确认。');
+      }
+    }
+    if (sets.some(set => set.completed)) throw new Error('这个动作已有完成组，无法替换。');
+    if (exerciseId === replacementId) throw new Error('请选择一个不同的动作。');
+
+    const replacement = await transaction.getFirstAsync<Exercise>('SELECT * FROM exercises WHERE id = ?', replacementId);
+    if (!replacement) throw new Error('找不到替换动作，请重新选择。');
+    const existing = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workout_sets WHERE workoutId = ? AND exerciseId = ? LIMIT 1', workoutId, replacementId);
+    if (existing) throw new Error('这个动作已在本次训练中，请选择其他动作。');
+
+    const target = defaultSetTarget(replacement);
+    for (const set of sets) {
+      await createWorkoutSet(transaction, workoutId, { ...set, ...target, exerciseId: replacementId }, set.setNumber);
+    }
+    await transaction.runAsync('DELETE FROM workout_sets WHERE workoutId = ? AND exerciseId = ?', workoutId, exerciseId);
+  });
+}
+
 export async function appendWorkoutSet(db: SQLiteDatabase, workoutId: string, exerciseId: string) {
-  const previous = await db.getFirstAsync<WorkoutSet>('SELECT * FROM workout_sets WHERE workoutId = ? AND exerciseId = ? ORDER BY setNumber DESC LIMIT 1', workoutId, exerciseId);
-  if (!previous) return;
-  await createWorkoutSet(db, workoutId, previous, previous.setNumber + 1);
+  await db.withExclusiveTransactionAsync(async transaction => {
+    const workout = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workouts WHERE id = ? AND endedAt IS NULL', workoutId);
+    if (!workout) throw new Error('只能在进行中的训练里添加组数。');
+    const previous = await transaction.getFirstAsync<WorkoutSet>('SELECT * FROM workout_sets WHERE workoutId = ? AND exerciseId = ? ORDER BY setNumber DESC LIMIT 1', workoutId, exerciseId);
+    if (!previous) throw new Error('这个动作已变更，请重新查看训练。');
+    await createWorkoutSet(transaction, workoutId, previous, previous.setNumber + 1);
+  });
 }

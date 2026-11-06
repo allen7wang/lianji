@@ -321,7 +321,7 @@ private struct WatchWorkoutView: View {
                         }
                     }
                     NavigationLink {
-                        WatchExercisePicker()
+                        WorkoutExercisePicker()
                     } label: {
                         Label("添加动作", systemImage: "plus")
                     }
@@ -343,9 +343,13 @@ private struct WatchWorkoutView: View {
 
 private struct WatchExerciseView: View {
     @EnvironmentObject private var store: TrainingStore
-    let exerciseId: String
+    @State private var exerciseId: String
     @State private var restUntil: Date?
     @State private var timerLabel = "休息"
+
+    init(exerciseId: String) {
+        _exerciseId = State(initialValue: exerciseId)
+    }
 
     var body: some View {
         let workout = store.activeWorkout
@@ -356,6 +360,12 @@ private struct WatchExerciseView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(store.exercise(exerciseId)?.name ?? "未知动作")
                     .font(.headline).lineLimit(2)
+                if let workout {
+                    ReplaceWorkoutExerciseButton(workoutId: workout.id, exerciseId: exerciseId) { exercise in
+                        exerciseId = exercise.id
+                        restUntil = nil
+                    }
+                }
                 if let exercise = store.exercise(exerciseId), ExerciseDemo.find(exercise) != nil {
                     NavigationLink("查看动图", destination: ExerciseDemoView(exercise: exercise))
                 }
@@ -394,12 +404,19 @@ private struct WatchExerciseView: View {
                                         .navigationTitle("呼吸引导")
                                 }
                             } else {
-                                Button("计时 \(set.reps) 秒") { timerLabel = "动作计时"; restUntil = .now.addingTimeInterval(Double(set.reps)) }
+                                Button("计时 \(set.reps) 秒") {
+                                    guard store.activeWorkout?.sets.contains(where: { $0.id == set.id }) == true else { return }
+                                    timerLabel = "动作计时"
+                                    restUntil = .now.addingTimeInterval(Double(set.reps))
+                                }
                             }
                         }
                         Button {
                             store.updateSet(set.id, completed: !set.completed)
-                            if !set.completed { timerLabel = "休息"; restUntil = .now.addingTimeInterval(Double(set.restSeconds ?? 90)) }
+                            if !set.completed, store.activeWorkout?.sets.contains(where: { $0.id == set.id && $0.completed }) == true {
+                                timerLabel = "休息"
+                                restUntil = .now.addingTimeInterval(Double(set.restSeconds ?? 90))
+                            }
                         } label: {
                             Label(set.completed ? "已完成" : "完成这组", systemImage: set.completed ? "checkmark.circle.fill" : "circle")
                         }
@@ -415,26 +432,6 @@ private struct WatchExerciseView: View {
             }
         }
         .navigationTitle("动作")
-    }
-}
-
-private struct WatchExercisePicker: View {
-    @EnvironmentObject private var store: TrainingStore
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        List(store.state.exercises) { exercise in
-            Button {
-                store.addWorkoutExercise(exercise.id)
-                dismiss()
-            } label: {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(exercise.name)
-                    Text(exercise.muscle).font(.caption2).foregroundStyle(.secondary)
-                }
-            }
-        }
-        .navigationTitle("选择动作")
     }
 }
 

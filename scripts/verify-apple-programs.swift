@@ -94,7 +94,8 @@ struct AppleProgramChecks {
         checkWellnessTrends()
         try checkPlanReuse(in: directory)
         try checkReusePreviousSet(in: directory)
-        print("Passed: 34 programs / 69 days; legacy data, persistence, progress, plans, goals, schedules, comparisons, wellness, backup, plan reuse and applying previous groups.")
+        try checkExerciseReplacement(in: directory)
+        print("Passed: 34 programs / 69 days; legacy data, persistence, progress, plans, goals, schedules, comparisons, wellness, backup, plan reuse, previous groups and pending exercise replacement.")
     }
 
     static func checkProgress() {
@@ -684,6 +685,84 @@ struct AppleProgramChecks {
             preconditionFailure("failed persistence must not apply previous values")
         } catch is CocoaError {}
         precondition(failingStore.state.workouts == fixture.workouts, "a failed write preserves the current group and history")
+    }
+
+    @MainActor
+    static func checkExerciseReplacement(in directory: URL) throws {
+        func expectUnavailable(_ action: () throws -> Void) throws {
+            do {
+                try action()
+                preconditionFailure("a changed or completed group must reject replacement")
+            } catch ExerciseReplacementError.unavailable {}
+        }
+        let source = "barbell_bench"
+        let target = "plank"
+        let customTarget = "custom-plank"
+        var fixture = AppState.starter()
+        fixture.exercises.append(Exercise(id: customTarget, name: "平板支撑", muscle: "自定义", equipment: "自重", isCustom: true))
+        let history = Workout(id: "replace-history", planId: fixture.plans[0].id, name: "历史", endedAt: .now, sets: [
+            TrainingSet(exerciseId: source, setNumber: 1, weight: 70, reps: 8, completed: true)
+        ])
+        let current = Workout(id: "replace-current", planId: fixture.plans[0].id, name: "当前", note: "保留笔记", sets: [
+            TrainingSet(id: "replace-old-1", exerciseId: source, setNumber: 2, weight: 50, reps: 8, restSeconds: 0),
+            TrainingSet(id: "replace-other", exerciseId: "pull_up", setNumber: 1, weight: 0, reps: 5, completed: true, restSeconds: 80),
+            TrainingSet(id: "replace-old-2", exerciseId: source, setNumber: 7, weight: 20, reps: 60, unit: .seconds)
+        ])
+        fixture.workouts = [history, current]
+        let file = directory.appendingPathComponent("exercise-replacement.json")
+        try JSONEncoder().encode(fixture).write(to: file)
+        let store = TrainingStore(fileURL: file)
+        let request = store.exerciseReplacementRequest(workoutId: current.id, exerciseId: source)!
+        precondition(request.setIds == ["replace-old-1", "replace-old-2"], "request snapshots all source row IDs in display order")
+        precondition(store.exerciseReplacementRequest(workoutId: current.id, exerciseId: "pull_up") == nil, "a group with a completed row has no replacement action")
+        for invalidTarget in [source, "pull_up", "missing"] {
+            do {
+                try store.replaceWorkoutExercise(request, with: invalidTarget)
+                preconditionFailure("target must be a different available exercise")
+            } catch ExerciseReplacementError.invalidTarget {}
+        }
+        store.updateSet("replace-old-2", completed: true)
+        try expectUnavailable { try store.replaceWorkoutExercise(request, with: target) }
+        store.updateSet("replace-old-2", completed: false)
+        store.addSet(for: source)
+        let additional = store.activeWorkout!.sets.last!.id
+        try expectUnavailable { try store.replaceWorkoutExercise(request, with: target) }
+        store.deleteSet(additional)
+
+        try store.replaceWorkoutExercise(request, with: target)
+        let replaced = store.activeWorkout!
+        precondition(replaced.sets.map(\.exerciseId) == [target, "pull_up", target], "replacement preserves global group positions")
+        precondition(replaced.sets.map(\.setNumber) == current.sets.map(\.setNumber), "replacement preserves original group numbers")
+        precondition(replaced.sets.map(\.restSeconds) == current.sets.map(\.restSeconds), "replacement preserves zero and legacy optional rest")
+        let newRows = replaced.sets.filter { $0.exerciseId == target }
+        precondition(newRows.count == 2 && newRows.allSatisfy { !$0.completed && $0.weight == 0 && $0.reps == 30 && $0.unit == .seconds },
+                     "timed replacement defaults every pending group to zero weight and thirty seconds")
+        precondition(Set(newRows.map(\.id)).isDisjoint(with: Set(request.setIds)), "replacement creates fresh row IDs")
+        precondition(replaced.sets[1] == current.sets[1] && replaced.note == current.note && replaced.planId == current.planId, "unrelated rows and workout context are preserved")
+        precondition(store.state.workouts[0] == history && store.state.plans == fixture.plans, "replacement leaves source history and saved plans intact")
+        store.updateSet("replace-old-1", weight: 999, reps: 999, completed: true)
+        store.deleteSet("replace-old-2")
+        precondition(store.activeWorkout == replaced, "queued old-ID events cannot modify replacement rows")
+        try expectUnavailable { try store.replaceWorkoutExercise(request, with: customTarget) }
+        precondition(TrainingStore(fileURL: file).activeWorkout == replaced, "replacement persists across relaunch")
+
+        let secondRequest = store.exerciseReplacementRequest(workoutId: current.id, exerciseId: target)!
+        try store.replaceWorkoutExercise(secondRequest, with: customTarget)
+        precondition(store.activeWorkout!.sets.filter { $0.exerciseId == customTarget }.allSatisfy { $0.unit == .reps && $0.reps == 10 && $0.weight == 0 },
+                     "same-name custom exercises use their own repetition defaults")
+        store.finishWorkout()
+        try expectUnavailable { try store.replaceWorkoutExercise(secondRequest, with: source) }
+
+        try JSONEncoder().encode(fixture).write(to: file)
+        let failingStore = TrainingStore(fileURL: file)
+        try FileManager.default.removeItem(at: file)
+        try FileManager.default.createDirectory(at: file, withIntermediateDirectories: false)
+        do {
+            try failingStore.replaceWorkoutExercise(request, with: target)
+            preconditionFailure("failed persistence must reject replacement")
+        } catch is CocoaError {}
+        precondition(failingStore.state.workouts == fixture.workouts && failingStore.state.plans == fixture.plans,
+                     "a failed atomic write preserves pending groups and all source data")
     }
 
 }

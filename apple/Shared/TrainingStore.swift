@@ -214,6 +214,38 @@ final class TrainingStore: ObservableObject {
         mutateActive { $0.sets.append(TrainingSet(exerciseId: exerciseId, setNumber: 1, weight: 0, reps: unit == .seconds ? 30 : 10, unit: unit, restSeconds: 90)) }
     }
 
+    func exerciseReplacementRequest(workoutId: String, exerciseId: String) -> ExerciseReplacementRequest? {
+        guard let workout = activeWorkout, workout.id == workoutId else { return nil }
+        let rows = workout.sets.filter { $0.exerciseId == exerciseId }
+        guard !rows.isEmpty, rows.allSatisfy({ !$0.completed }) else { return nil }
+        return ExerciseReplacementRequest(workoutId: workoutId, exerciseId: exerciseId, setIds: rows.map(\.id))
+    }
+
+    func replaceWorkoutExercise(_ request: ExerciseReplacementRequest, with exerciseId: String) throws {
+        guard let current = activeWorkout, current.id == request.workoutId,
+              let refreshed = exerciseReplacementRequest(workoutId: request.workoutId, exerciseId: request.exerciseId),
+              refreshed.setIds == request.setIds,
+              let workoutIndex = state.workouts.firstIndex(where: { $0.id == current.id }) else {
+            throw ExerciseReplacementError.unavailable
+        }
+        guard let exercise = exercise(exerciseId), exercise.id != request.exerciseId,
+              !current.sets.contains(where: { $0.exerciseId == exerciseId }) else { throw ExerciseReplacementError.invalidTarget }
+        let unit = exercise.defaultUnit
+        var next = state
+        next.workouts[workoutIndex].sets = current.sets.map { set in
+            guard set.exerciseId == request.exerciseId else { return set }
+            return TrainingSet(
+                exerciseId: exerciseId,
+                setNumber: set.setNumber,
+                weight: 0,
+                reps: unit == .seconds ? 30 : 10,
+                unit: unit,
+                restSeconds: set.restSeconds
+            )
+        }
+        try commit(next)
+    }
+
     func addSet(for exerciseId: String) {
         guard let previous = activeWorkout?.sets.last(where: { $0.exerciseId == exerciseId }) else { return }
         mutateActive { $0.sets.append(TrainingSet(exerciseId: exerciseId, setNumber: previous.setNumber + 1, weight: previous.weight, reps: previous.reps, unit: previous.unit, restSeconds: previous.restSeconds)) }
@@ -325,6 +357,18 @@ enum ReusePreviousSetError: LocalizedError {
 
     var errorDescription: String? {
         "当前组或上次记录已变化，请重新查看后重试。"
+    }
+}
+
+enum ExerciseReplacementError: LocalizedError {
+    case unavailable
+    case invalidTarget
+
+    var errorDescription: String? {
+        switch self {
+        case .unavailable: "训练或待练组已变化，请重新选择。"
+        case .invalidTarget: "请选择训练中尚未添加的其他动作。"
+        }
     }
 }
 

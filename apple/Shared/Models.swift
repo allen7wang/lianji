@@ -59,6 +59,14 @@ struct TrainingSet: Identifiable, Codable, Hashable {
     var targetLabel: String { "\(reps) \(unit == .seconds ? "秒" : "次")" }
 }
 
+struct ExerciseReplacementRequest: Identifiable {
+    let workoutId: String
+    let exerciseId: String
+    let setIds: [String]
+
+    var id: String { exerciseId }
+}
+
 struct Workout: Identifiable, Codable, Hashable {
     var id: String = UUID().uuidString
     var planId: String?

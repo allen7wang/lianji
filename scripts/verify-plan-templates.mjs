@@ -53,7 +53,7 @@ function database() {
 const { migrate, readWeeklyGoal, writeWeeklyGoal, readTrainingSchedule, insertScheduledTraining, removeScheduledTraining, readFavoritePlanIds, writePlanFavorite } = loadSource(path.join(root, 'src/lib/database.ts'));
 const { trainingPrograms, templatePlanId } = loadSource(path.join(root, 'src/lib/plan-templates.ts'));
 const { importPlanTemplate } = loadSource(path.join(root, 'src/lib/import-plan-template.ts'));
-const { startWorkoutFromPlan, repeatWorkoutFromHistory, appendWorkoutSet, editFinishedWorkout, reusePreviousWorkoutSet } = loadSource(path.join(root, 'src/lib/workout-storage.ts'));
+const { startWorkoutFromPlan, repeatWorkoutFromHistory, addWorkoutExercise, appendWorkoutSet, editFinishedWorkout, reusePreviousWorkoutSet, replaceWorkoutExercise } = loadSource(path.join(root, 'src/lib/workout-storage.ts'));
 const { volumeOf } = loadSource(path.join(root, 'src/lib/types.ts'));
 const media = loadSource(path.join(root, 'assets/exercises/exercise-demos.json'));
 const { breathingProfiles, breathingProfileFor, breathingPhases, breathingPhaseAt, newBreathingSession, breathingElapsedMs, pauseBreathingSession, resumeBreathingSession } = loadSource(path.join(root, 'src/lib/breathing.ts'));
@@ -918,5 +918,100 @@ reuse.native.prepare('UPDATE workout_sets SET completed = 0 WHERE id = ?').run('
 reuse.native.prepare('UPDATE workouts SET endedAt = ? WHERE id = ?').run('2026-11-03T11:00:00Z', 'reuse-active');
 await assert.rejects(reusePreviousWorkoutSet(reuse.db, 'reuse-target-2', 'reuse-last-2'), /进行中的训练/);
 reuse.native.close();
+
+// Replacement starts new rows with the new exercise's defaults and keeps prior data isolated.
+const replacement = database();
+await migrate(replacement.db);
+const replacementSource = replacement.native.prepare('SELECT id FROM exercises WHERE name = ? AND isCustom = 0').get('杠铃卧推').id;
+const replacementTimed = replacement.native.prepare('SELECT id FROM exercises WHERE name = ? AND isCustom = 0').get('平板支撑').id;
+const replacementExisting = replacement.native.prepare('SELECT id FROM exercises WHERE name = ? AND isCustom = 0').get('卷腹').id;
+replacement.native.prepare('INSERT INTO exercises VALUES (?, ?, ?, ?, 1)').run('replacement-custom', '平板支撑', '核心', '自定义');
+const replacementPlan = replacement.native.prepare('SELECT id FROM plans LIMIT 1').get().id;
+const insertReplacementWorkout = replacement.native.prepare('INSERT INTO workouts VALUES (?, ?, ?, ?, ?, ?)');
+insertReplacementWorkout.run('replacement-active', replacementPlan, '保留训练', '2026-11-07T10:00:00Z', null, '保留笔记');
+insertReplacementWorkout.run('replacement-history', replacementPlan, '保留历史', '2026-11-06T10:00:00Z', '2026-11-06T11:00:00Z', '历史笔记');
+const insertReplacementSet = replacement.native.prepare('INSERT INTO workout_sets VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+insertReplacementSet.run('replacement-source-2', 'replacement-active', replacementSource, 3, 2, 40, 8, 0, 'reps', 0);
+insertReplacementSet.run('replacement-source-5', 'replacement-active', replacementSource, 3, 5, 45, 6, 0, 'reps', 150);
+insertReplacementSet.run('replacement-other', 'replacement-active', replacementExisting, 4, 1, 0, 20, 1, 'reps', 90);
+insertReplacementSet.run('replacement-past', 'replacement-history', replacementSource, 0, 1, 30, 10, 1, 'reps', 90);
+const replacementRows = (workoutId = 'replacement-active') => replacement.native.prepare('SELECT * FROM workout_sets WHERE workoutId = ? ORDER BY sortOrder, setNumber, id').all(workoutId);
+const replacementBefore = replacementRows();
+const replacementHistory = replacementRows('replacement-history');
+const replacementWorkouts = replacement.native.prepare('SELECT * FROM workouts ORDER BY id').all();
+const replacementPlans = replacement.native.prepare('SELECT * FROM plans ORDER BY id').all();
+const replacementItems = replacement.native.prepare('SELECT * FROM plan_items ORDER BY id').all();
+await assert.rejects(replaceWorkoutExercise(replacement.db, 'missing', replacementSource, replacementTimed), /进行中/);
+await assert.rejects(replaceWorkoutExercise(replacement.db, 'replacement-history', replacementSource, replacementTimed), /进行中/);
+await assert.rejects(replaceWorkoutExercise(replacement.db, 'replacement-active', 'missing', replacementTimed), /找不到要替换/);
+await assert.rejects(replaceWorkoutExercise(replacement.db, 'replacement-active', replacementSource, replacementSource), /不同的动作/);
+await assert.rejects(replaceWorkoutExercise(replacement.db, 'replacement-active', replacementSource, 'missing'), /找不到替换/);
+await assert.rejects(replaceWorkoutExercise(replacement.db, 'replacement-active', replacementSource, replacementExisting), /已在本次训练/);
+for (const expectedIds of [[], ['replacement-source-2'], ['replacement-source-2', 'replacement-source-2'], ['missing', 'replacement-source-5']]) {
+  await assert.rejects(replaceWorkoutExercise(replacement.db, 'replacement-active', replacementSource, replacementTimed, expectedIds), /组数已变更/);
+}
+await assert.rejects(addWorkoutExercise(replacement.db, 'missing', replacementTimed), /进行中的训练/);
+await assert.rejects(addWorkoutExercise(replacement.db, 'replacement-history', replacementTimed), /进行中的训练/);
+await assert.rejects(addWorkoutExercise(replacement.db, 'replacement-active', 'missing'), /找不到这个动作/);
+await assert.rejects(addWorkoutExercise(replacement.db, 'replacement-active', replacementSource), /已在本次训练/);
+replacement.native.prepare('UPDATE workout_sets SET completed = 1 WHERE id = ?').run('replacement-source-5');
+await assert.rejects(replaceWorkoutExercise(replacement.db, 'replacement-active', replacementSource, replacementTimed), /已有完成组/);
+replacement.native.prepare('UPDATE workout_sets SET completed = 0 WHERE id = ?').run('replacement-source-5');
+for (const trigger of [
+  `BEFORE INSERT ON workout_sets WHEN NEW.workoutId = 'replacement-active' AND NEW.setNumber = 5`,
+  `AFTER DELETE ON workout_sets WHEN OLD.id = 'replacement-source-2'`,
+]) {
+  replacement.native.exec(`CREATE TRIGGER fail_replacement ${trigger} BEGIN SELECT RAISE(ABORT, 'forced failure'); END;`);
+  await assert.rejects(replaceWorkoutExercise(replacement.db, 'replacement-active', replacementSource, replacementTimed), /forced failure/);
+  assert.deepEqual(replacementRows(), replacementBefore, 'insert/delete failures restore the entire original group');
+  replacement.native.exec('DROP TRIGGER fail_replacement');
+}
+await replaceWorkoutExercise(replacement.db, 'replacement-active', replacementSource, replacementTimed, ['replacement-source-5', 'replacement-source-2']);
+const replacementTimedRows = replacementRows().filter(set => set.exerciseId === replacementTimed);
+const oldSourceRows = replacementBefore.filter(set => set.exerciseId === replacementSource);
+assert.deepEqual(replacementTimedRows.map(({ id, ...set }) => set), oldSourceRows.map(({ id, ...set }) => ({ ...set, exerciseId: replacementTimed, weight: 0, reps: 30, unit: 'seconds' })), 'timed defaults reset targets while retaining group count, position, numbering and each rest interval');
+assert.ok(replacementTimedRows.every(set => !oldSourceRows.some(old => old.id === set.id)));
+assert.equal(replacement.native.prepare('UPDATE workout_sets SET weight = 999, reps = 999 WHERE id IN (?, ?)').run('replacement-source-2', 'replacement-source-5').changes, 0, 'late old-row writes cannot reach the replacement');
+await assert.rejects(replaceWorkoutExercise(replacement.db, 'replacement-active', replacementSource, replacementTimed), /找不到要替换/);
+await replaceWorkoutExercise(replacement.db, 'replacement-active', replacementTimed, 'replacement-custom');
+const replacementCustomRows = replacementRows().filter(set => set.exerciseId === 'replacement-custom');
+assert.deepEqual(replacementCustomRows.map(({ id, ...set }) => set), oldSourceRows.map(({ id, ...set }) => ({ ...set, exerciseId: 'replacement-custom', weight: 0, reps: 10, unit: 'reps' })), 'same-name custom exercises use repetition defaults');
+assert.ok(replacementCustomRows.every(set => !replacementTimedRows.some(old => old.id === set.id)));
+assert.deepEqual(replacementRows().filter(set => set.id === 'replacement-other'), replacementBefore.filter(set => set.id === 'replacement-other'));
+assert.deepEqual(replacementRows('replacement-history'), replacementHistory);
+assert.deepEqual(replacement.native.prepare('SELECT * FROM workouts ORDER BY id').all(), replacementWorkouts);
+assert.deepEqual(replacement.native.prepare('SELECT * FROM plans ORDER BY id').all(), replacementPlans);
+assert.deepEqual(replacement.native.prepare('SELECT * FROM plan_items ORDER BY id').all(), replacementItems);
+await assert.rejects(appendWorkoutSet(replacement.db, 'replacement-history', replacementSource), /进行中的训练/);
+await appendWorkoutSet(replacement.db, 'replacement-active', 'replacement-custom');
+await assert.rejects(replaceWorkoutExercise(replacement.db, 'replacement-active', 'replacement-custom', replacementTimed, replacementCustomRows.map(set => set.id)), /组数已变更/);
+await replaceWorkoutExercise(replacement.db, 'replacement-active', 'replacement-custom', replacementTimed);
+assert.equal(replacementRows().filter(set => set.exerciseId === replacementTimed).length, 3, 'an append that commits first is included in the replacement');
+const pendingAppendDb = {
+  ...replacement.db,
+  withExclusiveTransactionAsync: async task => {
+    // A replacement wins while the already-requested append is waiting for its transaction.
+    await replaceWorkoutExercise(replacement.db, 'replacement-active', replacementTimed, 'replacement-custom');
+    await replacement.db.withExclusiveTransactionAsync(task);
+  },
+};
+await assert.rejects(appendWorkoutSet(pendingAppendDb, 'replacement-active', replacementTimed), /已变更/);
+assert.equal(replacementRows().filter(set => set.exerciseId === replacementTimed).length, 0, 'a delayed append cannot recreate the old exercise');
+assert.equal(replacementRows().filter(set => set.exerciseId === 'replacement-custom').length, 3);
+const pendingAddDb = {
+  ...replacement.db,
+  withExclusiveTransactionAsync: async task => {
+    await replaceWorkoutExercise(replacement.db, 'replacement-active', 'replacement-custom', replacementTimed);
+    await replacement.db.withExclusiveTransactionAsync(task);
+  },
+};
+await assert.rejects(addWorkoutExercise(pendingAddDb, 'replacement-active', replacementTimed), /已在本次训练/);
+assert.equal(replacementRows().filter(set => set.exerciseId === replacementTimed).length, 3, 'a pending add cannot duplicate a replacement that commits first');
+await addWorkoutExercise(replacement.db, 'replacement-active', 'replacement-custom');
+await assert.rejects(replaceWorkoutExercise(replacement.db, 'replacement-active', replacementTimed, 'replacement-custom'), /已在本次训练/);
+const addedCustom = replacementRows().filter(set => set.exerciseId === 'replacement-custom');
+assert.equal(addedCustom.length, 1, 'an add that commits first remains a single independent group');
+assert.deepEqual([addedCustom[0].sortOrder, addedCustom[0].setNumber, addedCustom[0].weight, addedCustom[0].reps, addedCustom[0].unit, addedCustom[0].restSeconds], [5, 1, 0, 10, 'reps', 90]);
+replacement.native.close();
 
 console.log(`Passed: 34 programs / 69 days / ${media.length} demos with offline teaching / ${media.filter(demo => demo.asset).length} bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import, workout repeat and history edits; independent plan copies and favorite ordering; backup, training schedule, favorites and weekly goal round-trip, validation and rollback; calendar, weekly activity, personal-record and training comparison metrics; body and nutrition trends.`);

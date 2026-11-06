@@ -4,8 +4,7 @@ import { exportBackup, importBackup, type BackupFile } from './backup';
 import { insertScheduledTraining, readFavoritePlanIds, readTrainingSchedule, readWeeklyGoal, removeScheduledTraining, writePlanFavorite, writeWeeklyGoal } from './database';
 import { importPlanTemplate } from './import-plan-template';
 import type { ScheduledTraining } from './training-schedule';
-import { defaultUnit } from './training-target';
-import { appendWorkoutSet, editFinishedWorkout as saveWorkoutEdit, repeatWorkoutFromHistory, reusePreviousWorkoutSet, startWorkoutFromPlan, type FinishedWorkoutEdit } from './workout-storage';
+import { addWorkoutExercise as addExerciseToWorkout, appendWorkoutSet, editFinishedWorkout as saveWorkoutEdit, repeatWorkoutFromHistory, replaceWorkoutExercise as replaceExercise, reusePreviousWorkoutSet, startWorkoutFromPlan, type FinishedWorkoutEdit } from './workout-storage';
 import { id, type BodyEntry, type Exercise, type FoodEntry, type Plan, type PlanDraftItem, type PlanItem, type Workout, type WorkoutSet } from './types';
 
 type Data = {
@@ -32,6 +31,7 @@ type Data = {
   startWorkout: (planId?: string) => Promise<string>;
   repeatWorkout: (workoutId: string) => Promise<string | null>;
   addWorkoutExercise: (workoutId: string, exerciseId: string) => Promise<void>;
+  replaceWorkoutExercise: (workoutId: string, exerciseId: string, replacementId: string, expectedSetIds?: string[]) => Promise<void>;
   addSet: (workoutId: string, exerciseId: string) => Promise<void>;
   updateSet: (setId: string, patch: Partial<Pick<WorkoutSet, 'weight' | 'reps' | 'completed'>>) => Promise<void>;
   reusePreviousSet: (setId: string, sourceSetId: string) => Promise<{ weight: number; reps: number }>;
@@ -165,9 +165,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return nextId;
     },
     async addWorkoutExercise(workoutId, exerciseId) {
-      const nextOrder = (await db.getFirstAsync<{ n: number }>('SELECT COALESCE(MAX(sortOrder), -1) + 1 AS n FROM workout_sets WHERE workoutId = ?', workoutId))?.n ?? 0;
-      const unit = defaultUnit(exercises.find(item => item.id === exerciseId));
-      await db.runAsync('INSERT INTO workout_sets (id, workoutId, exerciseId, sortOrder, setNumber, weight, reps, completed, unit) VALUES (?, ?, ?, ?, 1, 0, ?, 0, ?)', id(), workoutId, exerciseId, nextOrder, unit === 'seconds' ? 30 : 10, unit);
+      await addExerciseToWorkout(db, workoutId, exerciseId);
+      await refresh();
+    },
+    async replaceWorkoutExercise(workoutId, exerciseId, replacementId, expectedSetIds) {
+      await replaceExercise(db, workoutId, exerciseId, replacementId, expectedSetIds);
       await refresh();
     },
     async addSet(workoutId, exerciseId) {
