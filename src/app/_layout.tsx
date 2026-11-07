@@ -1,3 +1,4 @@
+import { configureWebAlerts } from '@/lib/web-alerts';
 import { Suspense } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Stack } from 'expo-router';
@@ -6,6 +7,8 @@ import { StatusBar } from 'expo-status-bar';
 import { DataProvider } from '@/lib/data';
 import { migrate } from '@/lib/database';
 import { C } from '@/ui/theme';
+
+configureWebAlerts();
 
 export default function RootLayout() {
   return <Suspense fallback={<View style={{ flex: 1, backgroundColor: C.bg, justifyContent: 'center' }}><ActivityIndicator color={C.accent} /></View>}>

@@ -3,7 +3,7 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { getDocumentAsync } from 'expo-document-picker';
 import { useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { parseBackup } from '@/lib/backup';
 import { useData } from '@/lib/data';
@@ -37,6 +37,11 @@ export default function Me() {
   async function exportFlow() {
     try {
       const backup = await exportBackupData();
+      if (Platform.OS === 'web') {
+        const url = URL.createObjectURL(new Blob([JSON.stringify(backup)], { type: 'application/json' }));
+        const link = document.createElement('a'); link.href = url; link.download = `lianji-backup-${backup.exportedAt.slice(0, 10)}.json`; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000); return;
+      }
       const file = new File(Paths.cache, `lianji-backup-${backup.exportedAt.slice(0, 10)}.json`);
       file.create({ overwrite: true, intermediates: true });
       file.write(JSON.stringify(backup));
@@ -50,7 +55,8 @@ export default function Me() {
     try {
       const result = await getDocumentAsync({ type: ['application/json'], copyToCacheDirectory: true });
       if (result.canceled || !result.assets[0]) return;
-      const backup = parseBackup(await new File(result.assets[0].uri).text());
+      const text = Platform.OS === 'web' ? await (await fetch(result.assets[0].uri)).text() : await new File(result.assets[0].uri).text();
+      const backup = parseBackup(text);
       const tables = backup.tables;
       const finished = tables.workouts.filter(item => item.endedAt).length;
       Alert.alert('恢复备份', `备份导出于 ${dateLabel(backup.exportedAt)}，包含 ${tables.plans.length} 个计划、${finished} 次已完成训练、${tables.body_entries.length} 条身体记录和 ${tables.food_entries.length} 条饮食记录。恢复会用备份替换本机当前全部数据，且不可撤销。`, [

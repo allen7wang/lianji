@@ -1,3 +1,4 @@
+import { withWriteTransaction } from './write-transaction';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { findPreviousSetMatches } from './training-comparison';
 import { defaultSetTarget } from './training-target';
@@ -21,7 +22,7 @@ async function createWorkoutSet(db: SQLiteDatabase, workoutId: string, set: Pick
 
 export async function startWorkoutFromPlan(db: SQLiteDatabase, planId?: string) {
   let workoutId = '';
-  await db.withExclusiveTransactionAsync(async transaction => {
+  await withWriteTransaction(db, async transaction => {
     const active = await transaction.getFirstAsync<Workout>('SELECT * FROM workouts WHERE endedAt IS NULL LIMIT 1');
     if (active) { workoutId = active.id; return; }
     const plan = planId ? await transaction.getFirstAsync<Plan>('SELECT * FROM plans WHERE id = ?', planId) : null;
@@ -38,7 +39,7 @@ export async function startWorkoutFromPlan(db: SQLiteDatabase, planId?: string) 
 
 export async function repeatWorkoutFromHistory(db: SQLiteDatabase, sourceId: string): Promise<string | null> {
   let workoutId: string | null = null;
-  await db.withExclusiveTransactionAsync(async transaction => {
+  await withWriteTransaction(db, async transaction => {
     const active = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workouts WHERE endedAt IS NULL LIMIT 1');
     if (active) return;
 
@@ -62,7 +63,7 @@ export async function editFinishedWorkout(db: SQLiteDatabase, workoutId: string,
   const name = edit.name.trim();
   if (!name) throw new Error('请填写训练名称。');
 
-  await db.withExclusiveTransactionAsync(async transaction => {
+  await withWriteTransaction(db, async transaction => {
     const finished = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workouts WHERE id = ? AND endedAt IS NOT NULL', workoutId);
     if (!finished) throw new Error('没有找到已结束的训练记录。');
 
@@ -99,7 +100,7 @@ export async function editFinishedWorkout(db: SQLiteDatabase, workoutId: string,
 
 export async function reusePreviousWorkoutSet(db: SQLiteDatabase, setId: string, sourceSetId: string) {
   let copied = { weight: 0, reps: 0 };
-  await db.withExclusiveTransactionAsync(async transaction => {
+  await withWriteTransaction(db, async transaction => {
     const target = await transaction.getFirstAsync<WorkoutSet>('SELECT * FROM workout_sets WHERE id = ?', setId);
     if (!target) throw new Error('找不到这组训练，请重新打开训练。');
     const current = await transaction.getFirstAsync<Workout>('SELECT * FROM workouts WHERE id = ? AND endedAt IS NULL', target.workoutId);
@@ -131,7 +132,7 @@ export async function reusePreviousWorkoutSet(db: SQLiteDatabase, setId: string,
 }
 
 export async function addWorkoutExercise(db: SQLiteDatabase, workoutId: string, exerciseId: string) {
-  await db.withExclusiveTransactionAsync(async transaction => {
+  await withWriteTransaction(db, async transaction => {
     const workout = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workouts WHERE id = ? AND endedAt IS NULL', workoutId);
     if (!workout) throw new Error('只能在进行中的训练里添加动作。');
     const exercise = await transaction.getFirstAsync<Exercise>('SELECT * FROM exercises WHERE id = ?', exerciseId);
@@ -145,7 +146,7 @@ export async function addWorkoutExercise(db: SQLiteDatabase, workoutId: string, 
 }
 
 export async function replaceWorkoutExercise(db: SQLiteDatabase, workoutId: string, exerciseId: string, replacementId: string, expectedSetIds?: string[]) {
-  await db.withExclusiveTransactionAsync(async transaction => {
+  await withWriteTransaction(db, async transaction => {
     const workout = await transaction.getFirstAsync<Workout>('SELECT * FROM workouts WHERE id = ? AND endedAt IS NULL', workoutId);
     if (!workout) throw new Error('只能替换进行中训练的动作。');
     const sets = await transaction.getAllAsync<WorkoutSet>('SELECT * FROM workout_sets WHERE workoutId = ? AND exerciseId = ? ORDER BY sortOrder, setNumber, id', workoutId, exerciseId);
@@ -175,7 +176,7 @@ export async function replaceWorkoutExercise(db: SQLiteDatabase, workoutId: stri
 
 export async function moveWorkoutExercise(db: SQLiteDatabase, workoutId: string, exerciseId: string, direction: -1 | 1, expectedExerciseIds: string[]) {
   if (direction !== -1 && direction !== 1) throw new Error('请选择向上或向下移动动作。');
-  await db.withExclusiveTransactionAsync(async transaction => {
+  await withWriteTransaction(db, async transaction => {
     const workout = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workouts WHERE id = ? AND endedAt IS NULL', workoutId);
     if (!workout) throw new Error('只能调整进行中训练的动作顺序。');
     const sets = await transaction.getAllAsync<WorkoutSet>('SELECT * FROM workout_sets WHERE workoutId = ? ORDER BY sortOrder, setNumber, id', workoutId);
@@ -206,7 +207,7 @@ export async function moveWorkoutExercise(db: SQLiteDatabase, workoutId: string,
 }
 
 export async function appendWorkoutSet(db: SQLiteDatabase, workoutId: string, exerciseId: string) {
-  await db.withExclusiveTransactionAsync(async transaction => {
+  await withWriteTransaction(db, async transaction => {
     const workout = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workouts WHERE id = ? AND endedAt IS NULL', workoutId);
     if (!workout) throw new Error('只能在进行中的训练里添加组数。');
     const previous = await transaction.getFirstAsync<WorkoutSet>('SELECT * FROM workout_sets WHERE workoutId = ? AND exerciseId = ? ORDER BY setNumber DESC LIMIT 1', workoutId, exerciseId);

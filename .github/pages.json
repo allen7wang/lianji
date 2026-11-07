@@ -14,6 +14,11 @@
       "typecheck"
     ],
     [
+      "npm",
+      "run",
+      "test:templates"
+    ],
+    [
       "npx",
       "expo",
       "export",

@@ -1,3 +1,4 @@
+import { withWriteTransaction } from './write-transaction';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import extraExercises from '../../assets/exercises/extra-exercises.json';
 import { isScheduleDay, type ScheduledTraining } from './training-schedule';
@@ -60,7 +61,7 @@ export async function readFavoritePlanIds(db: SQLiteDatabase) {
 
 export async function writePlanFavorite(db: SQLiteDatabase, planId: string, favorite: boolean) {
   if (typeof favorite !== 'boolean') throw new Error('收藏状态无效。');
-  await db.withExclusiveTransactionAsync(async transaction => {
+  await withWriteTransaction(db, async transaction => {
     const plan = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM plans WHERE id = ?', planId);
     if (!plan) throw new Error('没有找到这个训练计划。');
     if (favorite) {

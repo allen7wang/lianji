@@ -1,3 +1,4 @@
+import { withWriteTransaction } from './write-transaction';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { id, type Exercise } from './types';
 import { templateDrafts, trainingPrograms } from './plan-templates';
@@ -6,7 +7,7 @@ export async function importPlanTemplate(db: SQLiteDatabase, programId: string) 
   const program = trainingPrograms.find(item => item.id === programId);
   if (!program) throw new Error('没有找到这个计划模板。');
   let added = 0;
-  await db.withExclusiveTransactionAsync(async transaction => {
+  await withWriteTransaction(db, async transaction => {
     const exercises = await transaction.getAllAsync<Exercise>('SELECT * FROM exercises');
     const drafts = templateDrafts(program, exercises);
     const created = Date.now();

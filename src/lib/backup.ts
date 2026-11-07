@@ -1,3 +1,4 @@
+import { withWriteTransaction } from './write-transaction';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { insertScheduledTraining, isWeeklyGoal, readFavoritePlanIds, readTrainingSchedule, readWeeklyGoal, writeWeeklyGoal } from './database';
 import { isScheduleDay, scheduleKey, type ScheduledTraining } from './training-schedule';
@@ -102,7 +103,7 @@ export function parseBackup(text: string): BackupFile {
 export async function importBackup(db: SQLiteDatabase, backup: BackupFile): Promise<void> {
   validateSchedule(backup.schedule, backup.tables.plans);
   validateFavoritePlanIds(backup.favoritePlanIds, backup.tables.plans);
-  await db.withExclusiveTransactionAsync(async transaction => {
+  await withWriteTransaction(db, async transaction => {
     if (backup.weeklyGoal !== undefined) await writeWeeklyGoal(transaction, backup.weeklyGoal);
     for (const table of DELETE_ORDER) await transaction.runAsync(`DELETE FROM ${table}`);
     for (const exercise of backup.tables.exercises) {
