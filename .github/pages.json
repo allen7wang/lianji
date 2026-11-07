@@ -1,0 +1,32 @@
+{
+  "title": "练迹",
+  "source_repository": "allen7wang/lianji",
+  "site_repository": "allen7wang/lianji-web",
+  "commands": [
+    [
+      "npm",
+      "run",
+      "lint"
+    ],
+    [
+      "npm",
+      "run",
+      "typecheck"
+    ],
+    [
+      "npx",
+      "expo",
+      "export",
+      "--platform",
+      "web"
+    ],
+    [
+      "node",
+      "scripts/prepare-web.mjs"
+    ]
+  ],
+  "directory": "dist",
+  "files": [
+    "dist"
+  ]
+}

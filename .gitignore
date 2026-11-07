@@ -57,3 +57,7 @@ apple/**/xcuserdata/
 /ios
 /android
 /device-build/
+/dist-pages/
+
+__pycache__/
+/dist-pages/
