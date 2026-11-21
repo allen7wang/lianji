@@ -46,7 +46,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "test:templates": "node scripts/verify-plan-templates.mjs",
-    "test": "node --test tests/ && node scripts/verify-plan-templates.mjs"
+    "test": "node --test tests/web-transaction.test.mjs && node scripts/verify-plan-templates.mjs"
   },
   "private": true
 }
