@@ -28,8 +28,8 @@ struct ReusePreviousSetButton: View {
     private var valueLabel: String {
         let set = source.set
         if set.unit == .seconds {
-            return set.weight > 0 ? "\(set.weight.formatted()) kg · \(set.targetLabel)" : set.targetLabel
+            return set.weight > 0 ? "\(store.state.preferences.weightUnit.format(kilograms: set.weight)) · \(set.targetLabel)" : set.targetLabel
         }
-        return "\(set.weight.formatted()) kg × \(set.targetLabel)"
+        return "\(store.state.preferences.weightUnit.format(kilograms: set.weight)) × \(set.targetLabel)"
     }
 }

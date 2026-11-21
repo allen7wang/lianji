@@ -7,10 +7,27 @@ struct TrainingBackupPreview: Equatable {
     var bodyEntries: Int
     var foodEntries: Int
     var hasWeeklyGoal: Bool
+    /// 备份是否带有 v3 的 `preferences`。
+    var hasPreferences: Bool = false
+
+    /// 「备份导出于…，包含…」。
+    var summary: String {
+        let date = exportedAt.formatted(date: .abbreviated, time: .omitted)
+        return "备份导出于 \(date)，包含 \(plans) 个计划、\(finishedWorkouts) 次已完成训练、\(bodyEntries) 条身体记录和 \(foodEntries) 条饮食记录。"
+    }
 
     var message: String {
-        let date = exportedAt.formatted(date: .abbreviated, time: .omitted)
-        return "备份导出于 \(date)，包含 \(plans) 个计划、\(finishedWorkouts) 次已完成训练、\(bodyEntries) 条身体记录和 \(foodEntries) 条饮食记录。恢复会用备份替换本机当前全部数据，且不可撤销。"
+        replaceMessage
+    }
+
+    /// v3 替换恢复确认文案（恢复前会自动保存快照）。
+    var replaceMessage: String {
+        "\(summary)替换会用备份覆盖本机当前全部数据；恢复前会自动保存一份快照，可以撤销这次导入。"
+    }
+
+    /// v3 合并导入确认文案。
+    var mergeMessage: String {
+        "\(summary)合并只添加本机没有的记录，保留本机已有的计划、训练和设置，未结束的训练不会导入；导入前会自动保存一份快照，可以撤销。"
     }
 }
 
@@ -88,6 +105,8 @@ enum TrainingBackup {
                     "completed": set.completed ? 1 : 0,
                     "unit": (set.unit ?? .reps).rawValue,
                     "restSeconds": set.restSeconds ?? 90,
+                    "kind": set.kind.rawValue,
+                    "rpe": set.rpe ?? NSNull(),
                 ] as [String: Any]
             }
         }
@@ -117,6 +136,12 @@ enum TrainingBackup {
         }.map { ["day": $0.day, "planId": $0.planId] as [String: Any] }
         let planIds = Set(state.plans.map(\.id))
         let favorites = Set(state.favoritePlanIds ?? []).filter { planIds.contains($0) }.sorted()
+        // 未显式选择单位时省略 weightUnit（读取方按缺省 kg 处理），以便合并与撤销保留「未设置」。
+        var preferences: [String: Any] = [
+            "calorieGoal": state.preferences.calorieGoal,
+            "proteinGoal": state.preferences.proteinGoal,
+        ]
+        if let unit = state.preferences.weightUnitSetting { preferences["weightUnit"] = unit.rawValue }
         let object: [String: Any] = [
             "app": "lianji",
             "version": version,
@@ -133,6 +158,7 @@ enum TrainingBackup {
             "weeklyGoal": state.weeklyGoalDays ?? 0,
             "schedule": schedule,
             "favoritePlanIds": favorites,
+            "preferences": preferences,
         ]
         guard JSONSerialization.isValidJSONObject(object) else {
             throw TrainingBackupError.message("备份内容已损坏：无法导出。")
@@ -144,6 +170,8 @@ enum TrainingBackup {
         "lianji-backup-\(isoString(exportedAt).prefix(10))"
     }
 
+    /// 解析并逐项校验备份（docs/data-contract.md §1），任一字段不合规则整体拒绝。
+    /// 只拒绝类型错误或明显损坏的数据（负数、非整数等），不按现行输入上限卡范围。
     static func parse(_ data: Data) throws -> TrainingBackupFile {
         let root: NSDictionary
         do {
@@ -178,6 +206,7 @@ enum TrainingBackup {
         let planIds = Set(try planRows.map { try identifier($0) })
         let schedule = try scheduleEntries(root["schedule"], planIds: planIds)
         let favorites = try favoritePlanIds(root["favoritePlanIds"], planIds: planIds)
+        let parsedPreferences = try preferences(root["preferences"])
 
         let exercises = try exerciseRows.map { row -> Exercise in
             Exercise(
@@ -199,13 +228,13 @@ enum TrainingBackup {
             let item = PlanItem(
                 id: try identifier(row),
                 exerciseId: exerciseId,
-                sets: try integer(row, "sets"),
-                reps: try integer(row, "reps"),
-                weight: try number(row, "weight"),
+                sets: try nonNegativeInteger(row, "sets", "组数"),
+                reps: try nonNegativeInteger(row, "reps", "次数"),
+                weight: try nonNegativeNumber(row, "weight", "重量"),
                 unit: try unit(row["unit"]),
-                restSeconds: try optionalInteger(row["restSeconds"])
+                restSeconds: try optionalNonNegativeInteger(row["restSeconds"], "休息时间")
             )
-            itemsByPlan[planId, default: []].append((try integer(row, "sortOrder"), offset, item))
+            itemsByPlan[planId, default: []].append((try nonNegativeInteger(row, "sortOrder", "排序"), offset, item))
         }
         let plans = try planRows.map { row -> Plan in
             let id = try identifier(row)
@@ -223,21 +252,21 @@ enum TrainingBackup {
             let set = TrainingSet(
                 id: try identifier(row),
                 exerciseId: exerciseId,
-                setNumber: try integer(row, "setNumber"),
-                weight: try number(row, "weight"),
-                reps: try integer(row, "reps"),
+                setNumber: try nonNegativeInteger(row, "setNumber", "组号"),
+                weight: try nonNegativeNumber(row, "weight", "重量"),
+                reps: try nonNegativeInteger(row, "reps", "次数"),
                 completed: try flag(row, "completed"),
                 unit: try unit(row["unit"]),
-                restSeconds: try optionalInteger(row["restSeconds"])
+                restSeconds: try optionalNonNegativeInteger(row["restSeconds"], "休息时间"),
+                kind: try setKind(row["kind"]),
+                rpe: try rpe(row["rpe"])
             )
-            setsByWorkout[workoutId, default: []].append((try integer(row, "sortOrder"), offset, set))
+            setsByWorkout[workoutId, default: []].append((try nonNegativeInteger(row, "sortOrder", "排序"), offset, set))
         }
         let workouts = try workoutRows.map { row -> Workout in
             let id = try identifier(row)
-            let planId = try optionalText(row["planId"])
-            if let planId, !planIds.contains(planId) {
-                throw TrainingBackupError.message("备份内容已损坏：训练记录引用了不存在的计划。")
-            }
+            // 指向不存在的计划时按 null 导入（计划可能已被删除）。
+            let planId = try optionalText(row["planId"]).flatMap { planIds.contains($0) ? $0 : nil }
             return Workout(
                 id: id,
                 planId: planId,
@@ -249,7 +278,12 @@ enum TrainingBackup {
             )
         }
         let bodyEntries = try bodyRows.map { row in
-            BodyEntry(id: try identifier(row), recordedAt: try date(row, "recordedAt"), weight: try number(row, "weight"), bodyFat: try optionalNumber(row["bodyFat"]))
+            BodyEntry(
+                id: try identifier(row),
+                recordedAt: try date(row, "recordedAt"),
+                weight: try nonNegativeNumber(row, "weight", "体重"),
+                bodyFat: try optionalNonNegativeNumber(row["bodyFat"], "体脂率")
+            )
         }
         let foodEntries = try foodRows.map { row in
             FoodEntry(
@@ -258,10 +292,10 @@ enum TrainingBackup {
                 meal: try text(row, "meal"),
                 name: try text(row, "name"),
                 portion: try text(row, "portion"),
-                calories: try number(row, "calories"),
-                protein: try number(row, "protein"),
-                carbs: try number(row, "carbs"),
-                fat: try number(row, "fat")
+                calories: try nonNegativeNumber(row, "calories", "热量"),
+                protein: try nonNegativeNumber(row, "protein", "蛋白质"),
+                carbs: try nonNegativeNumber(row, "carbs", "碳水"),
+                fat: try nonNegativeNumber(row, "fat", "脂肪")
             )
         }
         let goal = hasWeeklyGoal ? integer(root["weeklyGoal"]) : nil
@@ -273,7 +307,8 @@ enum TrainingBackup {
             foodEntries: foodEntries,
             weeklyGoalDays: goal == 0 ? nil : goal,
             trainingSchedule: schedule,
-            favoritePlanIds: favorites
+            favoritePlanIds: favorites,
+            preferences: parsedPreferences ?? AppPreferences()
         )
         let preview = TrainingBackupPreview(
             exportedAt: try date(root, "exportedAt"),
@@ -281,7 +316,8 @@ enum TrainingBackup {
             finishedWorkouts: workouts.filter { $0.endedAt != nil }.count,
             bodyEntries: bodyEntries.count,
             foodEntries: foodEntries.count,
-            hasWeeklyGoal: hasWeeklyGoal
+            hasWeeklyGoal: hasWeeklyGoal,
+            hasPreferences: parsedPreferences != nil
         )
         return TrainingBackupFile(state: state, preview: preview)
     }
@@ -336,6 +372,78 @@ enum TrainingBackup {
             }
         }
         return list
+    }
+
+    private static func preferences(_ value: Any?) throws -> AppPreferences? {
+        if value == nil { return nil }
+        guard let row = value as? NSDictionary else {
+            throw TrainingBackupError.message("备份中的偏好设置无效。")
+        }
+        var result = AppPreferences()
+        if let raw = row["weightUnit"], !(raw is NSNull) {
+            guard let text = raw as? String, let unit = WeightUnit(rawValue: text) else {
+                throw TrainingBackupError.message("备份中的偏好设置无效：重量单位只能是 kg 或 lb。")
+            }
+            result.weightUnitSetting = unit
+        }
+        // 目标只拒绝类型错误或负数；超过现行编辑上限时按上限导入，不拒绝整份备份。
+        if let raw = row["calorieGoal"], !(raw is NSNull) {
+            guard let goal = integer(raw), goal >= 0 else {
+                throw TrainingBackupError.message("备份中的偏好设置无效：热量目标须为不小于 0 的整数。")
+            }
+            result.calorieGoal = min(goal, AppPreferences.calorieGoalRange.upperBound)
+        }
+        if let raw = row["proteinGoal"], !(raw is NSNull) {
+            guard let goal = integer(raw), goal >= 0 else {
+                throw TrainingBackupError.message("备份中的偏好设置无效：蛋白质目标须为不小于 0 的整数。")
+            }
+            result.proteinGoal = min(goal, AppPreferences.proteinGoalRange.upperBound)
+        }
+        return result
+    }
+
+    private static func setKind(_ value: Any?) throws -> SetKind {
+        if value == nil || value is NSNull { return .working }
+        guard let text = value as? String, let kind = SetKind(rawValue: text) else {
+            throw TrainingBackupError.message("备份内容已损坏：组次类型只能是 working 或 warmup。")
+        }
+        return kind
+    }
+
+    private static func rpe(_ value: Any?) throws -> Double? {
+        if value == nil || value is NSNull { return nil }
+        guard let number = finiteNumber(value), TrainingSet.isValidRPE(number) else {
+            throw TrainingBackupError.message("备份内容已损坏：RPE 须为 5–10 之间、步长 0.5 的数值。")
+        }
+        return number
+    }
+
+    private static func nonNegativeError(_ label: String) -> TrainingBackupError {
+        TrainingBackupError.message("备份内容已损坏：\(label)不能为负数。")
+    }
+
+    private static func nonNegativeNumber(_ row: NSDictionary, _ key: String, _ label: String) throws -> Double {
+        let value = try number(row, key)
+        guard value >= 0 else { throw nonNegativeError(label) }
+        return value
+    }
+
+    private static func optionalNonNegativeNumber(_ value: Any?, _ label: String) throws -> Double? {
+        guard let number = try optionalNumber(value) else { return nil }
+        guard number >= 0 else { throw nonNegativeError(label) }
+        return number
+    }
+
+    private static func nonNegativeInteger(_ row: NSDictionary, _ key: String, _ label: String) throws -> Int {
+        let value = try integer(row, key)
+        guard value >= 0 else { throw nonNegativeError(label) }
+        return value
+    }
+
+    private static func optionalNonNegativeInteger(_ value: Any?, _ label: String) throws -> Int? {
+        guard let number = try optionalInteger(value) else { return nil }
+        guard number >= 0 else { throw nonNegativeError(label) }
+        return number
     }
 
     private static func isScheduleDay(_ value: String) -> Bool {

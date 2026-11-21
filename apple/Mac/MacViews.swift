@@ -1,13 +1,6 @@
 import SwiftUI
 import Charts
 
-private enum Palette {
-    static let background = Color(red: 0.047, green: 0.063, blue: 0.078)
-    static let surface = Color(red: 0.09, green: 0.11, blue: 0.13)
-    static let accent = Color(red: 0.725, green: 0.953, blue: 0.416)
-    static let muted = Color(red: 0.57, green: 0.63, blue: 0.61)
-}
-
 private enum Section: String, CaseIterable, Identifiable {
     case today = "今天"
     case plans = "训练计划"
@@ -18,6 +11,7 @@ private enum Section: String, CaseIterable, Identifiable {
     case backup = "数据备份"
     case nutrition = "饮食记录"
     case body = "身体数据"
+    case settings = "设置"
 
     var id: String { rawValue }
     var symbol: String {
@@ -31,6 +25,7 @@ private enum Section: String, CaseIterable, Identifiable {
         case .backup: "externaldrive.fill"
         case .nutrition: "fork.knife"
         case .body: "figure.strengthtraining.traditional"
+        case .settings: "gearshape"
         }
     }
 }
@@ -59,12 +54,20 @@ struct MacRootView: View {
                 case .backup: MacBackupView()
                 case .nutrition: MacNutritionView()
                 case .body: MacBodyView()
+                case .settings:
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                        Text("设置").themeText(.title1)
+                        Surface { TrainingPreferencesView() }
+                        Spacer()
+                    }
+                    .padding(Theme.Spacing.xxl)
+                    .frame(maxWidth: 720, alignment: .leading)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Palette.background)
+            .background(Theme.Colors.bg)
         }
-        .tint(Palette.accent)
+        .tint(Theme.Colors.accentText)
     }
 }
 
@@ -72,9 +75,8 @@ private struct Surface<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
         content
-            .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.surface, in: RoundedRectangle(cornerRadius: 18))
+            .themeCard()
     }
 }
 
@@ -82,10 +84,7 @@ private struct PageHeader: View {
     let eyebrow: String
     let title: String
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(eyebrow).font(.caption.bold()).tracking(2).foregroundStyle(Palette.accent)
-            Text(title).font(.system(size: 32, weight: .bold))
-        }
+        ThemePageHeader(overline: eyebrow, title: title)
     }
 }
 
@@ -93,11 +92,8 @@ private struct Stat: View {
     let value: String
     let label: String
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(value).font(.system(size: 26, weight: .bold)).foregroundStyle(Palette.accent)
-            Text(label).font(.caption).foregroundStyle(Palette.muted)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        ThemeStat(value: value, caption: label, tint: Theme.Colors.data)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -112,26 +108,25 @@ private struct MacDashboard: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 PageHeader(eyebrow: "LIANJI · TRAINING LOG", title: "今天练什么？")
-                Surface {
+                SignalCard {
                     HStack(spacing: 30) {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(store.activeWorkout == nil ? "把今天练成更强的一天" : "继续你的训练")
+                            Text(store.activeWorkout == nil ? "自由训练" : "正在训练")
                                 .font(.system(size: 25, weight: .bold))
-                            Text(store.activeWorkout == nil ? "按计划训练，或自由记录每一组。" : store.activeWorkout!.name)
-                                .foregroundStyle(Palette.muted)
+                            if let workout = store.activeWorkout { Text(workout.name) }
                             if store.activeWorkout == nil {
                                 Button("开始自由训练") { store.startWorkout(planId: nil) }
-                                    .buttonStyle(.borderedProminent)
+                                    .buttonStyle(.themeSecondary(.small))
                             }
                         }
                         Spacer()
-                        Image(systemName: "dumbbell.fill").font(.system(size: 82)).foregroundStyle(Palette.accent)
+                        Image(systemName: "dumbbell.fill").font(.system(size: 58)).foregroundStyle(Theme.Colors.onAccent)
                     }
                 }
                 HStack(spacing: 14) {
                     Surface { Stat(value: "\(week.count)", label: "本周训练次数") }
                     Surface { Stat(value: "\(week.reduce(0) { $0 + $1.completedSets.count })", label: "本周完成组数") }
-                    Surface { Stat(value: "\(Int(week.reduce(0) { $0 + $1.volume })) kg", label: "本周训练容量") }
+                    Surface { Stat(value: "\(store.state.preferences.weightUnit.format(kilograms: week.reduce(0) { $0 + $1.volume }))", label: "本周训练容量") }
                 }
                 if store.activeWorkout != nil { MacActiveWorkout() }
                 Text("训练计划").font(.title2.bold())
@@ -141,7 +136,7 @@ private struct MacDashboard: View {
                             VStack(alignment: .leading, spacing: 5) {
                                 Label(plan.name, systemImage: store.isPlanFavorite(plan.id) ? "star.fill" : "dumbbell")
                                     .font(.headline)
-                                Text("\(plan.items.count) 个动作 · \(plan.note)").font(.caption).foregroundStyle(Palette.muted)
+                                Text("\(plan.items.count) 个动作 · \(plan.note)").font(.caption).foregroundStyle(Theme.Colors.textMuted)
                             }
                             Spacer()
                             Button("开始训练") { store.startWorkout(planId: plan.id) }
@@ -178,7 +173,7 @@ private struct MacScheduleView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("添加安排").font(.title2.bold())
                         if store.state.plans.isEmpty {
-                            Text("先在「训练计划」里新建或添加一份计划。").foregroundStyle(Palette.muted)
+                            Text("先在「训练计划」里新建或添加一份计划。").foregroundStyle(Theme.Colors.textMuted)
                         } else {
                             HStack {
                                 DatePicker("日期", selection: $date, in: today..., displayedComponents: .date)
@@ -203,7 +198,7 @@ private struct MacScheduleView: View {
                     }
                 }
                 if items.isEmpty {
-                    Text("还没有训练安排。").foregroundStyle(Palette.muted)
+                    Text("还没有训练安排。").foregroundStyle(Theme.Colors.textMuted)
                 }
                 ForEach(items) { item in
                     Surface {
@@ -212,7 +207,7 @@ private struct MacScheduleView: View {
                                 Text(item.plan.name).font(.headline)
                                 Text("\(item.entry.day) · \(item.status.rawValue)")
                                     .font(.subheadline)
-                                    .foregroundStyle(item.status == .missed ? Palette.muted : Palette.accent)
+                                    .foregroundStyle(item.status == .missed ? Theme.Colors.textMuted : Theme.Colors.data)
                             }
                             Spacer()
                             TrainingScheduleActions(item: item)
@@ -265,8 +260,8 @@ private struct MacPlansView: View {
                         Surface {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("\(template.name) · \(template.subtitle)").font(.title3.bold())
-                                Text(template.description).foregroundStyle(Palette.muted)
-                                Text("\(template.level) · \(template.equipment.joined(separator: " / "))").font(.caption).foregroundStyle(Palette.muted)
+                                Text(template.description).foregroundStyle(Theme.Colors.textMuted)
+                                Text("\(template.level) · \(template.equipment.joined(separator: " / "))").font(.caption).foregroundStyle(Theme.Colors.textMuted)
                                 Text(template.frequency).font(.caption)
                                 Text("一轮 \(template.days.count) 个训练日 · \(template.days.map(\.name).joined(separator: " / "))").font(.caption)
                                 Button("查看模板") { program = template }
@@ -279,7 +274,7 @@ private struct MacPlansView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(plan.name).font(.title3.bold())
-                                    Text(plan.note).font(.caption).foregroundStyle(Palette.muted)
+                                    Text(plan.note).font(.caption).foregroundStyle(Theme.Colors.textMuted)
                                 }
                                 Spacer()
                                 PlanFavoriteButton(plan: plan)
@@ -295,8 +290,8 @@ private struct MacPlansView: View {
                                 HStack {
                                     Text(store.exercise(item.exerciseId)?.name ?? "未知动作")
                                     Spacer()
-                                    Text("\(item.sets) × \(item.targetLabel) · \(item.weight.formatted()) kg")
-                                        .foregroundStyle(Palette.muted)
+                                    Text("\(item.sets) × \(item.targetLabel) · \(store.state.preferences.weightUnit.format(kilograms: item.weight))")
+                                        .foregroundStyle(Theme.Colors.textMuted)
                                 }.font(.subheadline)
                             }
                         }
@@ -406,7 +401,7 @@ private struct MacPlanEditor: View {
                         }.frame(width: 90)
                         Stepper(item.targetLabel, value: $item.reps, in: 1...1000).frame(width: 110)
                         Stepper("休息 \(item.restSeconds ?? 90) 秒", value: Binding(get: { item.restSeconds ?? 90 }, set: { item.restSeconds = $0 }), in: 0...600, step: 5).frame(width: 160)
-                        if BreathingProfile.find(store.exercise(item.exerciseId)) == nil { TextField("kg", value: $item.weight, format: .number).frame(width: 60) }
+                        if BreathingProfile.find(store.exercise(item.exerciseId)) == nil { WeightField(kilograms: item.weight, unit: store.state.preferences.weightUnit) { item.weight = $0 }.frame(width: 90) }
                         Button(role: .destructive) { draft.items.removeAll { $0.id == item.id } } label: {
                             Image(systemName: "trash")
                         }
@@ -454,10 +449,10 @@ private struct MacExercisesView: View {
                 .textFieldStyle(.roundedBorder)
             List(store.state.exercises.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) || $0.equipment.localizedCaseInsensitiveContains(query) }) { exercise in
                 HStack {
-                    Image(systemName: "dumbbell.fill").foregroundStyle(Palette.accent).frame(width: 30)
+                    Image(systemName: "dumbbell.fill").foregroundStyle(Theme.Colors.data).frame(width: 30)
                     Text(exercise.name)
                     Spacer()
-                    Text("\(exercise.muscle) · \(exercise.equipment)").foregroundStyle(Palette.muted)
+                    Text("\(exercise.muscle) · \(exercise.equipment)").foregroundStyle(Theme.Colors.textMuted)
                     if ExerciseDemo.find(exercise) != nil {
                         Button("查看动图", systemImage: "play.circle") { demoExercise = exercise }
                     }
@@ -507,8 +502,8 @@ private struct MacActiveWorkout: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("正在训练 · \(workout.name)").font(.title3.bold())
-                            Text("已完成 \(workout.completedSets.count) / \(workout.sets.count) 组 · 容量 \(Int(workout.volume)) kg")
-                                .foregroundStyle(Palette.muted)
+                            Text("已完成 \(workout.completedSets.count) / \(workout.sets.count) 组 · 容量 \(store.state.preferences.weightUnit.format(kilograms: workout.volume))")
+                                .foregroundStyle(Theme.Colors.textMuted)
                         }
                         Spacer()
                         Button("放弃", role: .destructive) { store.discardWorkout() }
@@ -521,7 +516,7 @@ private struct MacActiveWorkout: View {
                             let remaining = max(0, Int(restUntil.timeIntervalSince(context.date)))
                             Text(remaining > 0 ? "\(timerLabel) · \(remaining) 秒" : "计时结束，请按实际完成情况记录")
                                 .font(.subheadline.bold())
-                                .foregroundStyle(Palette.accent)
+                                .foregroundStyle(Theme.Colors.data)
                         }
                         Button("停止计时") { self.restUntil = nil; timerExerciseId = nil }
                     }
@@ -544,47 +539,15 @@ private struct MacActiveWorkout: View {
                             ForEach(references[exerciseId, default: []]) { reference in
                                 PreviousExerciseSetsView(reference: reference)
                             }
+                            TrainingSuggestionRow(exerciseId: exerciseId)
                             ForEach(workout.sets.filter { $0.exerciseId == exerciseId }) { set in
-                                VStack(alignment: .leading, spacing: 5) {
-                                    HStack(spacing: 12) {
-                                        Text("第 \(set.setNumber) 组").foregroundStyle(Palette.muted).frame(width: 75, alignment: .leading)
-                                        if BreathingProfile.find(store.exercise(exerciseId)) == nil {
-                                            TextField("重量", value: Binding(get: { set.weight }, set: { store.updateSet(set.id, weight: $0) }), format: .number).frame(width: 70)
-                                            Text("kg")
-                                        }
-                                        TextField(set.unit == .seconds ? "秒数" : "次数", value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), format: .number)
-                                            .frame(width: 70)
-                                        Text(set.unit == .seconds ? "秒" : "次")
-                                        if set.unit == .seconds && !set.completed {
-                                            Button(BreathingProfile.find(store.exercise(exerciseId)) == nil ? "计时" : "呼吸引导") {
-                                                guard store.activeWorkout?.sets.contains(where: { $0.id == set.id }) == true else { return }
-                                                if let profile = BreathingProfile.find(store.exercise(exerciseId)) {
-                                                    restUntil = nil; timerExerciseId = nil; breathGuide = BreathGuideRequest(profile: profile, seconds: set.reps)
-                                                } else {
-                                                    timerLabel = "动作计时"; timerExerciseId = exerciseId
-                                                    restUntil = .now.addingTimeInterval(Double(set.reps))
-                                                }
-                                            }
-                                        }
-                                        Toggle("完成", isOn: Binding(get: { set.completed }, set: {
-                                            store.updateSet(set.id, completed: $0)
-                                            if $0, store.activeWorkout?.sets.contains(where: { $0.id == set.id && $0.completed }) == true {
-                                                timerLabel = "组间休息"; timerExerciseId = exerciseId
-                                                restUntil = .now.addingTimeInterval(Double(set.restSeconds ?? 90))
-                                            }
-                                        }))
-                                            .toggleStyle(.checkbox)
-                                        Button(role: .destructive) { store.deleteSet(set.id) } label: { Image(systemName: "minus.circle") }
-                                            .buttonStyle(.plain)
-                                    }
-                                    if let reference = references[exerciseId]?.first(where: { $0.unit == (set.unit ?? .reps) }),
-                                       let source = reference.reusableSet(for: set, in: workout) {
-                                        ReusePreviousSetButton(workoutId: workout.id, setId: set.id, source: source)
-                                    }
-                                }
+                                setRow(set, workout: workout, references: references[exerciseId, default: []])
                             }
-                            Button("添加一组", systemImage: "plus") { store.addSet(for: exerciseId) }
-                                .font(.caption)
+                            HStack {
+                                Button("添加一组", systemImage: "plus") { store.addSet(for: exerciseId) }
+                                Button("添加热身组") { store.addWarmupSet(for: exerciseId) }
+                            }
+                            .font(.caption)
                         }
                         Divider()
                     }
@@ -602,6 +565,51 @@ private struct MacActiveWorkout: View {
             .sheet(item: $demoExercise) { MacExerciseDemoSheet(exercise: $0) }
             .sheet(item: $breathGuide) { MacBreathingGuideSheet(request: $0) }
         }
+    }
+
+    private func setRow(_ set: TrainingSet, workout: Workout, references: [PreviousExerciseSets]) -> some View {
+        let exerciseId = set.exerciseId
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 12) {
+                ThemeTag(text: set.isWarmup ? "W · 热身" : "第 \(workout.workingSetOrdinal(of: set.id) ?? set.setNumber) 组", tone: set.isWarmup ? .warning : .neutral)
+                    .frame(width: 72, alignment: .leading)
+                if BreathingProfile.find(store.exercise(exerciseId)) == nil {
+                    WeightField(kilograms: set.weight, unit: store.state.preferences.weightUnit) {
+                        store.updateSet(set.id, weight: $0)
+                    }.frame(width: 90)
+                }
+                TextField(set.unit == .seconds ? "秒数" : "次数", value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), format: .number)
+                    .frame(width: 70)
+                Text(set.unit == .seconds ? "秒" : "次")
+                if set.unit == .seconds && !set.completed {
+                    Button(BreathingProfile.find(store.exercise(exerciseId)) == nil ? "计时" : "呼吸引导") {
+                        guard store.activeWorkout?.sets.contains(where: { $0.id == set.id }) == true else { return }
+                        if let profile = BreathingProfile.find(store.exercise(exerciseId)) {
+                            restUntil = nil; timerExerciseId = nil; breathGuide = BreathGuideRequest(profile: profile, seconds: set.reps)
+                        } else {
+                            timerLabel = "动作计时"; timerExerciseId = exerciseId
+                            restUntil = .now.addingTimeInterval(Double(set.reps))
+                        }
+                    }
+                }
+                Toggle("完成", isOn: Binding(get: { set.completed }, set: {
+                    store.updateSet(set.id, completed: $0)
+                    if $0, store.activeWorkout?.sets.contains(where: { $0.id == set.id && $0.completed }) == true {
+                        timerLabel = "组间休息"; timerExerciseId = exerciseId
+                        restUntil = .now.addingTimeInterval(Double(set.restSeconds ?? 90))
+                    }
+                }))
+                    .toggleStyle(.checkbox)
+                Button(role: .destructive) { store.deleteSet(set.id) } label: { Image(systemName: "minus.circle") }
+                    .buttonStyle(.plain)
+            }
+            SetKindAndRPE(set: set)
+            if let reference = references.first(where: { $0.unit == (set.unit ?? .reps) }),
+               let source = reference.reusableSet(for: set, in: workout) {
+                ReusePreviousSetButton(workoutId: workout.id, setId: set.id, source: source)
+            }
+        }
+        .themeCard(padding: Theme.Spacing.sm)
     }
 }
 
@@ -642,7 +650,7 @@ private struct MacProgressView: View {
                             exerciseProgress(progress.exercise(activeExerciseId))
                         } else {
                             Text("保存包含已完成组的训练后，可在这里查看个人纪录。")
-                                .foregroundStyle(Palette.muted)
+                                .foregroundStyle(Theme.Colors.textMuted)
                         }
                     }
                 }
@@ -663,13 +671,13 @@ private struct MacProgressView: View {
                     ForEach(recentWeeks) { activity in
                         VStack(alignment: .leading, spacing: 5) {
                             Text(activity.id == week.id ? "本周" : "\(activity.start.formatted(.dateTime.month().day()))起")
-                                .font(.caption).foregroundStyle(Palette.muted)
+                                .font(.caption).foregroundStyle(Theme.Colors.textMuted)
                             Text("\(activity.activeDays(through: today)) 天")
-                                .font(.title3.bold().monospacedDigit()).foregroundStyle(Palette.accent)
+                                .font(.title3.bold().monospacedDigit()).foregroundStyle(Theme.Colors.data)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(Palette.accent.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+                        .background(Theme.Colors.data.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
                         .accessibilityElement(children: .combine)
                     }
                 }
@@ -690,7 +698,7 @@ private struct MacProgressView: View {
                     Spacer()
                     if let first = days.first, let last = days.last {
                         Text("\(first.date.formatted(.dateTime.year().month().day())) – \(last.date.formatted(.dateTime.month().day()))")
-                            .foregroundStyle(Palette.muted)
+                            .foregroundStyle(Theme.Colors.textMuted)
                     }
                     Button {
                         weekOffset -= 1
@@ -721,11 +729,11 @@ private struct MacProgressView: View {
                                 Text(day.date.formatted(.dateTime.weekday(.abbreviated))).font(.caption)
                                 Text(day.date.formatted(.dateTime.day())).font(.headline)
                                 Text("\(day.completedSets) 组").font(.caption)
-                                    .foregroundStyle(day.completedSets > 0 ? Palette.accent : Palette.muted)
+                                    .foregroundStyle(day.completedSets > 0 ? Theme.Colors.data : Theme.Colors.textMuted)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 9)
-                            .background(Palette.accent.opacity(isSelected ? 0.18 : 0.04), in: RoundedRectangle(cornerRadius: 8))
+                            .background(Theme.Colors.data.opacity(isSelected ? 0.18 : 0.04), in: RoundedRectangle(cornerRadius: 8))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(day.date.formatted(date: .complete, time: .omitted))，\(day.completedSets) 组")
@@ -733,19 +741,19 @@ private struct MacProgressView: View {
                     }
                 }
                 Text("\(week.activeDays()) 个训练日 · \(week.completedSets) 个完成组")
-                    .font(.subheadline).foregroundStyle(Palette.accent)
+                    .font(.subheadline).foregroundStyle(Theme.Colors.data)
                 if let selectedDay {
                     Divider()
                     Text(selectedDay.date.formatted(.dateTime.month().day().weekday())).font(.headline)
                     if selectedDay.workouts.isEmpty {
-                        Text("当天没有保存的训练").foregroundStyle(Palette.muted)
+                        Text("当天没有保存的训练").foregroundStyle(Theme.Colors.textMuted)
                     }
                     ForEach(selectedDay.workouts) { workout in
                         HStack {
                             Text(workout.name)
                             Spacer()
                             Text("\(workout.startedAt.formatted(date: .omitted, time: .shortened)) · \(workout.completedSets.count) 组")
-                                .foregroundStyle(Palette.muted)
+                                .foregroundStyle(Theme.Colors.textMuted)
                         }
                     }
                 }
@@ -757,12 +765,12 @@ private struct MacProgressView: View {
     private func exerciseProgress(_ progress: ExerciseProgress) -> some View {
         let metrics = progress.records.metrics
         if metrics.isEmpty {
-            Text("此动作还没有可比较的次数或时长。").foregroundStyle(Palette.muted)
+            Text("此动作还没有可比较的次数或时长。").foregroundStyle(Theme.Colors.textMuted)
         } else {
             Text("个人纪录").font(.headline)
             HStack(spacing: 20) {
                 ForEach(metrics) { kind in
-                    if let label = progress.records.label(kind) {
+                    if let label = progress.records.label(kind, unit: store.state.preferences.weightUnit) {
                         Stat(value: label, label: kind.rawValue)
                     }
                 }
@@ -779,11 +787,11 @@ private struct MacProgressView: View {
                     if let value = session.records.value(activeMetric) {
                         BarMark(
                             x: .value("训练日期", session.date),
-                            y: .value(activeMetric.rawValue, value)
+                            y: .value(activeMetric.rawValue, activeMetric.isWeight ? store.state.preferences.weightUnit.fromKilograms(value) : value)
                         )
-                        .foregroundStyle(Palette.accent)
+                        .foregroundStyle(Theme.Colors.data)
                         .accessibilityLabel(session.date.formatted(date: .abbreviated, time: .omitted))
-                        .accessibilityValue(session.records.label(activeMetric) ?? "")
+                        .accessibilityValue(session.records.label(activeMetric, unit: store.state.preferences.weightUnit) ?? "")
                     }
                 }
                 .chartXAxis {
@@ -792,13 +800,13 @@ private struct MacProgressView: View {
                         AxisValueLabel(format: .dateTime.month().day())
                     }
                 }
-                .chartYAxisLabel(activeMetric.unit)
+                .chartYAxisLabel(activeMetric.unit(store.state.preferences.weightUnit))
                 .frame(height: 150)
                 ForEach(samples.reversed()) { session in
                     HStack {
-                        Text(session.date.formatted(date: .abbreviated, time: .shortened)).foregroundStyle(Palette.muted)
+                        Text(session.date.formatted(date: .abbreviated, time: .shortened)).foregroundStyle(Theme.Colors.textMuted)
                         Spacer()
-                        Text(session.records.label(activeMetric) ?? "")
+                        Text(session.records.label(activeMetric, unit: store.state.preferences.weightUnit) ?? "")
                     }
                     .font(.subheadline)
                 }
@@ -817,7 +825,7 @@ private struct MacHistoryView: View {
                 PageHeader(eyebrow: "YOUR PROGRESS", title: "训练历史")
                 HStack(spacing: 14) {
                     Surface { Stat(value: "\(history.count)", label: "累计训练") }
-                    Surface { Stat(value: "\(Int(history.reduce(0) { $0 + $1.volume })) kg", label: "累计容量") }
+                    Surface { Stat(value: "\(store.state.preferences.weightUnit.format(kilograms: history.reduce(0) { $0 + $1.volume }))", label: "累计容量") }
                 }
                 ForEach(history) { workout in
                     Surface {
@@ -826,23 +834,23 @@ private struct MacHistoryView: View {
                                 Text(workout.name).font(.headline)
                                 Spacer()
                                 Text(workout.startedAt.formatted(date: .abbreviated, time: .shortened))
-                                    .foregroundStyle(Palette.muted)
+                                    .foregroundStyle(Theme.Colors.textMuted)
                                 Button(role: .destructive) { store.deleteWorkout(workout.id) } label: { Image(systemName: "trash") }
                             }
-                            Text("\(workout.completedSets.count) 组 · \(Int(workout.volume)) kg 容量")
-                                .font(.subheadline).foregroundStyle(Palette.accent)
+                            Text("\(workout.completedSets.count) 组 · \(store.state.preferences.weightUnit.format(kilograms: workout.volume)) 容量")
+                                .font(.subheadline).foregroundStyle(Theme.Colors.data)
                             if let prior = comparison.previousPlanWorkout(for: workout) {
                                 PlanWorkoutComparisonView(comparison: prior)
                             }
                             ForEach(workout.completedSets) { set in
-                                Text("\(store.exercise(set.exerciseId)?.name ?? "未知动作") · \(set.weight.formatted()) kg × \(set.targetLabel)")
-                                    .font(.caption).foregroundStyle(Palette.muted)
+                                Text("\(set.isWarmup ? "W · " : "")\(store.exercise(set.exerciseId)?.name ?? "未知动作") · \(store.state.preferences.weightUnit.format(kilograms: set.weight)) × \(set.targetLabel)\(set.rpe.map { " · RPE \($0.formatted())" } ?? "")")
+                                    .font(.caption).foregroundStyle(Theme.Colors.textMuted)
                             }
                             SaveWorkoutPlanButton(workout: workout)
                         }
                     }
                 }
-                if history.isEmpty { Text("还没有训练记录").foregroundStyle(Palette.muted) }
+                if history.isEmpty { Text("还没有训练记录").foregroundStyle(Theme.Colors.textMuted) }
             }
             .padding(30).frame(maxWidth: 1000)
         }
@@ -858,6 +866,11 @@ private struct MacNutritionView: View {
     @State private var protein = 0.0
     @State private var carbs = 0.0
     @State private var fat = 0.0
+    @State private var editingGoals = false
+    @State private var calorieGoal = 0
+    @State private var proteinGoal = 0
+    @State private var notice: String?
+    @State private var frequent = false
     private var today: [FoodEntry] { store.state.foodEntries.filter { Calendar.current.isDateInToday($0.loggedAt) } }
     private var recentIntake: [NutritionDay] { WellnessTrend.nutritionTrend(store.state.foodEntries) }
     private var intakePeak: Double { recentIntake.map(\.calories).max() ?? 0 }
@@ -871,6 +884,8 @@ private struct MacNutritionView: View {
                     Surface { Stat(value: "\(Int(today.reduce(0) { $0 + $1.carbs })) g", label: "碳水") }
                     Surface { Stat(value: "\(Int(today.reduce(0) { $0 + $1.fat })) g", label: "脂肪") }
                 }
+                goalsCard
+                quickFoodCard
                 if !recentIntake.isEmpty {
                     Surface {
                         VStack(alignment: .leading, spacing: 12) {
@@ -879,23 +894,23 @@ private struct MacNutritionView: View {
                                 HStack(spacing: 12) {
                                     Text(monthDayLabel(day.day))
                                         .font(.subheadline.monospacedDigit())
-                                        .foregroundStyle(Palette.muted)
+                                        .foregroundStyle(Theme.Colors.textMuted)
                                         .frame(width: 48, alignment: .leading)
                                     GeometryReader { proxy in
                                         let fraction = intakePeak > 0 ? day.calories / intakePeak : 0
                                         let width = proxy.size.width * CGFloat(fraction)
                                         ZStack(alignment: .leading) {
                                             RoundedRectangle(cornerRadius: 4)
-                                                .fill(Palette.accent.opacity(0.15))
+                                                .fill(Theme.Colors.data.opacity(0.15))
                                             RoundedRectangle(cornerRadius: 4)
-                                                .fill(Palette.accent)
+                                                .fill(Theme.Colors.data)
                                                 .frame(width: max(width, CGFloat(fraction > 0 ? 4 : 0)))
                                         }
                                     }
                                     .frame(height: 10)
                                     Text("\(day.calories.formatted()) 千卡")
                                         .font(.subheadline.monospacedDigit())
-                                        .foregroundStyle(Palette.accent)
+                                        .foregroundStyle(Theme.Colors.data)
                                         .frame(minWidth: 84, alignment: .trailing)
                                 }
                                 .accessibilityElement(children: .ignore)
@@ -928,9 +943,9 @@ private struct MacNutritionView: View {
                 ForEach(today.sorted { $0.loggedAt > $1.loggedAt }) { entry in
                     Surface {
                         HStack {
-                            Text(entry.meal).foregroundStyle(Palette.accent).frame(width: 60, alignment: .leading)
+                            Text(entry.meal).foregroundStyle(Theme.Colors.data).frame(width: 60, alignment: .leading)
                             Text(entry.name)
-                            Text(entry.portion).foregroundStyle(Palette.muted)
+                            Text(entry.portion).foregroundStyle(Theme.Colors.textMuted)
                             Spacer()
                             Text("\(Int(entry.calories)) 千卡")
                         }
@@ -938,6 +953,73 @@ private struct MacNutritionView: View {
                 }
             }
             .padding(30).frame(maxWidth: 1000)
+        }
+        .sheet(isPresented: $editingGoals) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                Text("每日营养目标").themeText(.title2)
+                Text("填 0 可关闭对应目标。").themeText(.caption)
+                TextField("热量 · 千卡", value: $calorieGoal, format: .number)
+                TextField("蛋白质 · g", value: $proteinGoal, format: .number)
+                HStack {
+                    Button("取消") { editingGoals = false }
+                    Button("保存目标") {
+                        do {
+                            var preferences = store.state.preferences
+                            preferences.calorieGoal = calorieGoal
+                            preferences.proteinGoal = proteinGoal
+                            try store.setPreferences(preferences)
+                            editingGoals = false
+                        } catch { notice = error.localizedDescription; editingGoals = false }
+                    }
+                    .disabled(!(0...10_000).contains(calorieGoal) || !(0...1_000).contains(proteinGoal))
+                    .buttonStyle(.themePrimary(.small))
+                }
+            }
+            .padding(Theme.Spacing.xl)
+            .frame(width: 320)
+        }
+        .alert("无法保存", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
+            Button("好", role: .cancel) {}
+        } message: { Text(notice ?? "") }
+    }
+
+    private var goalsCard: some View {
+        Surface {
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                ThemeSectionHeader(title: "每日营养目标", actionTitle: "设置目标", action: {
+                    calorieGoal = store.state.preferences.calorieGoal
+                    proteinGoal = store.state.preferences.proteinGoal
+                    editingGoals = true
+                })
+                NutritionGoalsSummary(progress: store.nutritionProgress())
+            }
+        }
+    }
+
+    @ViewBuilder private var quickFoodCard: some View {
+        let quickFoods = frequent ? store.frequentFoods() : store.recentFoods()
+        if !quickFoods.isEmpty {
+            Surface {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("快速记录 · \(meal)").themeText(.title3)
+                    Picker("常用食物", selection: $frequent) {
+                        Text("最近吃过").tag(false)
+                        Text("常吃").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    ForEach(quickFoods) { food in
+                        HStack {
+                            Text("\(food.name) · \(food.portion)")
+                            Spacer()
+                            Button("记录") {
+                                do {
+                                    _ = try store.relogFood(food, meal: meal)
+                                } catch { notice = error.localizedDescription }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -973,32 +1055,32 @@ private struct MacBodyView: View {
                     Surface {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                                Text("\(latest.weight.formatted()) kg")
+                                Text("\(store.state.preferences.weightUnit.format(kilograms: latest.weight))")
                                     .font(.system(size: 26, weight: .bold))
-                                    .foregroundStyle(Palette.accent)
+                                    .foregroundStyle(Theme.Colors.data)
                                 if let delta = trend.weightDelta {
                                     Text(weightDeltaLabel(delta))
                                         .font(.system(size: 16, weight: .semibold))
-                                        .foregroundStyle(delta == 0 ? Palette.muted : Palette.accent)
+                                        .foregroundStyle(delta == 0 ? Theme.Colors.textMuted : Theme.Colors.data)
                                 }
                             }
                             Text("最近体重 · \(latest.recordedAt.formatted(date: .abbreviated, time: .omitted))")
                                 .font(.caption)
-                                .foregroundStyle(Palette.muted)
+                                .foregroundStyle(Theme.Colors.textMuted)
                         }
                     }
                 }
                 if trend.points.count >= 2 {
-                    MacMetricChart(title: "体重趋势", unit: "kg", samples: trend.points) { $0.weight }
+                    MacMetricChart(title: "体重趋势", unit: store.state.preferences.weightUnit.symbol, samples: trend.points) { store.state.preferences.weightUnit.fromKilograms($0.weight) }
                 }
                 if trend.fatPoints.count >= 2 {
                     MacMetricChart(title: "体脂率趋势", unit: "%", samples: trend.fatPoints) { $0.bodyFat ?? 0 }
                 }
                 Surface {
                     HStack {
-                        TextField("体重 kg", value: $weight, format: .number)
+                        TextField("体重 \(store.state.preferences.weightUnit.symbol)", value: $weight, format: .number)
                         TextField("体脂率 %", value: $bodyFat, format: .number)
-                        Button("记录") { store.addBodyEntry(weight: weight, bodyFat: bodyFat > 0 ? bodyFat : nil) }
+                        Button("记录") { store.addBodyEntry(weight: store.state.preferences.weightUnit.toKilograms(weight), bodyFat: bodyFat > 0 ? bodyFat : nil) }
                             .disabled(weight <= 0)
                     }
                 }
@@ -1007,8 +1089,8 @@ private struct MacBodyView: View {
                         HStack {
                             Text(entry.recordedAt.formatted(date: .abbreviated, time: .shortened))
                             Spacer()
-                            Text("\(entry.weight.formatted()) kg")
-                            if let fat = entry.bodyFat { Text("体脂 \(fat.formatted()) %").foregroundStyle(Palette.muted) }
+                            Text("\(store.state.preferences.weightUnit.format(kilograms: entry.weight))")
+                            if let fat = entry.bodyFat { Text("体脂 \(fat.formatted()) %").foregroundStyle(Theme.Colors.textMuted) }
                         }
                     }
                 }
@@ -1019,8 +1101,8 @@ private struct MacBodyView: View {
 
     private func weightDeltaLabel(_ delta: Double) -> String {
         if delta == 0 { return "与上次相同" }
-        let magnitude = abs(delta).formatted(.number.precision(.fractionLength(0...2)))
-        return delta > 0 ? "+\(magnitude) kg" : "-\(magnitude) kg"
+        let magnitude = store.state.preferences.weightUnit.format(kilograms: abs(delta))
+        return delta > 0 ? "+\(magnitude)" : "-\(magnitude)"
     }
 }
 
@@ -1043,7 +1125,7 @@ private struct MacMetricChart: View {
                         x: .value("日期", point.recordedAt),
                         y: .value(title, value(point))
                     )
-                    .foregroundStyle(Palette.accent)
+                    .foregroundStyle(Theme.Colors.data)
                     .accessibilityLabel(point.recordedAt.formatted(date: .abbreviated, time: .omitted))
                     .accessibilityValue("\(value(point).formatted()) \(unit)")
                 }
@@ -1057,5 +1139,30 @@ private struct MacMetricChart: View {
                 .frame(height: 150)
             }
         }
+    }
+}
+
+private struct WeightField: View {
+    let kilograms: Double
+    let unit: WeightUnit
+    let save: (Double) -> Void
+    @State private var draft: String?
+    @FocusState private var editing: Bool
+
+    var body: some View {
+        let formatted = unit.format(kilograms: kilograms, includeUnit: false)
+        TextField(unit.symbol, text: Binding(get: { draft ?? formatted }, set: { draft = $0 }))
+            .accessibilityLabel("重量，\(unit.label)")
+            .focused($editing)
+            .onSubmit { commit(original: formatted) }
+            .onChange(of: editing) { _, focused in
+                if !focused { commit(original: formatted) }
+            }
+    }
+
+    private func commit(original: String) {
+        defer { draft = nil }
+        guard let draft, draft != original, let weight = unit.parseKilograms(draft), weight <= 2000 else { return }
+        save(weight)
     }
 }

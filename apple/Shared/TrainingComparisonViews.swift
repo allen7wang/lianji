@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PreviousExerciseSetsView: View {
+    @EnvironmentObject private var store: TrainingStore
     let reference: PreviousExerciseSets
 
     var body: some View {
@@ -26,11 +27,12 @@ struct PreviousExerciseSetsView: View {
     }
 
     private func setLabel(_ set: TrainingSet) -> String {
-        set.unit == .seconds ? set.targetLabel : "\(set.weight.formatted()) kg × \(set.targetLabel)"
+        set.unit == .seconds ? set.targetLabel : "\(store.state.preferences.weightUnit.format(kilograms: set.weight)) × \(set.targetLabel)"
     }
 }
 
 struct PlanWorkoutComparisonView: View {
+    @EnvironmentObject private var store: TrainingStore
     let comparison: PlanWorkoutComparison
 
     var body: some View {
@@ -41,7 +43,7 @@ struct PlanWorkoutComparisonView: View {
                 Text("上次 → 本次").foregroundStyle(.secondary)
                 Text("完成组 \(previous.completedSets) → \(current.completedSets)")
                 if previous.volume > 0 || current.volume > 0 {
-                    Text("容量 \(number(previous.volume)) → \(number(current.volume)) kg × 次")
+                    Text("容量 \(number(store.state.preferences.weightUnit.fromKilograms(previous.volume))) → \(store.state.preferences.weightUnit.format(kilograms: current.volume)) × 次")
                 }
                 if previous.timedSeconds > 0 || current.timedSeconds > 0 {
                     Text("计时 \(number(previous.timedSeconds)) → \(number(current.timedSeconds)) 秒")

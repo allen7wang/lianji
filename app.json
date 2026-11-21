@@ -3,24 +3,29 @@
     "name": "练迹",
     "slug": "lianji",
     "scheme": "lianji",
-    "version": "2.10.0",
+    "version": "3.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.allenwang.lianji",
-      "buildNumber": "18"
+      "buildNumber": "19"
     },
     "android": {
       "package": "com.allenwang.lianji",
-      "versionCode": 18,
+      "versionCode": 19,
       "adaptiveIcon": {
-        "backgroundColor": "#0C1014",
+        "backgroundColor": "#FF5A1F",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.health.WRITE_EXERCISE",
+        "android.permission.health.WRITE_WEIGHT",
+        "android.permission.health.WRITE_BODY_FAT"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -37,10 +42,42 @@
         {
           "ios": {
             "enableSceneSupport": true
+          },
+          "android": {
+            "minSdkVersion": 26
           }
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "backgroundColor": "#F4F2EE",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#0E0E0F"
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#FF5A1F"
+        }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "background": false,
+          "NSHealthShareUsageDescription": "练迹会检查写入健康数据的权限。",
+          "NSHealthUpdateUsageDescription": "允许练迹将完成的训练、体重和体脂率写入「健康」。"
+        }
+      ],
+      "react-native-health-connect"
     ],
     "experiments": {
       "typedRoutes": true,

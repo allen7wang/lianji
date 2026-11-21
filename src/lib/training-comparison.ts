@@ -1,4 +1,4 @@
-import { volumeOf, type TrainingUnit, type Workout, type WorkoutSet } from './types';
+import { isWarmup, volumeOf, type TrainingUnit, type Workout, type WorkoutSet } from './types';
 
 export type PreviousExerciseTraining = { workout: Workout; sets: WorkoutSet[] };
 export type PreviousExerciseSets = Partial<Record<TrainingUnit, PreviousExerciseTraining>>;
@@ -32,7 +32,8 @@ function earlierWorkouts(current: Workout, workouts: Workout[]) {
 function completedSetsByWorkout(workouts: Workout[], sets: WorkoutSet[]) {
   const byWorkout = new Map(workouts.map(workout => [workout.id, [] as WorkoutSet[]]));
   for (const set of sets) {
-    if (set.completed && Number.isFinite(set.reps) && set.reps > 0) byWorkout.get(set.workoutId)?.push(set);
+    // Warm-ups never serve as a reference or count toward a comparison.
+    if (set.completed && !isWarmup(set) && Number.isFinite(set.reps) && set.reps > 0) byWorkout.get(set.workoutId)?.push(set);
   }
   return byWorkout;
 }
@@ -63,15 +64,14 @@ export function findPreviousExerciseSets(current: Workout, workouts: Workout[], 
   return byExercise;
 }
 
-export function findPreviousSetMatches(current: Workout, workouts: Workout[], sets: WorkoutSet[]) {
+/** Pairs each unfinished working set with the same-position set of the last comparable session. */
+export function matchSetsToReferences(currentSets: WorkoutSet[], references: Map<string, PreviousExerciseSets>) {
   const matches = new Map<string, WorkoutSet>();
-  if (current.endedAt) return matches;
-  const references = findPreviousExerciseSets(current, workouts, sets);
   const positions = new Map<string, number>();
-  const currentSets = sets.filter(set => set.workoutId === current.id)
+  const ordered = currentSets.filter(set => !isWarmup(set))
     .sort((a, b) => a.sortOrder - b.sortOrder || a.setNumber - b.setNumber || a.id.localeCompare(b.id));
 
-  for (const set of currentSets) {
+  for (const set of ordered) {
     const unit: TrainingUnit = set.unit === 'seconds' ? 'seconds' : 'reps';
     const key = `${set.exerciseId}:${unit}`;
     const position = positions.get(key) ?? 0;
@@ -84,6 +84,11 @@ export function findPreviousSetMatches(current: Workout, workouts: Workout[], se
     }
   }
   return matches;
+}
+
+export function findPreviousSetMatches(current: Workout, workouts: Workout[], sets: WorkoutSet[]) {
+  if (current.endedAt) return new Map<string, WorkoutSet>();
+  return matchSetsToReferences(sets.filter(set => set.workoutId === current.id), findPreviousExerciseSets(current, workouts, sets));
 }
 
 function totals(sets: WorkoutSet[]): WorkoutTotals {

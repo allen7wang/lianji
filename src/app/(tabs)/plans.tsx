@@ -1,17 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useData } from '@/lib/data';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { useActions, useActiveWorkout, useLibrary } from '@/lib/data';
 import { prioritizePlans } from '@/lib/plan-library';
 import { Badge, Button, Card, Empty, Header, IconButton, Page } from '@/ui/components';
 import { programCategories, programSports, templatePlanId, trainingPrograms, type TrainingProgram } from '@/lib/plan-templates';
 import { targetLabel } from '@/lib/types';
 import { PlanTemplatePreview } from '@/ui/plan-template-preview';
-import { C } from '@/ui/theme';
+import { makeStyles, useTheme } from '@/ui/theme';
 
 export default function Plans() {
-  const { plans, planItems, exercises, workouts, schedule, favoritePlanIds, setPlanFavorite, startWorkout, deleteWorkout, deletePlan } = useData();
+  const styles = useStyles();
+  const { c } = useTheme();
+  const { plans, planItems, exercises, schedule, favoritePlanIds } = useLibrary();
+  const { workout: activeWorkout } = useActiveWorkout();
+  const { setPlanFavorite, startWorkout, deleteWorkout, deletePlan } = useActions();
   const [tab, setTab] = useState<'my' | 'templates'>('my');
   const [planFilter, setPlanFilter] = useState<'all' | 'favorites'>('all');
   const [favoriteSaving, setFavoriteSaving] = useState<Set<string>>(() => new Set());
@@ -44,7 +48,7 @@ export default function Plans() {
     }
   }
   async function begin(planId: string, name: string) {
-    const conflict = workouts.find(item => !item.endedAt && item.planId !== planId);
+    const conflict = activeWorkout?.planId !== planId ? activeWorkout : null;
     if (!conflict) {
       await startWorkout(planId);
       router.push('/workout');
@@ -103,7 +107,7 @@ export default function Plans() {
           <View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View>
           <View style={{ flex: 1 }}><Text style={styles.name}>{plan.name}</Text><Text style={styles.note}>{plan.note || `${items.length} 个动作`}</Text></View>
           <Pressable accessibilityRole="checkbox" accessibilityLabel={`${plan.name}，常用计划`} accessibilityHint="切换常用标记" accessibilityState={{ checked: favorite, disabled: savingFavorite, busy: savingFavorite }} disabled={savingFavorite} onPress={() => { void toggleFavorite(plan.id); }} style={[styles.favorite, favorite && styles.favoriteActive]}>
-            {savingFavorite ? <ActivityIndicator color={C.accent} size="small" /> : <Ionicons name={favorite ? 'star' : 'star-outline'} color={favorite ? C.accent : C.muted} size={22} />}
+            {savingFavorite ? <ActivityIndicator color={c.accent} size="small" /> : <Ionicons name={favorite ? 'star' : 'star-outline'} color={favorite ? c.accent : c.textMuted} size={22} />}
           </Pressable>
         </View>
         <View style={styles.divider} />
@@ -115,7 +119,7 @@ export default function Plans() {
         <View style={styles.actions}>
           <Button label="开始训练" icon="play" onPress={() => begin(plan.id, plan.name)} style={styles.planAction} />
           <IconButton icon="calendar-outline" label={`安排${plan.name}的日期`} onPress={() => router.push({ pathname: '/training-schedule', params: { planId: plan.id } })} />
-          <IconButton icon="trash-outline" label={`删除${plan.name}`} color={C.faint} onPress={() => confirmDelete(plan.id, plan.name)} />
+          <IconButton icon="trash-outline" label={`删除${plan.name}`} color={c.textFaint} onPress={() => confirmDelete(plan.id, plan.name)} />
         </View>
       </Card>;
     })}
@@ -124,20 +128,20 @@ export default function Plans() {
   </Page>;
 }
 
-const styles = StyleSheet.create({
-  intro: { color: C.muted, fontSize: 14, lineHeight: 21, marginTop: -6 }, top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  index: { width: 42, height: 42, borderRadius: 13, backgroundColor: C.accentDark, alignItems: 'center', justifyContent: 'center' }, indexText: { color: C.accent, fontSize: 14, fontWeight: '800' },
-  name: { color: C.text, fontSize: 17, fontWeight: '700' }, note: { color: C.muted, fontSize: 12, marginTop: 5 }, divider: { height: 1, backgroundColor: C.line },
-  exerciseRow: { flexDirection: 'row', alignItems: 'center', gap: 10 }, exerciseNumber: { color: C.faint, fontSize: 12, width: 16 }, exerciseName: { color: C.text, fontSize: 13, flex: 1 }, exerciseSets: { color: C.muted, fontSize: 12 }, more: { color: C.faint, fontSize: 12 },
+const useStyles = makeStyles(c => ({
+  intro: { color: c.textMuted, fontSize: 14, lineHeight: 21, marginTop: -6 }, top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  index: { width: 42, height: 42, borderRadius: 13, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' }, indexText: { color: c.accent, fontSize: 14, fontWeight: '800' },
+  name: { color: c.text, fontSize: 17, fontWeight: '700' }, note: { color: c.textMuted, fontSize: 12, marginTop: 5 }, divider: { height: 1, backgroundColor: c.border },
+  exerciseRow: { flexDirection: 'row', alignItems: 'center', gap: 10 }, exerciseNumber: { color: c.textFaint, fontSize: 12, width: 16 }, exerciseName: { color: c.text, fontSize: 13, flex: 1 }, exerciseSets: { color: c.textMuted, fontSize: 12 }, more: { color: c.textFaint, fontSize: 12 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   secondaryActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   planAction: { flex: 1, minWidth: 0, paddingHorizontal: 8 },
   filters: { flexDirection: 'row', gap: 8 },
-  filter: { minHeight: 44, paddingHorizontal: 17, justifyContent: 'center', borderRadius: 15, borderWidth: 1, borderColor: C.line, backgroundColor: C.elevated },
-  filterActive: { backgroundColor: C.accent, borderColor: C.accent },
-  filterText: { color: C.muted, fontSize: 13, fontWeight: '700' },
-  filterTextActive: { color: C.bg },
-  favorite: { width: 44, height: 44, borderRadius: 13, backgroundColor: C.elevated, justifyContent: 'center', alignItems: 'center' },
-  favoriteActive: { backgroundColor: C.accentDark },
-  favoriteError: { color: C.danger, fontSize: 13, lineHeight: 18 },
-});
+  filter: { minHeight: 44, paddingHorizontal: 17, justifyContent: 'center', borderRadius: 15, borderWidth: 1, borderColor: c.border, backgroundColor: c.surfaceAlt },
+  filterActive: { backgroundColor: c.accent, borderColor: c.accent },
+  filterText: { color: c.textMuted, fontSize: 13, fontWeight: '700' },
+  filterTextActive: { color: c.onAccent },
+  favorite: { width: 44, height: 44, borderRadius: 13, backgroundColor: c.surfaceAlt, justifyContent: 'center', alignItems: 'center' },
+  favoriteActive: { backgroundColor: c.accentSoft },
+  favoriteError: { color: c.danger, fontSize: 13, lineHeight: 18 },
+}));

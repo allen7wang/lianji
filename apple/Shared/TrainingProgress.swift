@@ -35,7 +35,7 @@ struct TrainingProgress {
     func exerciseOptions(_ exercises: [Exercise]) -> [Exercise] {
         var performedIds = Set<String>()
         for workout in workouts {
-            performedIds.formUnion(workout.completedSets.map(\.exerciseId))
+            performedIds.formUnion(workout.completedWorkingSets.map(\.exerciseId))
         }
         return exercises.filter { performedIds.contains($0.id) }
     }
@@ -46,7 +46,7 @@ struct TrainingProgress {
         var recentByMetric: [ProgressMetric: [ExerciseSession]] = [:]
         for workout in workouts {
             var session = ExerciseRecords()
-            for set in workout.completedSets where set.exerciseId == id {
+            for set in workout.completedWorkingSets where set.exerciseId == id {
                 records.add(set)
                 session.add(set)
             }
@@ -104,13 +104,17 @@ struct ExerciseSession: Identifiable {
 
 enum ProgressMetric: String, CaseIterable, Identifiable {
     case weight = "最大重量"
+    case estimatedOneRepMax = "估算 1RM"
     case reps = "最多次数"
     case seconds = "最长时长"
 
     var id: Self { self }
-    var unit: String {
+    var unit: String { unit(.kg) }
+    var isWeight: Bool { self == .weight || self == .estimatedOneRepMax }
+
+    func unit(_ weightUnit: WeightUnit) -> String {
         switch self {
-        case .weight: "kg"
+        case .weight, .estimatedOneRepMax: weightUnit.symbol
         case .reps: "次"
         case .seconds: "秒"
         }
@@ -119,17 +123,26 @@ enum ProgressMetric: String, CaseIterable, Identifiable {
 
 struct ExerciseRecords {
     private(set) var heaviestSet: TrainingSet?
+    /// 估算 1RM 最高的那一组。
+    private(set) var bestEstimatedOneRepMaxSet: TrainingSet?
+    /// 最高估算 1RM（kg，未取整）。
+    private(set) var bestEstimatedOneRepMax: Double?
     private var reps = 0
     private var seconds = 0
     var metrics: [ProgressMetric] { ProgressMetric.allCases.filter { value($0) != nil } }
 
+    /// 热身组与未完成组不计入纪录。
     mutating func add(_ set: TrainingSet) {
-        guard set.reps > 0 else { return }
+        guard set.reps > 0, set.kind == .working, set.completed else { return }
         if set.unit == .seconds {
             seconds = max(seconds, set.reps)
             return
         }
         reps = max(reps, set.reps)
+        if let estimate = StrengthMath.estimatedOneRepMax(set), estimate > (bestEstimatedOneRepMax ?? 0) {
+            bestEstimatedOneRepMax = estimate
+            bestEstimatedOneRepMaxSet = set
+        }
         guard set.weight > 0 else { return }
         if let best = heaviestSet,
            best.weight > set.weight || (best.weight == set.weight && best.reps >= set.reps) { return }
@@ -139,17 +152,25 @@ struct ExerciseRecords {
     func value(_ metric: ProgressMetric) -> Double? {
         switch metric {
         case .weight: heaviestSet?.weight
+        case .estimatedOneRepMax: bestEstimatedOneRepMax
         case .reps: reps > 0 ? Double(reps) : nil
         case .seconds: seconds > 0 ? Double(seconds) : nil
         }
     }
 
-    func label(_ metric: ProgressMetric) -> String? {
+    func label(_ metric: ProgressMetric) -> String? { label(metric, unit: .kg) }
+
+    func label(_ metric: ProgressMetric, unit: WeightUnit) -> String? {
         guard let value = value(metric) else { return nil }
-        if metric == .weight, let heaviestSet {
-            return "\(value.formatted()) kg × \(heaviestSet.reps) 次"
+        switch metric {
+        case .weight:
+            guard let heaviestSet else { return nil }
+            return "\(unit.format(kilograms: value)) × \(heaviestSet.reps) 次"
+        case .estimatedOneRepMax:
+            return unit.formatEstimatedOneRepMax(kilograms: value)
+        case .reps, .seconds:
+            return "\(WeightUnit.trimmed(value)) \(metric.unit(unit))"
         }
-        return "\(value.formatted()) \(metric.unit)"
     }
 }
 
@@ -201,7 +222,7 @@ struct TrainingComparison {
     }
 
     private func comparableSets(in workout: Workout) -> [TrainingSet] {
-        workout.sets.filter { $0.completed && $0.reps > 0 }
+        workout.sets.filter { $0.completed && $0.kind == .working && $0.reps > 0 }
     }
 }
 
@@ -222,12 +243,13 @@ struct PreviousExerciseSets: Identifiable {
 
     var id: TrainingUnit { unit }
 
+    /// 热身组不参与对照与沿用：当前行须为正式组，序号只在正式组中计算。
     func reusableSet(for set: TrainingSet, in current: Workout) -> PreviousSetReference? {
-        guard current.endedAt == nil, !set.completed, (set.unit ?? .reps) == unit else { return nil }
-        let rows = current.sets.filter { $0.exerciseId == set.exerciseId && ($0.unit ?? .reps) == unit }
+        guard current.endedAt == nil, !set.completed, set.kind == .working, (set.unit ?? .reps) == unit else { return nil }
+        let rows = current.sets.filter { $0.exerciseId == set.exerciseId && $0.kind == .working && ($0.unit ?? .reps) == unit }
         guard let ordinal = rows.firstIndex(where: { $0.id == set.id }), sets.indices.contains(ordinal) else { return nil }
         let previous = sets[ordinal]
-        guard previous.completed, previous.exerciseId == set.exerciseId, (previous.unit ?? .reps) == unit,
+        guard previous.completed, previous.kind == .working, previous.exerciseId == set.exerciseId, (previous.unit ?? .reps) == unit,
               previous.weight.isFinite,
               (0...2000).contains(previous.weight), (1...1000).contains(previous.reps) else { return nil }
         return PreviousSetReference(workoutId: workout.id, set: previous)

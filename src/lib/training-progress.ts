@@ -1,6 +1,6 @@
-import type { Workout, WorkoutSet } from './types';
+import { isWarmup, type Workout, type WorkoutSet } from './types';
 
-export type ProgressMetric = 'weight' | 'reps' | 'seconds' | 'volume';
+export type ProgressMetric = 'weight' | 'reps' | 'seconds' | 'volume' | 'e1rm';
 
 export type TrainingSession = {
   workout: Workout;
@@ -19,6 +19,7 @@ export type ExerciseProgressPoint = {
   reps?: number;
   seconds?: number;
   volume?: number;
+  e1rm?: number;
 };
 
 export type ExerciseProgress = {
@@ -27,8 +28,14 @@ export type ExerciseProgress = {
   best: Partial<Record<ProgressMetric, ExerciseProgressPoint>>;
 };
 
-const metrics: ProgressMetric[] = ['weight', 'reps', 'seconds', 'volume'];
+const metrics: ProgressMetric[] = ['weight', 'reps', 'seconds', 'volume', 'e1rm'];
 const recordMetrics = ['weight', 'reps', 'seconds'] as const;
+
+/** Epley estimate; only 1–12 rep sets with load are meaningful. */
+export function estimateOneRepMax(weight: number, reps: number) {
+  if (!Number.isFinite(weight) || weight <= 0 || !Number.isInteger(reps) || reps < 1 || reps > 12) return undefined;
+  return reps === 1 ? weight : weight * (1 + reps / 30);
+}
 
 export function localDayKey(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -84,6 +91,8 @@ export function buildTrainingProgress(workouts: Workout[], sets: WorkoutSet[]) {
     let timedSeconds = 0;
 
     for (const set of completed) {
+      // Warm-ups mark the day as trained but never count toward records or volume.
+      if (isWarmup(set)) continue;
       let point = points.get(set.exerciseId);
       if (!point) {
         point = { workout, day };
@@ -100,6 +109,8 @@ export function buildTrainingProgress(workouts: Workout[], sets: WorkoutSet[]) {
         const setVolume = set.weight * set.reps;
         volume += setVolume;
         point.volume = (point.volume ?? 0) + setVolume;
+        const e1rm = estimateOneRepMax(set.weight, set.reps);
+        if (e1rm !== undefined && e1rm > (point.e1rm ?? 0)) point.e1rm = e1rm;
         if (set.weight > (point.weight ?? 0) ||
             (set.weight === point.weight && set.reps > (point.weightReps ?? 0))) {
           point.weight = set.weight;

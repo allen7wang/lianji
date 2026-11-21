@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useData } from '@/lib/data';
+import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { useLibrary, useHistory } from '@/lib/data';
 import { buildTrainingProgress, buildWeeklyTrainingActivity, localDayKey, mondayOf, type TrainingSession } from '@/lib/training-progress';
+import { formatVolume } from '@/lib/units';
+import { toDisplayWeight } from '@/ui/set-display';
 import { dateLabel, durationLabel } from '@/lib/types';
 import { useTrainingDate } from '@/lib/use-training-date';
-import { Card, Empty, Header, Metric, Page, SectionTitle } from '@/ui/components';
-import { C, space } from '@/ui/theme';
-import { ProgressTabs, TrainingCalendar, type CalendarDay } from '@/ui/training-progress-calendar';
+import { Card, Empty, Header, Metric, Page, SectionTitle, Segmented } from '@/ui/components';
+import { makeStyles, useTheme, space } from '@/ui/theme';
+import { TrainingCalendar, type CalendarDay } from '@/ui/training-progress-calendar';
 import { TrainingProgressChart } from '@/ui/training-progress-chart';
 import { ExerciseProgressView } from '@/ui/training-progress-exercise';
 import { WeeklyTrainingGoal } from '@/ui/weekly-training-goal';
@@ -17,7 +19,7 @@ type ProgressView = 'calendar' | 'exercise';
 type Period = 'week' | 'month' | 'all';
 const views = [{ value: 'calendar', label: '训练日历' }, { value: 'exercise', label: '动作进步' }] as const;
 const periods = [{ value: 'week', label: '周' }, { value: 'month', label: '月' }, { value: 'all', label: '全部' }] as const;
-const formatVolume = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 1, notation: 'compact' });
+
 
 function plusDays(date: Date, days: number) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days, 12);
@@ -34,7 +36,7 @@ function adjacentPeriod(start: Date, period: Exclude<Period, 'all'>, step: -1 | 
 function periodLabel(start: Date, period: Exclude<Period, 'all'>) {
   if (period === 'month') return `${start.getFullYear()}年${start.getMonth() + 1}月`;
   const end = plusDays(start, 6);
-  return `${start.getFullYear()}年${dateLabel(start.toISOString())} – ${end.getFullYear() !== start.getFullYear() ? `${end.getFullYear()}年` : ''}${dateLabel(end.toISOString())}`;
+  return [start, end].map(date => date.toLocaleDateString('zh-CN')).join(' – ');
 }
 
 function openWorkout(id: string) {
@@ -49,7 +51,10 @@ function timedLabel(totalSeconds: number) {
 }
 
 export default function History() {
-  const { ready, workouts, workoutSets, exercises } = useData();
+  const styles = useStyles();
+  const { c } = useTheme();
+  const { ready, exercises, preferences: { weightUnit } } = useLibrary();
+  const { workouts, sets: workoutSets } = useHistory();
   const { exerciseId: requested } = useLocalSearchParams<{ exerciseId?: string | string[] }>();
   const requestedId = Array.isArray(requested) ? requested[0] : requested;
   const [view, setView] = useState<ProgressView>('calendar');
@@ -96,7 +101,7 @@ export default function History() {
   const canGoBack = !!start && sessions.length > 0 && sessions[sessions.length - 1].day < startKey;
   const canGoForward = !!start && period !== 'all' && start < periodStart(today, period);
   const dayLabel = selectedDay ? dateLabel(focusDate.toISOString()) : null;
-  const capacityPoints = selectedDay ? [] : shown.slice(0, 6).reverse().map(({ workout, volume }) => ({ workout, value: volume }));
+  const capacityPoints = selectedDay ? [] : shown.slice(0, 6).reverse().map(({ workout, volume }) => ({ workout, value: toDisplayWeight(volume, weightUnit), label: formatVolume(volume, weightUnit) }));
 
   function changeView(next: ProgressView) {
     if (requestedId) {
@@ -108,14 +113,14 @@ export default function History() {
 
   const header = <View style={styles.header}>
     <Header eyebrow="YOUR PROGRESS" title="训练进度" />
-    <ProgressTabs options={views} value={currentView} onChange={changeView} />
-    {!ready ? <View style={styles.loading}><ActivityIndicator color={C.accent} /><Text style={styles.help}>正在加载训练记录</Text></View> : currentView === 'exercise' ? <ExerciseProgressView selected={selectedExercise} options={exerciseOptions} progressByExercise={byExercise} onOpenWorkout={openWorkout} onSelect={id => {
+    <Segmented options={views} value={currentView} onChange={changeView} />
+    {!ready ? <View style={styles.loading}><ActivityIndicator color={c.accent} /><Text style={styles.help}>正在加载训练记录</Text></View> : currentView === 'exercise' ? <ExerciseProgressView selected={selectedExercise} options={exerciseOptions} progressByExercise={byExercise} onOpenWorkout={openWorkout} onSelect={id => {
       setView('exercise');
       setExerciseId(id);
       if (requestedId) router.setParams({ exerciseId: undefined });
     }} /> : <>
       <WeeklyTrainingGoal weeks={weeks} showRecent />
-      <ProgressTabs options={periods} value={period} onChange={next => {
+      <Segmented options={periods} value={period} onChange={next => {
         if (next === period) return;
         setPeriod(next);
         setSelectedDay(null);
@@ -133,7 +138,7 @@ export default function History() {
       <PeriodSummary sessions={shown} title={dayLabel ? `${dayLabel}汇总` : period === 'all' ? '全部训练汇总' : '时段汇总'} />
       {capacityPoints.some(point => point.value > 0) ? <>
         <SectionTitle title="训练容量趋势" />
-        <TrainingProgressChart description={`最近 ${capacityPoints.length} 次训练`} points={capacityPoints} unit="kg × 次" onOpenWorkout={openWorkout} />
+        <TrainingProgressChart description={`最近 ${capacityPoints.length} 次训练`} points={capacityPoints} unit={`${weightUnit} × 次`} onOpenWorkout={openWorkout} />
       </> : null}
       <View style={styles.listHeading}>
         <SectionTitle title={dayLabel ? `${dayLabel}训练记录` : '训练记录'} />
@@ -148,6 +153,8 @@ export default function History() {
 }
 
 function PeriodSummary({ sessions, title }: { sessions: TrainingSession[]; title: string }) {
+  const styles = useStyles();
+  const { preferences: { weightUnit } } = useLibrary();
   let totalSets = 0;
   let totalVolume = 0;
   let totalTimedSeconds = 0;
@@ -162,42 +169,44 @@ function PeriodSummary({ sessions, title }: { sessions: TrainingSession[]; title
     <Text style={styles.summaryTitle} accessibilityRole="header">{title}</Text>
     <View style={styles.metrics}><Metric value={String(sessions.length)} label="训练次数" accent /><Metric value={String(trainingDays.size)} label="训练天数" /></View>
     <View style={styles.divider} />
-    <View style={styles.metrics}><Metric value={String(totalSets)} label="完成组数" /><Metric value={formatVolume.format(totalVolume)} label="训练容量 · kg × 次" /></View>
+    <View style={styles.metrics}><Metric value={String(totalSets)} label="完成组数" /><Metric value={formatVolume(totalVolume, weightUnit)} label={`训练容量 · ${weightUnit} × 次`} /></View>
     {totalTimedSeconds > 0 ? <Text style={styles.help}>计时组总时长 · {timedLabel(totalTimedSeconds)}</Text> : null}
   </Card>;
 }
 
 function WorkoutRow({ session }: { session: TrainingSession }) {
+  const styles = useStyles();
+  const { c } = useTheme();
   const { workout, completedSets, exerciseCount } = session;
   return <Pressable accessibilityRole="button" accessibilityHint="查看训练明细" onPress={() => openWorkout(workout.id)} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
     <Card style={styles.workout}>
-      <View style={styles.icon}><Ionicons name="checkmark" size={20} color={C.accent} /></View>
+      <View style={styles.icon}><Ionicons name="checkmark" size={20} color={c.accent} /></View>
       <View style={styles.rowInfo}>
         <Text style={styles.workoutName}>{workout.name}</Text>
         <Text style={styles.workoutMeta}>{dateLabel(workout.startedAt)} · {durationLabel(workout.startedAt, workout.endedAt)} · {exerciseCount} 个动作 · {completedSets} 组</Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={C.muted} />
+      <Ionicons name="chevron-forward" size={18} color={c.textMuted} />
     </Card>
   </Pressable>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   page: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: space.page, paddingBottom: 42 },
   header: { gap: 16 },
   loading: { minHeight: 180, gap: 12, alignItems: 'center', justifyContent: 'center' },
-  help: { color: C.muted, fontSize: 13 },
+  help: { color: c.textMuted, fontSize: 13 },
   summary: { gap: 14 },
-  summaryTitle: { color: C.text, fontSize: 16, fontWeight: '800' },
+  summaryTitle: { color: c.text, fontSize: 16, fontWeight: '800' },
   metrics: { flexDirection: 'row', gap: 12 },
-  divider: { height: 1, backgroundColor: C.line },
+  divider: { height: 1, backgroundColor: c.border },
   listHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 4 },
   reset: { minHeight: 44, justifyContent: 'center', paddingLeft: 12 },
-  resetLabel: { color: C.accent, fontSize: 13, fontWeight: '700' },
+  resetLabel: { color: c.accent, fontSize: 13, fontWeight: '700' },
   row: { marginTop: 10 },
   pressed: { opacity: 0.7 },
   workout: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  icon: { width: 42, height: 42, borderRadius: 13, backgroundColor: C.accentDark, justifyContent: 'center', alignItems: 'center' },
+  icon: { width: 42, height: 42, borderRadius: 13, backgroundColor: c.accentSoft, justifyContent: 'center', alignItems: 'center' },
   rowInfo: { flex: 1, gap: 5 },
-  workoutName: { color: C.text, fontSize: 15, fontWeight: '700' },
-  workoutMeta: { color: C.muted, fontSize: 12, lineHeight: 17 },
-});
+  workoutName: { color: c.text, fontSize: 15, fontWeight: '700' },
+  workoutMeta: { color: c.textMuted, fontSize: 12, lineHeight: 17 },
+}));

@@ -8,7 +8,8 @@ struct LianjiWatchApp: App {
         WindowGroup {
             WatchHomeView()
                 .environmentObject(store)
-                .tint(Color(red: 0.725, green: 0.953, blue: 0.416))
+                .tint(Theme.Colors.accent)
+                .preferredColorScheme(.dark)
         }
     }
 }

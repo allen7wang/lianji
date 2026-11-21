@@ -6,9 +6,10 @@ options:
     watchOS: "10.0"
 settings:
   base:
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "2.10.0"
-    CURRENT_PROJECT_VERSION: "18"
+    MARKETING_VERSION: "3.0.0"
+    CURRENT_PROJECT_VERSION: "19"
 targets:
   LianjiMac:
     type: application
@@ -42,6 +43,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.allenwang.lianji.watch
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: 练迹
+        CODE_SIGN_ENTITLEMENTS: Watch/LianjiWatch.entitlements
+        INFOPLIST_KEY_NSHealthShareUsageDescription: 练迹会检查写入训练的权限。
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: 练迹会把完成的训练写入「健康」。
         INFOPLIST_KEY_WKWatchOnly: YES
         INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp: YES
         CODE_SIGN_STYLE: Automatic

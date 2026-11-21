@@ -1,24 +1,32 @@
 {
   "name": "lianji",
-  "version": "2.10.0",
+  "version": "3.0.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
-    "eslint-config-expo": "~57.0.2",
+    "@kingstinct/react-native-healthkit": "^16.2.0",
     "expo": "~57.0.25",
     "expo-build-properties": "~57.0.22",
     "expo-constants": "~57.0.19",
     "expo-document-picker": "~57.0.3",
     "expo-file-system": "~57.0.7",
+    "expo-font": "~57.0.4",
+    "expo-haptics": "~57.0.3",
     "expo-image": "~57.0.5",
+    "expo-keep-awake": "~57.0.2",
     "expo-linking": "~57.0.11",
+    "expo-notifications": "~57.0.25",
     "expo-router": "~57.0.23",
     "expo-sharing": "~57.0.23",
+    "expo-splash-screen": "~57.0.11",
     "expo-sqlite": "~57.0.3",
     "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-health-connect": "^4.1.3",
+    "react-native-nitro-modules": "^0.37.2",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-web": "^0.21.2"
@@ -37,7 +45,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
-    "test:templates": "node scripts/verify-plan-templates.mjs"
+    "test:templates": "node scripts/verify-plan-templates.mjs",
+    "test": "node --test tests/ && node scripts/verify-plan-templates.mjs"
   },
   "private": true
 }

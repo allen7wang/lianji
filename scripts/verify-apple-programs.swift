@@ -96,7 +96,15 @@ struct AppleProgramChecks {
         try checkReusePreviousSet(in: directory)
         try checkExerciseReplacement(in: directory)
         try checkExerciseOrder(in: directory)
-        print("Passed: 34 programs / 69 days; legacy data, persistence, progress, plans, goals, schedules, comparisons, wellness, backup, plan reuse, previous groups, replacement and exercise ordering.")
+        try checkExerciseIdNormalization(in: directory)
+        try checkBackupV3(in: directory)
+        try checkMergeImport(in: directory)
+        try checkSnapshots(in: directory)
+        try checkWarmupsAndEstimatedMax(in: directory)
+        try checkProgression(in: directory)
+        checkWeightUnits()
+        try checkV3StoreAPIs(in: directory)
+        print("Passed: 34 programs / 69 days; legacy data, persistence, progress, plans, goals, schedules, comparisons, wellness, backup, plan reuse, previous groups, replacement and exercise ordering; v3 exercise IDs, backup fields and validation, merge import, snapshots and undo, warm-ups, e1RM, progression, weight units, preferences and food quick-add.")
     }
 
     static func checkProgress() {
@@ -859,4 +867,620 @@ struct AppleProgramChecks {
                      "failed atomic writes preserve the original interleaved order and all source data")
     }
 
+
+    // MARK: - v3 checks
+
+    static func near(_ lhs: Double?, _ rhs: Double, _ tolerance: Double = 1e-9) -> Bool {
+        guard let lhs else { return false }
+        return abs(lhs - rhs) <= tolerance
+    }
+
+    @MainActor
+    static func checkExerciseIdNormalization(in directory: URL) throws {
+        var legacy = AppState.starter()
+        // 旧版随机 ID 的内置动作 + 重复的同名内置动作 + 目录扩展动作的旧 ID + 同名自定义动作
+        legacy.exercises.removeAll { $0.id == "barbell_bench" || $0.id == "builtin:bodyweight_squat" }
+        legacy.exercises.append(contentsOf: [
+            Exercise(id: "legacy-bench", name: "杠铃卧推", muscle: "胸", equipment: "杠铃"),
+            Exercise(id: "legacy-bench-2", name: "杠铃卧推", muscle: "胸", equipment: "杠铃"),
+            Exercise(id: "legacy-squat", name: "自重深蹲", muscle: "腿", equipment: "自重"),
+            Exercise(id: "custom-bench", name: "杠铃卧推", muscle: "胸", equipment: "杠铃", isCustom: true),
+        ])
+        legacy.plans[0].items[0].exerciseId = "legacy-bench"
+        legacy.plans[0].items.append(PlanItem(exerciseId: "legacy-bench-2", sets: 2, reps: 5, weight: 40))
+        legacy.plans[0].items.append(PlanItem(exerciseId: "custom-bench", sets: 2, reps: 5, weight: 40))
+        legacy.workouts = [Workout(id: "legacy-workout", name: "旧训练", endedAt: .now, sets: [
+            TrainingSet(id: "l1", exerciseId: "legacy-bench-2", setNumber: 1, weight: 50, reps: 5, completed: true),
+            TrainingSet(id: "l2", exerciseId: "legacy-squat", setNumber: 1, weight: 0, reps: 20, completed: true),
+            TrainingSet(id: "l3", exerciseId: "custom-bench", setNumber: 1, weight: 30, reps: 5, completed: true),
+        ])]
+
+        var pure = legacy
+        let remap = pure.normalizeExerciseIds()
+        precondition(remap == ["legacy-bench": "barbell_bench", "legacy-bench-2": "barbell_bench", "legacy-squat": "builtin:bodyweight_squat"],
+                     "starter names map to slugs, extra catalog names to builtin IDs, customs are untouched")
+        precondition(pure.exercises.filter { $0.name == "杠铃卧推" && !$0.isCustom }.map(\.id) == ["barbell_bench"], "duplicate built-ins merge into one")
+        precondition(pure.exercises.contains { $0.id == "custom-bench" && $0.isCustom }, "same-name custom exercise keeps its ID")
+        precondition(pure.normalizeExerciseIds().isEmpty, "normalization is idempotent")
+
+        let file = directory.appendingPathComponent("normalize.json")
+        try JSONEncoder().encode(legacy).write(to: file)
+        let store = TrainingStore(fileURL: file)
+        let ids = store.state.exercises.map(\.id)
+        precondition(Set(ids).count == ids.count && store.state.exercises.count == 56, "upgrade yields 30 starters + 25 extras + 1 custom without duplicates")
+        precondition(!ids.contains { $0.hasPrefix("legacy-") }, "legacy IDs are gone after upgrade")
+        let items = store.state.plans[0].items.map(\.exerciseId)
+        precondition(items.first == "barbell_bench" && items.suffix(2) == ["barbell_bench", "custom-bench"], "plan item references follow the canonical IDs")
+        precondition(store.state.workouts[0].sets.map(\.exerciseId) == ["barbell_bench", "builtin:bodyweight_squat", "custom-bench"], "set references follow the canonical IDs")
+        precondition(store.state.workouts[0].volume == 400, "history survives normalization")
+        precondition(TrainingStore(fileURL: file).state.exercises.map(\.id) == ids, "normalized IDs persist")
+
+        // 被自定义动作占用的规范 ID 不会被抢走
+        var blocked = AppState(exercises: [
+            Exercise(id: "plank", name: "我的平板", muscle: "核心", equipment: "自重", isCustom: true),
+            Exercise(id: "legacy-plank", name: "平板支撑", muscle: "核心", equipment: "自重"),
+        ], plans: [], workouts: [], bodyEntries: [], foodEntries: [])
+        blocked.normalizeExerciseIds()
+        precondition(blocked.exercises.map(\.id) == ["plank", "legacy-plank"], "a canonical ID held by a custom exercise is never reassigned")
+
+        // 替换恢复同样规范化
+        let restoreFile = directory.appendingPathComponent("normalize-restore.json")
+        let restoreStore = TrainingStore(fileURL: restoreFile)
+        try restoreStore.restoreBackup(TrainingBackup.encode(legacy))
+        precondition(restoreStore.state.workouts[0].sets.map(\.exerciseId) == ["barbell_bench", "builtin:bodyweight_squat", "custom-bench"], "replace restore normalizes IDs")
+        precondition(restoreStore.state.exercises.filter { $0.name == "杠铃卧推" }.count == 2, "restore keeps one built-in and one custom bench")
+    }
+
+    @MainActor
+    static func checkBackupV3(in directory: URL) throws {
+        func reject(_ object: Any, _ fragment: String) {
+            do {
+                _ = try TrainingBackup.parse(JSONSerialization.data(withJSONObject: object))
+                preconditionFailure("backup must be rejected: \(fragment)")
+            } catch {
+                precondition(error.localizedDescription.contains(fragment), "expected \(fragment), got \(error.localizedDescription)")
+            }
+        }
+        let started = Date(timeIntervalSince1970: 1_762_387_200)
+        var state = AppState.starter()
+        state.plans = [Plan(id: "plan-v3", name: "推", createdAt: started, items: [PlanItem(id: "item-v3", exerciseId: "barbell_bench", sets: 3, reps: 8, weight: 60)])]
+        state.workouts = [Workout(id: "w-v3", planId: "plan-v3", name: "推", startedAt: started, endedAt: started.addingTimeInterval(1800), sets: [
+            TrainingSet(id: "s-warm", exerciseId: "barbell_bench", setNumber: 1, weight: 30, reps: 10, completed: true, unit: .reps, restSeconds: 60, kind: .warmup),
+            TrainingSet(id: "s-work", exerciseId: "barbell_bench", setNumber: 1, weight: 60, reps: 8, completed: true, unit: .reps, restSeconds: 90, rpe: 8.5),
+            TrainingSet(id: "s-plain", exerciseId: "barbell_bench", setNumber: 2, weight: 60, reps: 8, unit: .reps, restSeconds: 90),
+        ])]
+        state.preferences = AppPreferences(weightUnit: .lb, calorieGoal: 2200, proteinGoal: 150)
+        let data = try TrainingBackup.encode(state, exportedAt: started)
+        let root = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let rows = (root["tables"] as! [String: Any])["workout_sets"] as! [[String: Any]]
+        precondition(rows.map { $0["kind"] as? String } == ["warmup", "working", "working"], "kind is exported for every set")
+        precondition(rows[1]["rpe"] as? Double == 8.5 && rows[0]["rpe"] is NSNull, "rpe is exported as a number or null")
+        let prefs = root["preferences"] as! [String: Any]
+        precondition(prefs["weightUnit"] as? String == "lb" && prefs["calorieGoal"] as? Int == 2200 && prefs["proteinGoal"] as? Int == 150, "preferences are exported")
+        let parsed = try TrainingBackup.parse(data)
+        precondition(parsed.state.workouts[0].sets == state.workouts[0].sets, "kind and rpe round-trip")
+        precondition(parsed.state.preferences == state.preferences && parsed.preview.hasPreferences, "preferences round-trip")
+        precondition(parsed.state.workouts[0].volume == 480, "round-tripped warm-ups stay out of volume")
+
+        var unset = state
+        unset.preferences = AppPreferences()
+        let unsetRoot = try JSONSerialization.jsonObject(with: TrainingBackup.encode(unset)) as! [String: Any]
+        precondition((unsetRoot["preferences"] as! [String: Any])["weightUnit"] == nil, "an unset unit is omitted and read back as kg")
+        let unsetParsed = try TrainingBackup.parse(TrainingBackup.encode(unset))
+        precondition(unsetParsed.state.preferences.weightUnitSetting == nil && unsetParsed.state.preferences.weightUnit == .kg, "missing unit defaults to kg")
+
+        // 旧备份：没有 kind / rpe / preferences
+        let old = try JSONSerialization.jsonObject(with: data, options: .mutableContainers) as! NSMutableDictionary
+        old.removeObject(forKey: "preferences")
+        for row in ((old["tables"] as! NSMutableDictionary)["workout_sets"] as! NSMutableArray) {
+            (row as! NSMutableDictionary).removeObject(forKey: "kind")
+            (row as! NSMutableDictionary).removeObject(forKey: "rpe")
+        }
+        let oldData = try JSONSerialization.data(withJSONObject: old)
+        let oldParsed = try TrainingBackup.parse(oldData)
+        precondition(oldParsed.state.workouts[0].sets.allSatisfy { $0.kind == .working && $0.rpe == nil } && !oldParsed.preview.hasPreferences, "old backups default to working sets without RPE")
+        let file = directory.appendingPathComponent("backup-v3.json")
+        let store = TrainingStore(fileURL: file)
+        try store.setPreferences(AppPreferences(weightUnit: .lb, calorieGoal: 1800, proteinGoal: 0))
+        try store.restoreBackup(oldData)
+        precondition(store.state.preferences == AppPreferences(weightUnit: .lb, calorieGoal: 1800, proteinGoal: 0), "old backups keep the local preferences")
+        try store.restoreBackup(TrainingBackup.encode(unset))
+        precondition(store.state.preferences == AppPreferences(), "v3 backups replace preferences")
+
+        // 旧 training.json：没有 kind / rpe / preferences，或偏好字段异常，都能读出训练数据
+        var legacyRaw = try JSONSerialization.jsonObject(with: JSONEncoder().encode(state)) as! [String: Any]
+        legacyRaw.removeValue(forKey: "preferences")
+        legacyRaw["workouts"] = (legacyRaw["workouts"] as! [[String: Any]]).map { workout in
+            var workout = workout
+            workout["sets"] = (workout["sets"] as! [[String: Any]]).map { set in
+                var set = set; set.removeValue(forKey: "kind"); set.removeValue(forKey: "rpe"); return set
+            }
+            return workout
+        }
+        let legacyFile = directory.appendingPathComponent("legacy-v2.json")
+        try JSONSerialization.data(withJSONObject: legacyRaw).write(to: legacyFile)
+        let legacyStore = TrainingStore(fileURL: legacyFile)
+        precondition(legacyStore.state.workouts.first?.sets.allSatisfy { $0.kind == .working && $0.rpe == nil } == true, "v2 store files decode with working sets")
+        precondition(legacyStore.state.preferences == AppPreferences() && legacyStore.state.plans.map(\.id) == ["plan-v3"], "v2 store files decode with default preferences")
+        legacyRaw["preferences"] = ["weightUnit": "stone", "calorieGoal": "lots"]
+        try JSONSerialization.data(withJSONObject: legacyRaw).write(to: legacyFile)
+        precondition(TrainingStore(fileURL: legacyFile).state.plans.map(\.id) == ["plan-v3"], "malformed local preferences never discard training data")
+
+        // 字段校验
+        func mutated(_ change: (NSMutableDictionary) -> Void) -> NSMutableDictionary {
+            let copy = try! JSONSerialization.jsonObject(with: data, options: .mutableContainers) as! NSMutableDictionary
+            change(copy)
+            return copy
+        }
+        func table(_ root: NSMutableDictionary, _ name: String) -> NSMutableDictionary {
+            ((root["tables"] as! NSMutableDictionary)[name] as! NSMutableArray)[0] as! NSMutableDictionary
+        }
+        reject(mutated { table($0, "workout_sets")["weight"] = -1 }, "重量不能为负数")
+        reject(mutated { table($0, "workout_sets")["weight"] = "60" }, "weight 无效")
+        reject(mutated { table($0, "workout_sets")["reps"] = 2.5 }, "reps 无效")
+        reject(mutated { table($0, "workout_sets")["reps"] = -3 }, "次数不能为负数")
+        reject(mutated { table($0, "workout_sets")["setNumber"] = -1 }, "组号不能为负数")
+        reject(mutated { table($0, "workout_sets")["sortOrder"] = -1 }, "排序不能为负数")
+        reject(mutated { table($0, "workout_sets")["restSeconds"] = -5 }, "休息时间不能为负数")
+        reject(mutated { table($0, "workout_sets")["completed"] = 2 }, "completed 无效")
+        reject(mutated { table($0, "workout_sets")["kind"] = "cooldown" }, "组次类型")
+        for rpe in [4.5, 10.5, 7.25] as [Any] + ["8"] {
+            reject(mutated { table($0, "workout_sets")["rpe"] = rpe }, "RPE")
+        }
+        reject(mutated { table($0, "plan_items")["sets"] = -1 }, "组数不能为负数")
+        reject(mutated { table($0, "plan_items")["weight"] = -0.5 }, "重量不能为负数")
+        reject(mutated { table($0, "exercises")["isCustom"] = "0" }, "isCustom 无效")
+        reject(mutated { table($0, "exercises")["name"] = 3 }, "name 无效")
+        reject(mutated { table($0, "workouts")["startedAt"] = "yesterday" }, "日期无效")
+        reject(mutated { table($0, "plan_items")["unit"] = "minutes" }, "计次单位")
+        reject(mutated { $0["preferences"] = "lb" }, "偏好设置")
+        reject(mutated { ($0["preferences"] as! NSMutableDictionary)["weightUnit"] = "stone" }, "偏好设置")
+        reject(mutated { ($0["preferences"] as! NSMutableDictionary)["calorieGoal"] = -1 }, "偏好设置")
+        reject(mutated { ($0["preferences"] as! NSMutableDictionary)["proteinGoal"] = 1.5 }, "偏好设置")
+        let foodAndBody = mutated { root in
+            let tables = root["tables"] as! NSMutableDictionary
+            tables["body_entries"] = [["id": "b", "recordedAt": "2026-11-01T00:00:00Z", "weight": 70, "bodyFat": -1]]
+        }
+        reject(foodAndBody, "体脂率不能为负数")
+        let negativeFood = mutated { root in
+            (root["tables"] as! NSMutableDictionary)["food_entries"] = [["id": "f", "loggedAt": "2026-11-01T00:00:00Z", "meal": "早餐", "name": "蛋", "portion": "1", "calories": -10, "protein": 1, "carbs": 1, "fat": 1]]
+        }
+        reject(negativeFood, "热量不能为负数")
+        // 旧版本可能存有超出现行输入上限的值：仍可导入
+        let legacyLimits = mutated { root in
+            table(root, "workout_sets")["weight"] = 2100
+            table(root, "workout_sets")["reps"] = 1200
+            table(root, "workout_sets")["restSeconds"] = 900
+            table(root, "plan_items")["sets"] = 25
+            table(root, "plan_items")["sets"] = 0
+            table(root, "workouts")["planId"] = "deleted-plan"
+            (root["preferences"] as! NSMutableDictionary)["calorieGoal"] = 20000
+            (root["tables"] as! NSMutableDictionary)["body_entries"] = [["id": "b", "recordedAt": "2026-11-01T00:00:00Z", "weight": 2500, "bodyFat": 120]]
+        }
+        let lenient = try TrainingBackup.parse(JSONSerialization.data(withJSONObject: legacyLimits))
+        let lenientSet = lenient.state.workouts[0].sets.first { $0.id == "s-warm" }!
+        precondition(lenientSet.weight == 2100 && lenientSet.reps == 1200 && lenientSet.restSeconds == 900, "import does not enforce input upper bounds")
+        precondition(lenient.state.plans[0].items[0].sets == 0 && lenient.state.bodyEntries[0].bodyFat == 120, "zero sets and large body values import")
+        precondition(lenient.state.workouts[0].planId == nil, "a workout pointing at a missing plan imports with a null plan")
+        precondition(lenient.state.preferences.calorieGoal == 10000, "oversized goals clamp to the editable maximum")
+    }
+
+    @MainActor
+    static func checkMergeImport(in directory: URL) throws {
+        let day = Date(timeIntervalSince1970: 1_762_387_200)
+        var local = AppState.starter()
+        local.exercises.append(Exercise(id: "custom-local", name: "我的动作", muscle: "自定义", equipment: "自定义", isCustom: true))
+        local.plans.append(Plan(id: "plan-shared", name: "本机计划", items: [PlanItem(id: "shared-item", exerciseId: "barbell_bench", sets: 3, reps: 8, weight: 50)]))
+        local.workouts = [Workout(id: "w-shared", name: "本机训练", startedAt: day, endedAt: day, note: "本机", sets: [
+            TrainingSet(id: "shared-set", exerciseId: "barbell_bench", setNumber: 1, weight: 50, reps: 8, completed: true)
+        ])]
+        local.bodyEntries = [BodyEntry(id: "b-shared", recordedAt: day, weight: 70)]
+        local.trainingSchedule = [ScheduledTraining(planId: "plan-shared", day: "2026-11-10")]
+        local.favoritePlanIds = ["plan-shared"]
+        local.preferences = AppPreferences(weightUnit: nil, calorieGoal: 1800, proteinGoal: 0)
+        let file = directory.appendingPathComponent("merge.json")
+        try JSONEncoder().encode(local).write(to: file)
+        let store = TrainingStore(fileURL: file)
+        precondition(store.state.weeklyGoalDays == nil, "local weekly goal starts unset")
+
+        var backup = AppState.starter()
+        backup.exercises.removeAll { $0.id == "barbell_bench" }
+        backup.exercises.append(contentsOf: [
+            Exercise(id: "phone-bench", name: "杠铃卧推", muscle: "胸", equipment: "杠铃"),
+            Exercise(id: "custom-phone-a", name: "我的动作", muscle: "自定义", equipment: "自定义", isCustom: true),
+            Exercise(id: "custom-phone-b", name: "新动作", muscle: "自定义", equipment: "自定义", isCustom: true),
+        ])
+        backup.plans = [
+            Plan(id: "plan-shared", name: "备份计划", items: [PlanItem(id: "backup-shared-item", exerciseId: "phone-bench", sets: 5, reps: 5, weight: 80)]),
+            Plan(id: "plan-new", name: "新计划", items: [
+                PlanItem(id: "shared-item", exerciseId: "phone-bench", sets: 3, reps: 8, weight: 60),
+                PlanItem(id: "new-item-a", exerciseId: "custom-phone-a", sets: 3, reps: 10, weight: 10),
+                PlanItem(id: "new-item-b", exerciseId: "custom-phone-b", sets: 3, reps: 10, weight: 10),
+            ]),
+        ]
+        backup.workouts = [
+            Workout(id: "w-shared", name: "备份训练", startedAt: day, endedAt: day, note: "备份", sets: []),
+            Workout(id: "w-new", planId: "plan-new", name: "新训练", startedAt: day.addingTimeInterval(86400), endedAt: day.addingTimeInterval(90000), sets: [
+                TrainingSet(id: "shared-set", exerciseId: "phone-bench", setNumber: 1, weight: 60, reps: 8, completed: true),
+                TrainingSet(id: "new-set-b", exerciseId: "custom-phone-a", setNumber: 1, weight: 10, reps: 10, completed: true, kind: .warmup),
+            ]),
+            Workout(id: "w-draft", name: "进行中", startedAt: day, sets: [TrainingSet(exerciseId: "phone-bench", setNumber: 1, weight: 20, reps: 5)]),
+        ]
+        backup.bodyEntries = [BodyEntry(id: "b-shared", recordedAt: day, weight: 99), BodyEntry(id: "b-new", recordedAt: day, weight: 71)]
+        backup.foodEntries = [FoodEntry(id: "f-new", loggedAt: day, meal: "早餐", name: "鸡蛋", portion: "2个", calories: 140, protein: 12, carbs: 1, fat: 10)]
+        backup.trainingSchedule = [ScheduledTraining(planId: "plan-shared", day: "2026-11-10"), ScheduledTraining(planId: "plan-new", day: "2026-11-12")]
+        backup.favoritePlanIds = ["plan-new", "plan-shared"]
+        backup.weeklyGoalDays = 4
+        backup.preferences = AppPreferences(weightUnit: .lb, calorieGoal: 2500, proteinGoal: 160)
+        let data = try TrainingBackup.encode(backup, exportedAt: day)
+
+        let summary = try store.mergeBackup(data)
+        precondition(summary.workouts == 1 && summary.plans == 1 && summary.bodyEntries == 1 && summary.foodEntries == 1 && summary.exercises == 1,
+                     "merge adds only records whose IDs are new (normalized built-ins and same-name customs are not added)")
+        precondition(summary.skippedUnfinishedWorkouts == 1 && summary.scheduleEntries == 1 && summary.favorites == 1, "unfinished workouts are skipped; schedule and favorites are unioned")
+        precondition(summary.message == "新增 1 次训练、1 个计划、1 条身体记录、1 条饮食记录、1 个动作、1 项训练安排、1 个收藏计划；跳过 1 次未结束的训练。", summary.message)
+        let state = store.state
+        precondition(state.plans.first { $0.id == "plan-shared" }?.name == "本机计划", "existing plans keep the local version")
+        precondition(state.workouts.first { $0.id == "w-shared" }?.note == "本机" && !state.workouts.contains { $0.id == "w-draft" }, "existing workouts keep the local version and drafts are skipped")
+        precondition(state.bodyEntries.first { $0.id == "b-shared" }?.weight == 70, "existing body entries are kept")
+        let newPlan = state.plans.first { $0.id == "plan-new" }!
+        precondition(newPlan.items.map(\.exerciseId) == ["barbell_bench", "custom-local", "custom-phone-b"], "plan items use normalized and remapped exercise IDs")
+        precondition(newPlan.items[0].id != "shared-item" && newPlan.items[1].id == "new-item-a", "colliding item IDs get fresh IDs")
+        let newWorkout = state.workouts.first { $0.id == "w-new" }!
+        precondition(newWorkout.sets.map(\.exerciseId) == ["barbell_bench", "custom-local"] && newWorkout.sets[1].kind == .warmup, "merged sets are remapped and keep their kind")
+        precondition(newWorkout.sets[0].id != "shared-set" && newWorkout.planId == "plan-new", "colliding set IDs get fresh IDs")
+        precondition(!state.exercises.contains { $0.id == "custom-phone-a" || $0.id == "phone-bench" } && state.exercises.contains { $0.id == "custom-phone-b" }, "only the new custom exercise is added")
+        precondition(state.trainingSchedule == [ScheduledTraining(planId: "plan-shared", day: "2026-11-10"), ScheduledTraining(planId: "plan-new", day: "2026-11-12")], "schedule union")
+        precondition(state.favoritePlanIds == ["plan-shared", "plan-new"], "favorite union keeps the local order first")
+        precondition(state.weeklyGoalDays == 4 && summary.adoptedWeeklyGoal, "an unset local weekly goal adopts the backup value")
+        precondition(state.preferences == AppPreferences(weightUnit: .lb, calorieGoal: 1800, proteinGoal: 160) && summary.adoptedPreferences,
+                     "local preferences win; unset fields adopt the backup values")
+
+        let again = try store.mergeBackup(data)
+        precondition(again.totalAdded == 0 && again.message == "没有需要合并的新记录；跳过 1 次未结束的训练。", "merging the same backup twice adds nothing")
+        let reopened = TrainingStore(fileURL: file)
+        precondition(reopened.state.workouts.count == 2 && reopened.state.plans.count == 5 && reopened.state.preferences.weightUnit == .lb, "merge persists")
+
+        do {
+            try store.mergeBackup(Data("{\"app\":\"lianji\",\"version\":1,\"tables\":{}}".utf8))
+            preconditionFailure("invalid backups cannot be merged")
+        } catch {}
+        precondition(store.state.workouts.count == 2, "a rejected merge changes nothing")
+    }
+
+    @MainActor
+    static func checkSnapshots(in directory: URL) throws {
+        let folder = directory.appendingPathComponent("snapshot-check", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let file = folder.appendingPathComponent("training.json")
+        let store = TrainingStore(fileURL: file)
+        precondition(store.latestSnapshot == nil && store.importSnapshots.isEmpty, "fresh stores have nothing to undo")
+        do {
+            try store.undoLastImport()
+            preconditionFailure("undo without a snapshot must fail")
+        } catch ImportUndoError.noSnapshot {}
+        try store.setWeeklyGoal(3)
+        try store.setCalorieGoal(1900)
+        let originalPlans = store.state.plans.map(\.id)
+
+        var other = AppState.starter()
+        other.plans = [Plan(id: "snap-plan", name: "快照计划", items: [PlanItem(exerciseId: "barbell_bench", sets: 3, reps: 5, weight: 40)])]
+        other.weeklyGoalDays = 5
+        other.preferences = AppPreferences(weightUnit: .lb)
+        let data = try TrainingBackup.encode(other)
+
+        try store.restoreBackup(data)
+        precondition(store.state.plans.map(\.id) == ["snap-plan"] && store.state.weeklyGoalDays == 5, "replace restore applied")
+        precondition(store.importSnapshots.count == 1 && store.latestSnapshot?.reason == .replace, "replace writes a snapshot first")
+        let restored = try store.undoLastImport()
+        precondition(restored.reason == .replace && store.latestSnapshot == nil && store.importSnapshots.isEmpty, "undo deletes the snapshot it used")
+        precondition(store.state.plans.map(\.id) == originalPlans && store.state.weeklyGoalDays == 3, "undo restores the pre-import data")
+        precondition(store.state.preferences == AppPreferences(weightUnit: nil, calorieGoal: 1900), "undo restores preferences, including an unset unit")
+        precondition(TrainingStore(fileURL: file).state.plans.map(\.id) == originalPlans, "undo persists")
+
+        try store.mergeBackup(data)
+        precondition(store.state.plans.contains { $0.id == "snap-plan" } && store.latestSnapshot?.reason == .merge, "merge writes a snapshot first")
+        try store.undoLastImport()
+        precondition(store.state.plans.map(\.id) == originalPlans, "undoing a merge removes the merged records")
+
+        for _ in 0..<4 { try store.mergeBackup(data) }
+        let snapshots = store.importSnapshots
+        precondition(snapshots.count == ImportSnapshotStore.limit && snapshots.allSatisfy { $0.reason == .merge }, "at most three snapshots are kept")
+        precondition(zip(snapshots, snapshots.dropFirst()).allSatisfy { $0.createdAt > $1.createdAt }, "snapshots are listed newest first")
+        precondition(store.latestSnapshot == snapshots.first, "latest snapshot is the newest file")
+
+        do {
+            try store.restoreBackup(Data("not json".utf8))
+            preconditionFailure("invalid backups cannot be restored")
+        } catch {}
+        precondition(store.importSnapshots == snapshots, "a rejected backup writes no snapshot")
+
+        try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: file.path)
+        defer { try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: file.path) }
+        do {
+            try store.restoreBackup(data)
+            preconditionFailure("a locked store file must reject restore")
+        } catch {}
+        precondition(store.importSnapshots == snapshots, "a failed restore removes its snapshot and keeps older ones")
+        try FileManager.default.setAttributes([.immutable: false], ofItemAtPath: file.path)
+
+        try store.undoLastImport()
+        precondition(store.importSnapshots.count == 2 && store.latestSnapshot == snapshots[1], "undo walks back one snapshot at a time")
+        precondition(TrainingStore(fileURL: file).latestSnapshot == snapshots[1], "snapshots are rediscovered on launch")
+    }
+
+    @MainActor
+    static func checkWarmupsAndEstimatedMax(in directory: URL) throws {
+        precondition(StrengthMath.estimatedOneRepMax(weight: 100, reps: 1) == 100, "one rep equals the weight")
+        precondition(near(StrengthMath.estimatedOneRepMax(weight: 100, reps: 10), 133.33333333333334), "Epley formula")
+        precondition(near(StrengthMath.estimatedOneRepMax(weight: 60, reps: 12), 84), "twelve reps still count")
+        precondition(StrengthMath.estimatedOneRepMax(weight: 100, reps: 13) == nil && StrengthMath.estimatedOneRepMax(weight: 0, reps: 5) == nil
+                     && StrengthMath.estimatedOneRepMax(weight: 50, reps: 0) == nil, "out-of-range reps and zero weight are excluded")
+        precondition(StrengthMath.estimatedOneRepMax(TrainingSet(exerciseId: "x", setNumber: 1, weight: 50, reps: 5, completed: true, unit: .seconds)) == nil
+                     && StrengthMath.estimatedOneRepMax(TrainingSet(exerciseId: "x", setNumber: 1, weight: 50, reps: 5, completed: true, kind: .warmup)) == nil
+                     && StrengthMath.estimatedOneRepMax(TrainingSet(exerciseId: "x", setNumber: 1, weight: 50, reps: 5)) == nil,
+                     "timed, warm-up and incomplete sets have no estimate")
+
+        let monday = Date(timeIntervalSince1970: 1_772_409_600) // 2026-03-02
+        let bench = "barbell_bench"
+        let heavy = Workout(id: "warm-heavy", planId: "plan-warm", name: "卧推", startedAt: monday, endedAt: monday.addingTimeInterval(3600), sets: [
+            TrainingSet(id: "w0", exerciseId: bench, setNumber: 1, weight: 100, reps: 5, completed: true, kind: .warmup),
+            TrainingSet(id: "w1", exerciseId: bench, setNumber: 1, weight: 60, reps: 5, completed: true),
+            TrainingSet(id: "w2", exerciseId: bench, setNumber: 2, weight: 62.5, reps: 8, completed: true),
+            TrainingSet(id: "w3", exerciseId: bench, setNumber: 3, weight: 80, reps: 15, completed: true),
+            TrainingSet(id: "w4", exerciseId: bench, setNumber: 4, weight: 90, reps: 1),
+            TrainingSet(id: "w5", exerciseId: "warmup_only", setNumber: 1, weight: 40, reps: 10, completed: true, kind: .warmup),
+        ])
+        precondition(heavy.volume == 2000, "volume excludes warm-ups")
+        precondition(heavy.completedSets.count == 5 && heavy.completedWorkingSets.count == 3, "completed sets include warm-ups; working sets do not")
+        precondition(heavy.workingSetOrdinal(of: "w2") == 2 && heavy.workingSetOrdinal(of: "w0") == nil, "working ordinals skip warm-ups")
+        let warmOnly = Workout(id: "warm-only", name: "只热身", startedAt: monday.addingTimeInterval(86400), endedAt: monday.addingTimeInterval(90000), sets: [
+            TrainingSet(exerciseId: bench, setNumber: 1, weight: 200, reps: 1, completed: true, kind: .warmup)
+        ])
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let progress = TrainingProgress(workouts: [heavy, warmOnly], calendar: calendar)
+        let week = progress.week(containing: monday)
+        precondition(week.activeDays() == 2, "a workout with only completed warm-ups still counts as a training day")
+        let records = progress.exercise(bench)
+        precondition(records.records.heaviestSet?.id == "w3" && records.records.value(.weight) == 80, "warm-ups never become personal records")
+        precondition(near(records.records.bestEstimatedOneRepMax, 62.5 * (1 + 8.0 / 30)) && records.records.bestEstimatedOneRepMaxSet?.id == "w2", "best e1RM uses completed working sets with 1–12 reps")
+        precondition(records.records.label(.estimatedOneRepMax) == "79 kg" && records.records.label(.estimatedOneRepMax, unit: .lb) == "175 lb", "e1RM displays rounded to 0.5 kg / 1 lb")
+        precondition(records.recentByMetric[.estimatedOneRepMax]?.map(\.id) == ["warm-heavy"], "per-session e1RM points skip warm-up-only sessions")
+        precondition(records.recent.map(\.id) == ["warm-heavy"], "warm-up-only sessions are not progress points")
+        precondition(!progress.exerciseOptions(AppState.starter().exercises + [Exercise(id: "warmup_only", name: "热身", muscle: "", equipment: "", isCustom: true)]).contains { $0.id == "warmup_only" },
+                     "exercises with only warm-ups have no progress entry")
+
+        let current = Workout(id: "warm-current", planId: "plan-warm", name: "卧推", startedAt: monday.addingTimeInterval(200000), sets: [
+            TrainingSet(id: "c-warm", exerciseId: bench, setNumber: 1, weight: 20, reps: 10, kind: .warmup),
+            TrainingSet(id: "c1", exerciseId: bench, setNumber: 1, weight: 0, reps: 5),
+            TrainingSet(id: "c2", exerciseId: bench, setNumber: 2, weight: 0, reps: 5),
+        ])
+        let comparison = TrainingComparison(workouts: [heavy, warmOnly, current])
+        let reference = comparison.previousExerciseSets(for: current)[bench]!.first!
+        precondition(reference.workout.id == "warm-heavy" && reference.sets.map(\.id) == ["w1", "w2", "w3"], "previous sets skip warm-ups and warm-up-only sessions")
+        precondition(reference.reusableSet(for: current.sets[0], in: current) == nil, "warm-up rows have no reuse action")
+        precondition(reference.reusableSet(for: current.sets[1], in: current)?.set.id == "w1"
+                     && reference.reusableSet(for: current.sets[2], in: current)?.set.id == "w2", "reuse ordinals count working rows only")
+        var finished = current
+        finished.endedAt = finished.startedAt
+        finished.sets = finished.sets.map { var set = $0; set.completed = true; set.weight = 50; return set }
+        let plan = TrainingComparison(workouts: [heavy, warmOnly, finished]).previousPlanWorkout(for: finished)!
+        precondition(plan.previous.completedSets == 3 && plan.previous.volume == 2000 && plan.current.completedSets == 2 && plan.current.volume == 500,
+                     "same-plan comparison excludes warm-ups")
+
+        var fixture = AppState.starter()
+        fixture.workouts = [heavy, warmOnly]
+        let file = directory.appendingPathComponent("warmups.json")
+        try JSONEncoder().encode(fixture).write(to: file)
+        let store = TrainingStore(fileURL: file)
+        let saved = try store.saveWorkoutAsPlan("warm-heavy")
+        precondition(saved.items.map(\.exerciseId) == [bench] && saved.items[0].sets == 3 && saved.items[0].weight == 80, "save-as-plan ignores warm-ups")
+        do {
+            try store.saveWorkoutAsPlan("warm-only")
+            preconditionFailure("warm-up-only workouts cannot become plans")
+        } catch WorkoutPlanError.empty {}
+    }
+
+    @MainActor
+    static func checkProgression(in directory: URL) throws {
+        let bench = Exercise(id: "barbell_bench", name: "杠铃卧推", muscle: "胸", equipment: "杠铃")
+        let squat = Exercise(id: "barbell_squat", name: "杠铃深蹲", muscle: "腿", equipment: "杠铃")
+        let plan = Plan(id: "prog-plan", name: "力量", items: [
+            PlanItem(exerciseId: bench.id, sets: 3, reps: 8, weight: 60),
+            PlanItem(exerciseId: squat.id, sets: 3, reps: 5, weight: 100),
+        ])
+        func session(_ id: String, _ day: Double, planId: String? = "prog-plan", _ sets: [TrainingSet]) -> Workout {
+            let start = Date(timeIntervalSince1970: 1_772_409_600 + day * 86400)
+            return Workout(id: id, planId: planId, name: id, startedAt: start, endedAt: start.addingTimeInterval(3600), sets: sets)
+        }
+        func set(_ exercise: Exercise, _ weight: Double, _ reps: Int, done: Bool = true, kind: SetKind = .working, unit: TrainingUnit? = nil) -> TrainingSet {
+            TrainingSet(exerciseId: exercise.id, setNumber: 1, weight: weight, reps: reps, completed: done, unit: unit, kind: kind)
+        }
+        func suggest(_ exercise: Exercise, _ workouts: [Workout], unit: WeightUnit = .kg, plans: [Plan]? = nil) -> ProgressionSuggestion? {
+            ProgressionAdvisor.suggestion(for: exercise.id, exercise: exercise, workouts: workouts, plans: plans ?? [plan], unit: unit)
+        }
+        let achieved = session("achieved", 0, [set(bench, 40, 5, done: false, kind: .warmup), set(bench, 60, 8), set(bench, 60, 9), set(bench, 57.5, 8)])
+        let up = suggest(bench, [achieved])!
+        precondition(up.decision == .increase && up.reason == .allCompleted && up.suggestedWeight == 62.5 && up.baseWeight == 60 && up.targetReps == 8,
+                     "all working sets done at target: +2.5 kg (incomplete warm-ups ignored)")
+        precondition(up.reasonText == "上次全部完成" && up.message(unit: .kg) == "建议 62.5 kg · 上次全部完成", "increase copy")
+        precondition(near(suggest(bench, [achieved], unit: .lb)?.suggestedWeight, 60 + 5 * 0.45359237), "lb mode adds 5 lb")
+        let squatDay = session("squat", 0, [set(squat, 100, 5), set(squat, 100, 6)])
+        precondition(suggest(squat, [squatDay])?.suggestedWeight == 105, "legs add 5 kg")
+        precondition(near(suggest(squat, [squatDay], unit: .lb)?.suggestedWeight, 100 + 10 * 0.45359237), "legs add 10 lb in lb mode")
+
+        let shortReps = session("short", 1, [set(bench, 60, 8), set(bench, 60, 7)])
+        let hold = suggest(bench, [achieved, shortReps])!
+        precondition(hold.decision == .hold && hold.reason == .missedLastTime && hold.suggestedWeight == 60 && hold.sourceWorkoutId == "short",
+                     "reps under target after a good session: hold")
+        let incomplete = session("incomplete", 2, [set(bench, 60, 8), set(bench, 60, 8, done: false)])
+        let deload = suggest(bench, [achieved, shortReps, incomplete])!
+        precondition(deload.decision == .deload && deload.reason == .missedTwice && deload.suggestedWeight == 55 && deload.reasonText == "连续两次未完成",
+                     "two misses in a row: 60 × 0.9 rounded to 2.5 kg")
+        precondition(near(suggest(bench, [achieved, shortReps, incomplete], unit: .lb)?.suggestedWeight, 120 * 0.45359237), "lb deload rounds to 5 lb")
+
+        let free = session("free", 3, planId: nil, [set(bench, 70, 3), set(bench, 70, 2)])
+        precondition(suggest(bench, [achieved, shortReps, incomplete, free])?.decision == .increase, "free workouts do not compare reps")
+        let removedPlan = Plan(id: "prog-plan", name: "力量", items: [PlanItem(exerciseId: squat.id, sets: 3, reps: 5, weight: 100)])
+        let lowReps = session("low", 4, [set(bench, 60, 1), set(bench, 60, 1)])
+        precondition(suggest(bench, [lowReps], plans: [removedPlan])?.decision == .increase, "plans that no longer contain the exercise do not compare reps")
+        precondition(suggest(bench, [lowReps])?.decision == .hold, "plan targets still apply while the plan has the exercise")
+        precondition(suggest(bench, []) == nil, "no history, no suggestion")
+        precondition(suggest(bench, [session("zero", 0, [set(bench, 0, 8)])]) == nil, "zero base weight, no suggestion")
+        precondition(suggest(bench, [session("timed", 0, [set(bench, 20, 30, unit: .seconds)])]) == nil, "timed exercises get no suggestion")
+        precondition(suggest(bench, [session("warm", 0, [set(bench, 60, 8, kind: .warmup)])]) == nil, "warm-up-only history gets no suggestion")
+        var draft = achieved
+        draft.endedAt = nil
+        precondition(suggest(bench, [draft]) == nil, "unfinished workouts are ignored")
+
+        var fixture = AppState.starter()
+        fixture.plans.append(plan)
+        let activeStart = Date(timeIntervalSince1970: 1_772_409_600 + 10 * 86400)
+        fixture.workouts = [achieved, Workout(id: "prog-active", planId: plan.id, name: "力量", startedAt: activeStart, sets: [
+            TrainingSet(id: "a-warm", exerciseId: bench.id, setNumber: 1, weight: 20, reps: 10, kind: .warmup),
+            TrainingSet(id: "a-done", exerciseId: bench.id, setNumber: 1, weight: 60, reps: 8, completed: true),
+            TrainingSet(id: "a-1", exerciseId: bench.id, setNumber: 2, weight: 60, reps: 8),
+            TrainingSet(id: "a-2", exerciseId: bench.id, setNumber: 3, weight: 60, reps: 8),
+            TrainingSet(id: "a-squat", exerciseId: squat.id, setNumber: 1, weight: 100, reps: 5),
+        ])]
+        let file = directory.appendingPathComponent("progression.json")
+        try JSONEncoder().encode(fixture).write(to: file)
+        let store = TrainingStore(fileURL: file)
+        let suggestion = store.progressionSuggestion(for: bench.id)!
+        precondition(suggestion.suggestedWeight == 62.5 && suggestion.sourceWorkoutId == "achieved", "store suggestion ignores the active workout")
+        let filled = try store.applySuggestion(suggestion)
+        precondition(filled == 2, "only incomplete working sets are filled")
+        let sets = Dictionary(uniqueKeysWithValues: store.activeWorkout!.sets.map { ($0.id, $0.weight) })
+        precondition(sets == ["a-warm": 20, "a-done": 60, "a-1": 62.5, "a-2": 62.5, "a-squat": 100], "warm-ups, completed sets and other exercises are untouched")
+        precondition(TrainingStore(fileURL: file).activeWorkout?.sets[2].weight == 62.5, "applied weights persist")
+        do {
+            try store.applySuggestedWeight(2500, to: bench.id)
+            preconditionFailure("out-of-range weights are rejected")
+        } catch ProgressionApplyError.invalidWeight {}
+        store.finishWorkout()
+        do {
+            try store.applySuggestedWeight(60, to: bench.id)
+            preconditionFailure("applying without an active workout fails")
+        } catch ProgressionApplyError.unavailable {}
+    }
+
+    static func checkWeightUnits() {
+        precondition(WeightUnit.lb.toKilograms(1) == 0.45359237 && near(WeightUnit.lb.fromKilograms(0.45359237), 1), "1 lb = 0.45359237 kg")
+        precondition(WeightUnit.kg.toKilograms(62.5) == 62.5 && WeightUnit.kg.fromKilograms(62.5) == 62.5, "kg is the storage unit")
+        precondition(WeightUnit.kg.format(kilograms: 62.5) == "62.5 kg" && WeightUnit.kg.format(kilograms: 60) == "60 kg"
+                     && WeightUnit.kg.format(kilograms: 62.54) == "62.5 kg" && WeightUnit.kg.format(kilograms: 62.56) == "62.6 kg"
+                     && WeightUnit.kg.format(kilograms: 1250, includeUnit: false) == "1250", "kg shows one trimmed decimal without grouping")
+        precondition(WeightUnit.lb.format(kilograms: 60) == "132.5 lb" && WeightUnit.lb.format(kilograms: 135 * 0.45359237) == "135 lb"
+                     && WeightUnit.lb.format(kilograms: 20) == "44 lb", "lb rounds to 0.5")
+        precondition(near(WeightUnit.lb.parseKilograms("135"), 61.23496995) && WeightUnit.kg.parseKilograms(" 62,5 ") == 62.5
+                     && near(WeightUnit.lb.parseKilograms("135 lb"), 61.23496995), "input parses in the selected unit")
+        precondition(WeightUnit.kg.parseKilograms("abc") == nil && WeightUnit.kg.parseKilograms("-5") == nil && WeightUnit.kg.parseKilograms("") == nil
+                     && WeightUnit.kg.parseKilograms("inf") == nil, "invalid input is rejected")
+        precondition(WeightUnit.lb.format(kilograms: WeightUnit.lb.parseKilograms("137.5")!) == "137.5 lb", "lb input round-trips")
+        precondition(WeightUnit.kg.formatEstimatedOneRepMax(kilograms: 79.3) == "79.5 kg" && WeightUnit.lb.formatEstimatedOneRepMax(kilograms: 79.3) == "175 lb",
+                     "e1RM rounds to 0.5 kg / 1 lb")
+        precondition(WeightUnit.kg.format(kilograms: 0) == "0 kg" && WeightUnit.kg.format(kilograms: -0.0) == "0 kg", "zero formats plainly")
+        precondition(ProgressMetric.estimatedOneRepMax.unit(.lb) == "lb" && ProgressMetric.weight.unit == "kg", "metric units follow the weight unit")
+    }
+
+    @MainActor
+    static func checkV3StoreAPIs(in directory: URL) throws {
+        let file = directory.appendingPathComponent("v3-apis.json")
+        let store = TrainingStore(fileURL: file)
+        store.startWorkout(planId: "starter_push")
+        let first = store.activeWorkout!.sets[0]
+        store.updateSet(first.id, weight: 2500, reps: 1500)
+        precondition(store.activeWorkout!.sets[0].weight == 2000 && store.activeWorkout!.sets[0].reps == 1000, "edits clamp to input limits")
+        store.updateSet(first.id, weight: 60, reps: 8)
+
+        let warmId = store.addWarmupSet(for: first.exerciseId)!
+        let secondWarmId = store.addWarmupSet(for: first.exerciseId)!
+        let rows = store.activeWorkout!.sets.filter { $0.exerciseId == first.exerciseId }
+        precondition(rows.prefix(2).map(\.id) == [warmId, secondWarmId] && rows[2].id == first.id, "warm-ups go before the first working set in insertion order")
+        precondition(rows[0].kind == .warmup && rows[0].weight == 30 && rows[0].reps == 8 && rows[1].setNumber == 2, "warm-up uses half the working weight")
+        precondition(store.addWarmupSet(for: "missing") == nil, "warm-ups need the exercise in the workout")
+        store.addSet(for: first.exerciseId)
+        let appended = store.activeWorkout!.sets.filter { $0.exerciseId == first.exerciseId }.last!
+        precondition(appended.kind == .working && appended.setNumber == 4 && appended.weight == 0, "added sets are working sets copying the last working set")
+        store.updateSet(warmId, completed: true)
+        store.updateSet(first.id, completed: true)
+        precondition(store.activeWorkout!.volume == 480, "completed warm-ups are not volume")
+        store.toggleSetKind(warmId)
+        precondition(store.activeWorkout!.sets.first { $0.id == warmId }?.kind == .working && store.activeWorkout!.volume == 720, "toggling to working counts the set")
+        store.toggleSetKind(warmId)
+        store.setSetKind(first.id, .warmup)
+        precondition(store.activeWorkout!.volume == 0, "explicit kind changes apply")
+        store.setSetKind(first.id, .working)
+
+        try store.setRPE(first.id, 8.5)
+        precondition(store.activeWorkout!.sets.first { $0.id == first.id }?.rpe == 8.5, "RPE is stored")
+        for invalid in [4.5, 10.5, 7.25, .nan] {
+            do {
+                try store.setRPE(first.id, invalid)
+                preconditionFailure("invalid RPE must be rejected")
+            } catch SetEditError.invalidRPE {}
+        }
+        do {
+            try store.setRPE("missing", 8)
+            preconditionFailure("stale set IDs are rejected")
+        } catch SetEditError.staleSet {}
+        precondition(TrainingStore(fileURL: file).activeWorkout?.sets.first { $0.id == first.id }?.rpe == 8.5, "RPE persists")
+        try store.setRPE(first.id, nil)
+        precondition(store.activeWorkout!.sets.first { $0.id == first.id }?.rpe == nil, "RPE can be cleared")
+        precondition(TrainingSet.rpeOptions.count == 11 && TrainingSet.rpeOptions.first == 5 && TrainingSet.rpeOptions.last == 10, "RPE picker options")
+
+        try store.setWeightUnit(.lb)
+        try store.setCalorieGoal(2000)
+        try store.setProteinGoal(120)
+        for action in [{ try store.setCalorieGoal(10001) }, { try store.setCalorieGoal(-1) }, { try store.setProteinGoal(1001) }] {
+            do {
+                try action()
+                preconditionFailure("out-of-range goals are rejected")
+            } catch is PreferencesError {}
+        }
+        let reopened = TrainingStore(fileURL: file)
+        precondition(reopened.weightUnit == .lb && reopened.preferences == AppPreferences(weightUnit: .lb, calorieGoal: 2000, proteinGoal: 120), "preferences persist")
+        let lbWarm = reopened.addWarmupSet(for: first.exerciseId)!
+        precondition(near(reopened.activeWorkout!.sets.first { $0.id == lbWarm }?.weight, 65 * 0.45359237), "lb warm-ups round down to 5 lb")
+
+        let now = Date.now
+        let foods = [
+            FoodEntry(id: "f1", loggedAt: now.addingTimeInterval(-86400 * 3), meal: "早餐", name: "鸡蛋", portion: "2个", calories: 140, protein: 12, carbs: 1, fat: 10),
+            FoodEntry(id: "f2", loggedAt: now.addingTimeInterval(-86400 * 2), meal: "早餐", name: "鸡蛋", portion: "2个", calories: 150, protein: 13, carbs: 1, fat: 10),
+            FoodEntry(id: "f3", loggedAt: now.addingTimeInterval(-86400), meal: "加餐", name: " 鸡蛋 ", portion: "2个", calories: 155, protein: 13, carbs: 1, fat: 11),
+            FoodEntry(id: "f4", loggedAt: now.addingTimeInterval(-60), meal: "午餐", name: "米饭", portion: "1碗", calories: 200, protein: 4, carbs: 45, fat: 1),
+            FoodEntry(id: "f5", loggedAt: now.addingTimeInterval(-120), meal: "早餐", name: "鸡蛋", portion: "1个", calories: 70, protein: 6, carbs: 0.5, fat: 5),
+        ]
+        let recent = FoodQuickAdd.recent(foods)
+        precondition(recent.map(\.name) == ["米饭", "鸡蛋", "鸡蛋"] && recent.map(\.portion) == ["1碗", "1个", "2个"], "recent foods are distinct by name and portion, newest first")
+        precondition(recent[2].calories == 155 && recent[2].count == 3 && recent[2].lastMeal == "加餐", "templates use the newest values and count history")
+        precondition(FoodQuickAdd.frequent(foods).first?.portion == "2个", "frequent foods sort by count")
+        let many = (0..<10).map { FoodEntry(id: "m\($0)", loggedAt: now.addingTimeInterval(Double(-$0)), meal: "加餐", name: "食物\($0)", portion: "1份", calories: 1, protein: 1, carbs: 1, fat: 1) }
+        precondition(FoodQuickAdd.recent(many).count == 8 && FoodQuickAdd.recent(many).first?.name == "食物0", "quick-add lists cap at 8")
+        for food in foods { reopened.addFoodEntry(food) }
+        let relogged = try reopened.relogFood(reopened.recentFoods()[2], meal: "晚餐", at: now)
+        precondition(relogged.meal == "晚餐" && relogged.name == "鸡蛋" && relogged.calories == 155 && !foods.contains { $0.id == relogged.id }, "re-log copies values into a new entry")
+        precondition(reopened.frequentFoods().first?.count == 4 && reopened.recentFoods().first?.name == "鸡蛋" && reopened.recentFoods().first?.portion == "2个", "re-logged food moves up")
+        let today = reopened.nutritionProgress(on: now)
+        precondition(today.calorieGoal == 2000 && today.proteinGoal == 120, "goals come from preferences")
+        let expectedCalories = foods.filter { Calendar.current.isDate($0.loggedAt, inSameDayAs: now) }.reduce(155) { $0 + $1.calories }
+        precondition(today.calories == expectedCalories && near(today.calorieProgress, expectedCalories / 2000) && near(today.remainingCalories, 2000 - expectedCalories),
+                     "daily totals compare against the calorie goal")
+        try reopened.setCalorieGoal(0)
+        precondition(reopened.nutritionProgress(on: now).calorieGoal == nil && reopened.nutritionProgress(on: now).calorieProgress == nil, "a zero goal is unset")
+
+        let suite = "lianji-check-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let device = DeviceSettings(defaults: defaults)
+        precondition(device.restNotifications && device.haptics && !device.healthSync, "device defaults")
+        device.haptics = false
+        device.healthSync = true
+        precondition(!DeviceSettings(defaults: defaults).haptics && DeviceSettings(defaults: defaults).healthSync, "device settings persist in UserDefaults")
+        let backupPreferences = try TrainingBackup.parse(reopened.exportBackup()).state.preferences
+        precondition(defaults.bool(forKey: "device.healthSync") && backupPreferences.weightUnit == .lb, "backed-up preferences are unaffected by device settings")
+        let exported = String(decoding: try reopened.exportBackup(), as: UTF8.self)
+        precondition(!exported.contains("haptics") && !exported.contains("healthSync"), "device toggles are never exported")
+    }
 }

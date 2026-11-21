@@ -9,7 +9,6 @@ struct LianjiMacApp: App {
             MacRootView()
                 .environmentObject(store)
                 .frame(minWidth: 900, minHeight: 620)
-                .preferredColorScheme(.dark)
         }
     }
 }

@@ -1,7 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Card } from './components';
-import { C } from './theme';
+import { Pressable, View } from 'react-native';
+import { Card, IconButton, Txt } from './components';
+import { makeStyles, radius, space, useTheme } from './theme';
 
 const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
 
@@ -14,21 +13,10 @@ export type CalendarDay = {
   future: boolean;
 };
 
-export function ProgressTabs<T extends string>({ options, value, onChange }: {
-  options: readonly { value: T; label: string }[];
-  value: T;
-  onChange: (value: T) => void;
-}) {
-  return <View style={styles.tabs}>
-    {options.map(option => {
-      const selected = option.value === value;
-      return <Pressable key={option.value} accessibilityRole="tab" accessibilityState={{ selected }} onPress={() => onChange(option.value)} style={({ pressed }) => [styles.tab, selected && styles.tabSelected, pressed && styles.pressed]}>
-        <Text style={[styles.tabLabel, selected && styles.tabLabelSelected]}>{option.label}</Text>
-      </Pressable>;
-    })}
-  </View>;
-}
-
+/**
+ * Month (or single-week) grid: trained days are filled ink circles, today carries an accent ring,
+ * and the selected day sits on a cobalt tile. Days with several sessions show a dot per session.
+ */
 export function TrainingCalendar({ label, days, selectedDay, canGoBack, canGoForward, onMove, onToday, onSelect }: {
   label: string;
   days: CalendarDay[];
@@ -39,70 +27,68 @@ export function TrainingCalendar({ label, days, selectedDay, canGoBack, canGoFor
   onToday: () => void;
   onSelect: (day: CalendarDay) => void;
 }) {
-  return <Card style={styles.calendar}>
-    <View style={styles.calendarHeader}>
-      <CalendarArrow direction={-1} enabled={canGoBack} onPress={onMove} />
-      <Text style={styles.calendarTitle} accessibilityRole="header" accessibilityLiveRegion="polite">{label}</Text>
-      <CalendarArrow direction={1} enabled={canGoForward} onPress={onMove} />
+  const s = useStyles();
+  const { c } = useTheme();
+  return <Card style={s.calendar}>
+    <View style={s.header}>
+      <IconButton icon="chevron-back" label="上一个时段" disabled={!canGoBack} onPress={() => onMove(-1)} />
+      <Txt variant="title3" style={s.title} accessibilityRole="header" accessibilityLiveRegion="polite">{label}</Txt>
+      <IconButton icon="chevron-forward" label="下一个时段" disabled={!canGoForward} onPress={() => onMove(1)} />
     </View>
-    <View style={styles.week} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      {weekdays.map(day => <Text key={day} style={styles.weekday}>{day}</Text>)}
+    <View style={s.week} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      {weekdays.map(day => <Txt key={day} variant="caption" tone="faint" style={s.weekday}>{day}</Txt>)}
     </View>
-    {Array.from({ length: days.length / 7 }, (_, index) => <View key={days[index * 7].key} style={styles.week}>
+    {Array.from({ length: days.length / 7 }, (_, index) => <View key={days[index * 7].key} style={s.week}>
       {days.slice(index * 7, index * 7 + 7).map(day => {
+        if (!day.inPeriod) return <View key={day.key} style={s.cell} />;
         const selected = selectedDay === day.key;
         const trained = day.count > 0;
-        if (!day.inPeriod) return <View key={day.key} style={styles.dayCell} />;
-        return <Pressable key={day.key} accessibilityRole="button" accessibilityLabel={`${day.date.getFullYear()}年${day.date.getMonth() + 1}月${day.date.getDate()}日，${day.today ? '今天，' : ''}${trained ? `${day.count} 次训练` : '无训练'}`} accessibilityState={{ selected, disabled: day.future }} disabled={day.future} onPress={() => onSelect(day)} style={({ pressed }) => [styles.dayCell, pressed && styles.pressed]}>
-          <View style={[styles.day, trained && styles.dayTrained, day.today && styles.dayToday, selected && styles.daySelected]}>
-            <Text style={[styles.dayLabel, trained && styles.dayLabelTrained, day.future && styles.dayLabelFuture, selected && styles.dayLabelSelected]}>{day.date.getDate()}</Text>
-            {trained ? <View style={[styles.dayDot, selected && styles.dayDotSelected]} /> : null}
+        return <Pressable key={day.key} accessibilityRole="button"
+          accessibilityLabel={`${day.date.getFullYear()}年${day.date.getMonth() + 1}月${day.date.getDate()}日，${day.today ? '今天，' : ''}${trained ? `${day.count} 次训练` : '无训练'}`}
+          accessibilityState={{ selected, disabled: day.future }} disabled={day.future} onPress={() => onSelect(day)}
+          style={({ pressed }) => [s.cell, selected && s.cellSelected, pressed && s.pressed]}>
+          <View style={[s.day, trained && s.dayTrained, day.today && s.dayToday]}>
+            <Txt variant="bodyStrong" tone={trained ? 'inverse' : day.today ? 'accent' : day.future ? 'faint' : 'default'} style={s.dayLabel}>{day.date.getDate()}</Txt>
+          </View>
+          <View style={s.marks}>
+            {day.count > 1 ? Array.from({ length: Math.min(day.count, 3) }, (_, mark) => <View key={mark} style={[s.mark, { backgroundColor: selected ? c.data : c.text }]} />) : null}
           </View>
         </Pressable>;
       })}
     </View>)}
-    <View style={styles.calendarFooter}>
-      <View style={styles.legend}><View style={styles.legendDot} /><Text style={styles.help}>有训练记录</Text></View>
-      {canGoForward ? <Pressable accessibilityRole="button" onPress={onToday} style={styles.todayButton}><Text style={styles.todayLabel}>回到今天</Text></Pressable> : <Text style={styles.help}>点选日期查看明细</Text>}
+    <View style={s.footer}>
+      <View style={s.legend} accessible accessibilityLabel="图例：实心圆为有训练记录，橙色圆环为今天">
+        <View style={s.legendItem}><View style={s.legendTrained} /><Txt variant="caption" tone="muted">有训练</Txt></View>
+        <View style={s.legendItem}><View style={s.legendToday} /><Txt variant="caption" tone="muted">今天</Txt></View>
+      </View>
+      {canGoForward ? <Pressable accessibilityRole="button" hitSlop={8} onPress={onToday} style={({ pressed }) => [s.todayButton, pressed && s.pressed]}>
+        <Txt variant="bodyStrong" tone="accent" style={{ fontSize: 14 }}>回到今天</Txt>
+      </Pressable> : <Txt variant="caption" tone="faint">点选日期查看明细</Txt>}
     </View>
   </Card>;
 }
 
-function CalendarArrow({ direction, enabled, onPress }: { direction: -1 | 1; enabled: boolean; onPress: (direction: -1 | 1) => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={direction === -1 ? '上一个时段' : '下一个时段'} accessibilityState={{ disabled: !enabled }} disabled={!enabled} onPress={() => onPress(direction)} style={({ pressed }) => [styles.arrow, !enabled && styles.disabled, pressed && styles.pressed]}>
-    <Ionicons name={direction === -1 ? 'chevron-back' : 'chevron-forward'} size={20} color={C.text} />
-  </Pressable>;
-}
+const DAY = 36;
 
-const styles = StyleSheet.create({
-  tabs: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: 16, borderWidth: 1, borderColor: C.line, backgroundColor: C.surface },
-  tab: { flex: 1, minHeight: 44, paddingVertical: 8, paddingHorizontal: 3, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
-  tabSelected: { backgroundColor: C.accent },
-  tabLabel: { color: C.muted, fontSize: 14, fontWeight: '700', textAlign: 'center' },
-  tabLabelSelected: { color: C.bg },
-  calendar: { paddingHorizontal: 8, paddingVertical: 12, gap: 2 },
-  calendarHeader: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 6, marginBottom: 6, gap: 8 },
-  calendarTitle: { color: C.text, fontSize: 16, fontWeight: '800', flex: 1, textAlign: 'center' },
-  arrow: { alignItems: 'center', justifyContent: 'center', backgroundColor: C.elevated, borderRadius: 12, width: 44, height: 44 },
-  disabled: { opacity: 0.35 },
-  pressed: { opacity: 0.7 },
+const useStyles = makeStyles(c => ({
+  calendar: { paddingHorizontal: space.md, paddingVertical: space.lg, gap: space.xs },
+  header: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.xs, marginBottom: space.sm },
+  title: { flex: 1, textAlign: 'center', fontVariant: ['tabular-nums'] },
   week: { flexDirection: 'row' },
-  weekday: { flex: 1, color: C.muted, fontSize: 12, textAlign: 'center', paddingVertical: 5 },
-  dayCell: { flex: 1, minHeight: 44, padding: 2 },
-  day: { flex: 1, minHeight: 38, borderRadius: 11, borderWidth: 1, borderColor: 'transparent', justifyContent: 'center', alignItems: 'center' },
-  dayTrained: { backgroundColor: C.accentDark },
-  dayToday: { borderColor: C.accent },
-  daySelected: { backgroundColor: C.accent, borderColor: C.accent },
-  dayLabel: { color: C.text, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  dayLabelTrained: { color: C.accent },
-  dayLabelFuture: { color: C.faint },
-  dayLabelSelected: { color: C.bg },
-  dayDot: { position: 'absolute', bottom: 4, width: 3, height: 3, borderRadius: 2, backgroundColor: C.accent },
-  dayDotSelected: { backgroundColor: C.bg },
-  calendarFooter: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4, paddingHorizontal: 8 },
-  legend: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.accent },
-  help: { color: C.muted, fontSize: 12 },
+  weekday: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '700', paddingVertical: space.xs },
+  cell: { flex: 1, minHeight: 50, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, borderWidth: 1.5, borderColor: 'transparent', paddingTop: 3 },
+  cellSelected: { backgroundColor: c.dataSoft, borderColor: c.data },
+  pressed: { opacity: 0.7 },
+  day: { width: DAY, height: DAY, borderRadius: DAY / 2, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
+  dayTrained: { backgroundColor: c.inverse, borderColor: c.inverse },
+  dayToday: { borderColor: c.accent },
+  dayLabel: { fontSize: 14, lineHeight: 18, fontVariant: ['tabular-nums'] },
+  marks: { height: 7, flexDirection: 'row', alignItems: 'center', gap: 3 },
+  mark: { width: 4, height: 4, borderRadius: 2 },
+  footer: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: space.sm, paddingHorizontal: space.xs, marginTop: space.xs },
+  legend: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendTrained: { width: 10, height: 10, borderRadius: 5, backgroundColor: c.inverse },
+  legendToday: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: c.accent },
   todayButton: { minHeight: 44, justifyContent: 'center' },
-  todayLabel: { color: C.accent, fontSize: 12, fontWeight: '700' },
-});
+}));

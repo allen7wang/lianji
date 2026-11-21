@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useData } from '@/lib/data';
+import { useActions, useLibrary } from '@/lib/data';
 import { templatePlanId, type TrainingProgram } from '@/lib/plan-templates';
 import { targetLabel } from '@/lib/types';
 import { defaultUnit } from '@/lib/training-target';
 import { Button, Card, IconButton } from './components';
-import { C } from './theme';
+import { makeStyles } from './theme';
 
 export function PlanTemplatePreview({ program, onClose, onImported }: {
   program: TrainingProgram; onClose: () => void; onImported: () => void;
 }) {
-  const { ready, plans, addProgramTemplate } = useData();
+  const styles = useStyles();
+  const { ready, plans } = useLibrary();
+  const { addProgramTemplate } = useActions();
   const [busy, setBusy] = useState(false);
   const missing = program.days.filter(day => !plans.some(plan => plan.id === templatePlanId(program.id, day.id))).length;
   const close = () => { if (!busy) onClose(); };
@@ -47,7 +49,7 @@ export function PlanTemplatePreview({ program, onClose, onImported }: {
   </Modal>;
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.bg }, header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: 20 }, eyebrow: { color: C.accent, fontSize: 11, fontWeight: '700', marginBottom: 7 }, title: { color: C.text, fontSize: 19, fontWeight: '800', maxWidth: 280 },
-  content: { padding: 20, paddingTop: 0, gap: 18 }, description: { color: C.text, fontSize: 15, lineHeight: 23 }, hint: { color: C.muted, fontSize: 12, lineHeight: 20 }, day: { color: C.accent, fontSize: 18, fontWeight: '800' }, focus: { color: C.muted, fontSize: 12 }, row: { flexDirection: 'row', alignItems: 'center', gap: 12 }, exercise: { flex: 1, color: C.text, fontSize: 14 }, sets: { color: C.muted, fontSize: 12 }, total: { color: C.faint, fontSize: 11, marginTop: 3 }, footer: { padding: 20, borderTopWidth: 1, borderTopColor: C.line },
-});
+const useStyles = makeStyles(c => ({
+  screen: { flex: 1, backgroundColor: c.bg }, header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: 20 }, eyebrow: { color: c.accent, fontSize: 11, fontWeight: '700', marginBottom: 7 }, title: { color: c.text, fontSize: 19, fontWeight: '800', maxWidth: 280 },
+  content: { padding: 20, paddingTop: 0, gap: 18 }, description: { color: c.text, fontSize: 15, lineHeight: 23 }, hint: { color: c.textMuted, fontSize: 12, lineHeight: 20 }, day: { color: c.accent, fontSize: 18, fontWeight: '800' }, focus: { color: c.textMuted, fontSize: 12 }, row: { flexDirection: 'row', alignItems: 'center', gap: 12 }, exercise: { flex: 1, color: c.text, fontSize: 14 }, sets: { color: c.textMuted, fontSize: 12 }, total: { color: c.textFaint, fontSize: 11, marginTop: 3 }, footer: { padding: 20, borderTopWidth: 1, borderTopColor: c.border },
+}));

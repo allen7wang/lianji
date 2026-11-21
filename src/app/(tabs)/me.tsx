@@ -1,99 +1,190 @@
-import { Ionicons } from '@expo/vector-icons';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { getDocumentAsync } from 'expo-document-picker';
-import { useState } from 'react';
-import { Alert, Platform, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { parseBackup } from '@/lib/backup';
-import { useData } from '@/lib/data';
-import { dateLabel } from '@/lib/types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Platform, Switch, View } from 'react-native';
+import { mergeSummaryLabel, parseBackup, type BackupFile, type RestoreMode } from '@/lib/backup';
+import { useActions, useHistory, useLibrary, useWellness } from '@/lib/data';
+import { healthStoreName, isHealthAvailable, requestHealthAccess } from '@/lib/health';
+import { ensureNotificationPermission } from '@/lib/notifications';
+import { dateLabel, type DeviceSettings } from '@/lib/types';
+import { formatWeight, formatWeightValue, parseWeightInput } from '@/lib/units';
 import { buildBodyTrend } from '@/lib/wellness-trend';
-import { Button, Card, Empty, Field, Header, IconButton, Page, SectionTitle } from '@/ui/components';
-import { C } from '@/ui/theme';
+import { Button, Card, Empty, Field, Header, IconButton, ListRow, Metric, Page, SectionTitle, Segmented, Sheet, Tag, Txt } from '@/ui/components';
+import { toDisplayWeight } from '@/ui/set-display';
+import { space, useTheme } from '@/ui/theme';
 import { WellnessTrendChart } from '@/ui/wellness-trend-chart';
 
-function weightDeltaLabel(delta: number) {
-  const rounded = Math.round(delta * 10) / 10;
-  if (rounded === 0) return '与上次相同';
-  return `${rounded > 0 ? '+' : '−'}${Math.abs(rounded).toFixed(1)} kg`;
-}
-
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : String(error);
+const units = [{ value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' }] as const;
 
 export default function Me() {
-  const { bodyEntries, workouts, addBodyEntry, deleteBodyEntry, exportBackupData, restoreBackup } = useData();
+  const { c } = useTheme();
+  const { ready, preferences: { weightUnit }, deviceSettings, snapshot } = useLibrary();
+  const { workouts } = useHistory();
+  const { bodyEntries } = useWellness();
+  const { addBodyEntry, deleteBodyEntry, exportBackupData, restoreBackup, undoLastImport, setDeviceSettings, setPreferences } = useActions();
   const [modal, setModal] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [weight, setWeight] = useState('');
   const [bodyFat, setBodyFat] = useState('');
-  async function save() {
-    const n = Number(weight.replace(',', '.'));
-    const fat = bodyFat.trim() ? Number(bodyFat.replace(',', '.')) : null;
-    if (!Number.isFinite(n) || n <= 0 || n > 500) return Alert.alert('请输入有效体重');
-    if (fat !== null && (!Number.isFinite(fat) || fat < 0 || fat > 100)) return Alert.alert('请输入 0–100 的体脂率');
-    await addBodyEntry(n, fat);
-    setWeight(''); setBodyFat(''); setModal(false);
+  const [healthAvailable, setHealthAvailable] = useState(false);
+  const [pending, setPending] = useState(false);
+  const operation = useRef(false);
+  useEffect(() => {
+    let active = true;
+    isHealthAvailable().then(value => { if (active) setHealthAvailable(value); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+  const trend = useMemo(() => buildBodyTrend(bodyEntries), [bodyEntries]);
+  const weightPoints = trend.points.map(entry => ({ id: entry.id, date: entry.recordedAt, value: toDisplayWeight(entry.weight, weightUnit) }));
+  const fatPoints = trend.fatPoints.map(entry => ({ id: entry.id, date: entry.recordedAt, value: entry.bodyFat }));
+  const delta = trend.weightDelta;
+  const deltaValue = delta === null ? null : formatWeightValue(Math.abs(delta), weightUnit);
+
+  async function run(title: string, action: () => Promise<void>) {
+    if (operation.current) return;
+    operation.current = true;
+    setPending(true);
+    try { await action(); }
+    catch (error) { Alert.alert(title, errorMessage(error)); }
+    finally { operation.current = false; setPending(false); }
   }
-  async function exportFlow() {
-    try {
+
+  function save() {
+    const amount = parseWeightInput(weight, weightUnit);
+    const fat = bodyFat.trim() ? Number(bodyFat.replace(',', '.')) : null;
+    if (amount === null || amount <= 0 || amount > 500) return Alert.alert('请输入有效体重');
+    if (fat !== null && (!Number.isFinite(fat) || fat < 0 || fat > 100)) return Alert.alert('请输入 0–100 的体脂率');
+    void run('保存失败', async () => {
+      await addBodyEntry(amount, fat);
+      setWeight(''); setBodyFat(''); setModal(false);
+    });
+  }
+
+  function exportFlow() {
+    void run('导出失败', async () => {
       const backup = await exportBackupData();
+      const filename = `lianji-backup-${backup.exportedAt.slice(0, 10)}.json`;
       if (Platform.OS === 'web') {
         const url = URL.createObjectURL(new Blob([JSON.stringify(backup)], { type: 'application/json' }));
-        const link = document.createElement('a'); link.href = url; link.download = `lianji-backup-${backup.exportedAt.slice(0, 10)}.json`; link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 10000); return;
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        return;
       }
-      const file = new File(Paths.cache, `lianji-backup-${backup.exportedAt.slice(0, 10)}.json`);
+      if (!await Sharing.isAvailableAsync()) throw new Error('当前设备不支持系统分享。');
+      const file = new File(Paths.cache, filename);
       file.create({ overwrite: true, intermediates: true });
       file.write(JSON.stringify(backup));
-      if (!(await Sharing.isAvailableAsync())) return Alert.alert('无法分享', '当前设备不支持系统分享，无法导出备份。');
       await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: '保存练迹备份' });
-    } catch (error) {
-      Alert.alert('导出失败', errorMessage(error));
-    }
+    });
   }
-  async function importFlow() {
-    try {
+
+  function restore(backup: BackupFile, mode: RestoreMode) {
+    void run('恢复失败', async () => {
+      const summary = await restoreBackup(backup, mode);
+      Alert.alert('导入完成', summary ? mergeSummaryLabel(summary) : '已使用备份替换本机数据。');
+    });
+  }
+
+  function importFlow() {
+    void run('无法读取备份', async () => {
       const result = await getDocumentAsync({ type: ['application/json'], copyToCacheDirectory: true });
       if (result.canceled || !result.assets[0]) return;
-      const text = Platform.OS === 'web' ? await (await fetch(result.assets[0].uri)).text() : await new File(result.assets[0].uri).text();
-      const backup = parseBackup(text);
-      const tables = backup.tables;
-      const finished = tables.workouts.filter(item => item.endedAt).length;
-      Alert.alert('恢复备份', `备份导出于 ${dateLabel(backup.exportedAt)}，包含 ${tables.plans.length} 个计划、${finished} 次已完成训练、${tables.body_entries.length} 条身体记录和 ${tables.food_entries.length} 条饮食记录。恢复会用备份替换本机当前全部数据，且不可撤销。`, [
+      const { uri } = result.assets[0];
+      const backup = parseBackup(Platform.OS === 'web' ? await (await fetch(uri)).text() : await new File(uri).text());
+      const { plans, workouts, body_entries, food_entries } = backup.tables;
+      Alert.alert('恢复备份', `${dateLabel(backup.exportedAt)} 导出，含 ${plans.length} 个计划、${workouts.filter(item => item.endedAt).length} 次已完成训练、${body_entries.length} 条身体和 ${food_entries.length} 条饮食记录。合并保留本机已有记录，替换会覆盖本机数据。导入前会自动保存快照。`, [
         { text: '取消', style: 'cancel' },
-        { text: '替换并恢复', style: 'destructive', onPress: () => { restoreBackup(backup).then(() => Alert.alert('恢复完成', '练迹数据已从备份恢复。')).catch(error => Alert.alert('恢复失败', errorMessage(error))); } },
+        { text: '替换…', style: 'destructive', onPress: () => Alert.alert('替换本机数据？', '当前训练、计划、身体和饮食数据会被备份覆盖。', [
+          { text: '取消', style: 'cancel' },
+          { text: '替换并恢复', style: 'destructive', onPress: () => restore(backup, 'replace') },
+        ]) },
+        { text: '合并（推荐）', onPress: () => restore(backup, 'merge') },
       ]);
-    } catch (error) {
-      Alert.alert('无法读取备份', errorMessage(error));
-    }
+    });
   }
-  const bodyTrend = buildBodyTrend(bodyEntries);
-  const weightPoints = bodyTrend.points.map(entry => ({ id: entry.id, date: entry.recordedAt, value: entry.weight }));
-  const fatChartPoints = bodyTrend.fatPoints.map(entry => ({ id: entry.id, date: entry.recordedAt, value: entry.bodyFat }));
-  const roundedDelta = bodyTrend.weightDelta === null ? null : Math.round(bodyTrend.weightDelta * 10) / 10;
+
+  function changeSetting(key: keyof DeviceSettings, enabled: boolean) {
+    void run('无法更新设置', async () => {
+      if (key === 'restNotifications' && enabled && !await ensureNotificationPermission()) {
+        Alert.alert('通知权限未开启', '请在系统设置里允许练迹发送通知，再打开休息结束提醒。');
+        return;
+      }
+      if (key === 'healthSync' && enabled && !await requestHealthAccess()) {
+        Alert.alert('健康权限未开启', '请允许练迹写入健康数据后再试。');
+        return;
+      }
+      await setDeviceSettings({ [key]: enabled });
+    });
+  }
+
+  function toggle(key: keyof DeviceSettings, title: string, subtitle: string) {
+    return <ListRow title={title} subtitle={subtitle} right={
+      <Switch accessibilityLabel={title} disabled={pending || !ready} value={deviceSettings[key]}
+        trackColor={{ false: c.border, true: c.accent }} onValueChange={value => changeSetting(key, value)} />
+    } />;
+  }
+
   return <Page>
-    <Header eyebrow="YOUR BODY" title="我的数据" right={<IconButton icon="add" onPress={() => setModal(true)} />} />
-    <Card style={styles.summary}><View><Text style={styles.summaryLabel}>最近体重</Text><Text style={styles.weight}>{bodyTrend.latest?.weight ?? '—'} <Text style={styles.unit}>kg</Text></Text><Text style={styles.summarySub}>{bodyTrend.latest ? dateLabel(bodyTrend.latest.recordedAt) + ' 更新' : '还没有记录'}</Text></View><View style={styles.summaryIcon}><Ionicons name="body-outline" size={33} color={C.accent} /></View></Card>
-    {roundedDelta === null ? null : <Text style={[styles.delta, roundedDelta > 0 ? styles.deltaUp : roundedDelta < 0 ? styles.deltaDown : styles.deltaSame]}>{weightDeltaLabel(bodyTrend.weightDelta ?? 0)}</Text>}
-    {weightPoints.length >= 2 ? <WellnessTrendChart description="体重趋势" points={weightPoints} unit="kg" /> : null}
-    {fatChartPoints.length >= 2 ? <WellnessTrendChart description="体脂率趋势" points={fatChartPoints} unit="%" /> : null}
-    <View style={styles.tiles}><Card style={{ flex: 1 }}><Text style={styles.tileValue}>{workouts.filter(item => item.endedAt).length}</Text><Text style={styles.tileLabel}>累计训练</Text></Card><Card style={{ flex: 1 }}><Text style={styles.tileValue}>{bodyEntries.length}</Text><Text style={styles.tileLabel}>身体记录</Text></Card></View>
-    <SectionTitle title="身体记录" action="新增" onAction={() => setModal(true)} />
-    {bodyEntries.length ? bodyEntries.map(entry => <View key={entry.id} style={styles.row}><View><Text style={styles.rowDate}>{dateLabel(entry.recordedAt)}</Text><Text style={styles.rowSub}>{entry.bodyFat === null ? '未记录体脂率' : `体脂率 ${entry.bodyFat}%`}</Text></View><View style={styles.rowRight}><Text style={styles.rowWeight}>{entry.weight} kg</Text><Pressable onPress={() => Alert.alert('删除记录', '确定删除这条身体数据？', [{ text: '取消', style: 'cancel' }, { text: '删除', style: 'destructive', onPress: () => deleteBodyEntry(entry.id) }])} hitSlop={10}><Ionicons name="trash-outline" size={17} color={C.faint} /></Pressable></View></View>) : <Empty icon="body-outline" title="记录身体变化" subtitle="添加体重和体脂率，观察训练带来的改变" />}
-    <SectionTitle title="数据与备份" />
-    <Card style={{ gap: 12 }}>
-      <Text style={styles.localTitle}>备份保存在「文件」</Text>
-      <Text style={styles.localCopy}>导出全部计划、训练记录、身体和饮食数据为一个 JSON 文件，可存到 iCloud Drive 或其他位置。手机、Android 和 Mac 可以互相恢复，也可以恢复 Apple Watch 分享出来的备份。恢复会替换该设备的当前数据，各端不会自动同步。</Text>
-      <View style={styles.backupActions}><Button label="导出备份" icon="share-outline" onPress={exportFlow} style={{ flex: 1 }} /><Button label="从备份恢复" icon="download-outline" variant="secondary" onPress={importFlow} style={{ flex: 1 }} /></View>
+    <Header title="我的数据" right={<IconButton icon="add" label="记录身体数据" disabled={!ready} onPress={() => setModal(true)} />} />
+    <Card variant="data">
+      <Txt variant="caption" tone="muted">最近体重</Txt>
+      <Txt variant="display">{trend.latest ? formatWeightValue(trend.latest.weight, weightUnit) : '—'} <Txt variant="title3" tone="muted">{weightUnit}</Txt></Txt>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, flexWrap: 'wrap' }}>
+        <Txt variant="caption" tone="muted">{trend.latest ? `${dateLabel(trend.latest.recordedAt)} 更新` : '还没有记录'}</Txt>
+        {deltaValue !== null ? <Tag tone="data" label={deltaValue === '0' ? '与上次相同' : `${delta! > 0 ? '+' : '−'}${deltaValue} ${weightUnit}`} /> : null}
+      </View>
     </Card>
-    <Modal visible={modal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModal(false)}><SafeAreaView style={styles.modal} edges={['top', 'bottom']}><View style={styles.modalHeader}><Text style={styles.modalTitle}>记录身体数据</Text><IconButton icon="close" onPress={() => setModal(false)} /></View><View style={{ padding: 20, gap: 20 }}><Field label="体重 · kg" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder="例如 70.5" /><Field label="体脂率 · %（可选）" value={bodyFat} onChangeText={setBodyFat} keyboardType="decimal-pad" placeholder="例如 18.2" /><Button label="保存记录" onPress={save} /></View></SafeAreaView></Modal>
+    {weightPoints.length >= 2 ? <WellnessTrendChart description="体重趋势" points={weightPoints} unit={weightUnit} /> : null}
+    {fatPoints.length >= 2 ? <WellnessTrendChart description="体脂率趋势" points={fatPoints} unit="%" /> : null}
+    <Card style={{ flexDirection: 'row', gap: space.xl }}>
+      <Metric value={String(workouts.length)} label="累计训练" />
+      <Metric value={String(bodyEntries.length)} label="身体记录" />
+    </Card>
+    <SectionTitle title="身体记录" action={ready ? '新增' : undefined} onAction={() => setModal(true)} />
+    {bodyEntries.length ? <Card>
+      {(expanded ? bodyEntries : bodyEntries.slice(0, 10)).map(entry => <ListRow key={entry.id} title={formatWeight(entry.weight, weightUnit)}
+        subtitle={`${dateLabel(entry.recordedAt)} · ${entry.bodyFat === null ? '未记录体脂率' : `体脂率 ${entry.bodyFat}%`}`}
+        right={<IconButton icon="trash-outline" variant="plain" label={`删除 ${dateLabel(entry.recordedAt)} 身体记录`} onPress={() => Alert.alert('删除记录', '确定删除这条身体数据？', [
+          { text: '取消', style: 'cancel' },
+          { text: '删除', style: 'destructive', onPress: () => run('删除失败', () => deleteBodyEntry(entry.id)) },
+        ])} />} />)}
+      {bodyEntries.length > 10 ? <Button label={expanded ? '收起' : '显示全部'} variant="plain" onPress={() => setExpanded(value => !value)} /> : null}
+    </Card> : <Empty icon="body-outline" title={ready ? '记录身体变化' : '正在读取身体记录'} subtitle={ready ? '添加体重和体脂率，查看历史变化。' : ''} />}
+    <SectionTitle title="设置" />
+    <Card>
+      <Txt variant="bodyStrong">重量单位</Txt>
+      <Segmented options={units} value={weightUnit} accessibilityLabel="重量单位" onChange={value => {
+        if (ready) void run('无法切换重量单位', () => setPreferences({ weightUnit: value }));
+      }} />
+      {Platform.OS !== 'web' ? <>
+        {toggle('restNotifications', '休息结束提醒', '计时结束时发送系统通知')}
+        {toggle('keepAwake', '训练时屏幕常亮', '停留在训练页时保持屏幕开启')}
+        {toggle('haptics', '训练震动反馈', '完成组次和计时结束时震动')}
+        {healthAvailable && healthStoreName ? toggle('healthSync', `写入${healthStoreName}`, '保存之后完成的训练、体重和体脂率') : null}
+      </> : null}
+    </Card>
+    <SectionTitle title="数据与备份" />
+    <Card>
+      <Txt tone="muted">备份可在各端导入。合并时保留本机已有记录，替换前会自动保存快照。</Txt>
+      <Button label="导出备份" icon="share-outline" variant="secondary" disabled={!ready || pending} onPress={exportFlow} />
+      <Button label="从备份恢复" icon="download-outline" variant="secondary" disabled={!ready || pending} onPress={importFlow} />
+      {snapshot ? <ListRow title="撤销上次导入" subtitle={`${dateLabel(snapshot.createdAt)} · ${snapshot.reason === 'merge' ? '合并' : '替换'}前的快照`} divider={false} onPress={() => {
+        if (pending) return;
+        Alert.alert('撤销上次导入？', '会恢复到导入前的状态，之后新增的记录也会被覆盖。', [
+          { text: '取消', style: 'cancel' },
+          { text: '撤销导入', style: 'destructive', onPress: () => run('撤销失败', undoLastImport) },
+        ]);
+      }} /> : null}
+    </Card>
+    <Sheet visible={modal} title="记录身体数据" closeDisabled={pending} onClose={() => setModal(false)}>
+      <Field label={`体重 · ${weightUnit}`} value={weight} onChangeText={setWeight} keyboardType="decimal-pad" />
+      <Field label="体脂率 · %（可选）" value={bodyFat} onChangeText={setBodyFat} keyboardType="decimal-pad" />
+      <Button label="保存记录" loading={pending} onPress={save} />
+    </Sheet>
   </Page>;
 }
-
-const styles = StyleSheet.create({
-  summary: { minHeight: 145, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#253B1D' }, summaryLabel: { color: '#B6CCA9', fontSize: 13 }, weight: { color: C.text, fontWeight: '800', fontSize: 38, marginTop: 8 }, unit: { fontSize: 18, fontWeight: '600' }, summarySub: { color: '#B6CCA9', fontSize: 12, marginTop: 5 }, summaryIcon: { width: 70, height: 70, borderRadius: 22, backgroundColor: '#36542A', alignItems: 'center', justifyContent: 'center' },
-  delta: { fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] }, deltaUp: { color: C.orange }, deltaDown: { color: C.accent }, deltaSame: { color: C.muted },
-  tiles: { flexDirection: 'row', gap: 12 }, tileValue: { color: C.accent, fontSize: 25, fontWeight: '800' }, tileLabel: { color: C.muted, fontSize: 12, marginTop: 6 },
-  row: { paddingVertical: 16, borderBottomColor: C.line, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, rowDate: { color: C.text, fontSize: 15, fontWeight: '700' }, rowSub: { color: C.muted, fontSize: 12, marginTop: 5 }, rowRight: { flexDirection: 'row', alignItems: 'center', gap: 18 }, rowWeight: { color: C.accent, fontSize: 16, fontWeight: '700' },
-  localTitle: { color: C.text, fontSize: 14, fontWeight: '700' }, localCopy: { color: C.muted, fontSize: 12, lineHeight: 20, marginTop: 6 }, backupActions: { flexDirection: 'row', gap: 10, marginTop: 6 }, modal: { flex: 1, backgroundColor: C.bg }, modalHeader: { paddingHorizontal: 20, paddingTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, modalTitle: { color: C.text, fontSize: 24, fontWeight: '800' },
-});

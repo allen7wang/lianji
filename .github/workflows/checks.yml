@@ -26,8 +26,8 @@ jobs:
         run: npm run lint
       - name: Typecheck
         run: npm run typecheck
-      - name: Verify training programs
-        run: npm run test:templates
+      - name: Verify training and data storage
+        run: npm test
       - name: Export iOS bundle
         run: npx expo export --platform ios --output-dir dist/ios
       - name: Export Android bundle

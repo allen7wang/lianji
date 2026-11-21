@@ -24,6 +24,8 @@ struct TrainingBackupActions: View {
     @State private var pending: Data?
     @State private var confirm = false
     @State private var confirmText = ""
+    @State private var confirmReplacement = false
+    @State private var confirmUndo = false
     @State private var notice: String?
     #if os(watchOS)
     @State private var exportURL: URL?
@@ -56,9 +58,27 @@ struct TrainingBackupActions: View {
             }
             .alert("恢复备份", isPresented: $confirm) {
                 Button("取消", role: .cancel) { pending = nil }
-                Button("替换并恢复", role: .destructive, action: applyImport)
+                Button("合并（推荐）") { applyImport(merge: true) }
+                Button("替换…", role: .destructive) { confirmReplacement = true }
             } message: {
                 Text(confirmText)
+            }
+            .alert("替换本机数据？", isPresented: $confirmReplacement) {
+                Button("取消", role: .cancel) { pending = nil }
+                Button("替换并恢复", role: .destructive) { applyImport(merge: false) }
+            } message: {
+                Text("当前数据会被备份覆盖。替换前会自动保存快照。")
+            }
+            .alert("撤销上次导入？", isPresented: $confirmUndo) {
+                Button("取消", role: .cancel) {}
+                Button("撤销导入", role: .destructive) {
+                    do {
+                        try store.undoLastImport()
+                        notice = "已恢复导入前的数据。"
+                    } catch { notice = error.localizedDescription }
+                }
+            } message: {
+                Text("导入后新增的数据也会被覆盖。")
             }
         #endif
     }
@@ -73,6 +93,10 @@ struct TrainingBackupActions: View {
             exportControl
             #if !os(watchOS)
             Button("从备份恢复") { importing = true }
+            if let snapshot = store.latestSnapshot {
+                Button("撤销上次导入") { confirmUndo = true }
+                Text(snapshot.label).font(.caption).foregroundStyle(Theme.Colors.textMuted)
+            }
             #endif
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -82,7 +106,7 @@ struct TrainingBackupActions: View {
         #if os(watchOS)
         "导出全部计划、训练、身体和饮食数据。点「准备备份」后，用系统分享保存 JSON。手表不能选文件恢复，可在 iPhone、Android 或 Mac 上恢复这份备份。"
         #else
-        "导出全部计划、训练、身体和饮食数据。同一份 JSON 可以在 iPhone、Android 和 Mac 上手动恢复，也可以恢复 Apple Watch 分享出来的备份。恢复会替换本机当前数据，各端不会自动同步。"
+        "导出全部计划、训练、身体和饮食数据。同一份 JSON 可以在 iPhone、Android 和 Mac 上手动恢复，也可以恢复 Apple Watch 分享出来的备份。导入时可以合并或替换，操作前会自动保存快照。"
         #endif
     }
 
@@ -124,7 +148,7 @@ struct TrainingBackupActions: View {
             let accessed = url.startAccessingSecurityScopedResource()
             defer { if accessed { url.stopAccessingSecurityScopedResource() } }
             let data = try Data(contentsOf: url)
-            confirmText = try TrainingBackup.parse(data).preview.message
+            confirmText = try TrainingBackup.parse(data).preview.mergeMessage
             pending = data
             confirm = true
         } catch {
@@ -132,12 +156,16 @@ struct TrainingBackupActions: View {
         }
     }
 
-    private func applyImport() {
+    private func applyImport(merge: Bool) {
         guard let pending else { return }
         self.pending = nil
         do {
-            _ = try store.restoreBackup(pending)
-            notice = "练迹数据已从备份恢复。"
+            if merge {
+                notice = try store.mergeBackup(pending).message
+            } else {
+                try store.restoreBackup(pending)
+                notice = "练迹数据已从备份恢复。"
+            }
         } catch {
             notice = error.localizedDescription
         }

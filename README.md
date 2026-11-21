@@ -4,15 +4,18 @@
 
 ## 下载预览版
 
-[下载 Android APK · v1.3.1](https://github.com/allen7wang/lianji/releases/download/v1.3.1/Lianji-1.3.1-Android.apk)。在 Android 7.0+ 手机上下载后打开安装，按系统提示允许当前下载来源安装应用。安装后直接打开「练迹」，无需 Expo Go 或连接开发电脑。
+[练迹 v3.0.0 GitHub 预览版](https://github.com/allen7wang/lianji/releases/tag/v3.0.0)提供构建附件、各平台安装条件和校验值。macOS 包未签名、未公证，iPhone 和 Apple Watch 模拟器包需在 Xcode 模拟器中使用。
 
-[GitHub 发布页](https://github.com/allen7wang/lianji/releases/tag/v1.3.1)提供新版 Android、macOS 通用预览包，以及 iPhone / Apple Watch 模拟器预览包。macOS 包尚未签名或公证；Apple 模拟器包不能安装到真实手机或手表。
-
-各平台的安装方式和验证范围见 [v1.3.1 发布说明](docs/release-v1.3.1.md)。这是公开预览版，尚未发布到 App Store 或 Google Play。
+Android v3 需要 Android 8.0 或更高版本。已发布的旧版 APK 可从 [v1.3.0 发布页](https://github.com/allen7wang/lianji/releases/tag/v1.3.0)下载。完整变更和验收范围见 [v3.0.0 发布说明](docs/release-v3.0.0.md)。
 
 <img src="docs/iphone-preview.png" alt="练迹 iPhone 首页预览" width="280" />
 
 > **v1.3.1 动图补齐**：51 项本地 GIF 与 4 项呼吸动画已全部随包提供，55 个内置动作的默认演示无需联网。
+
+## v3.0.0 迹线
+
+- 手机、Web、Mac 和 Apple Watch 更新界面，支持热身组、RPE、kg/lb 和估算 1RM。
+- 新增备份合并与导入撤销，补齐营养目标和快捷记录。完整变更见 [v3.0.0 版本说明](docs/release-v3.0.0.md)。
 
 ## v2.10.0 调整动作顺序
 
@@ -153,7 +156,7 @@
 
 专项力量可再按短跑、半马、全马、游泳、铁三、自行车、登山、篮球和羽毛球筛选。模板提供配合专项训练的力量练习；跑量、游泳距离、骑行时间和比赛日程仍由用户安排。动物流模板是独立编写的基础地面练习，未采用官方课程编排。
 
-按秒项目显示时长，计时结束后手动勾选完成；20/10 模板采用该间歇节奏，动作强度可自行调整。计时器目前只提供应用内倒计时，没有后台通知或自动判定完成。按秒组不计入力量训练容量（kg × 次）。旧训练记录保持原有次数语义，新模板使用明确的次/秒单位。
+按秒项目显示时长，计时结束后手动勾选完成。20/10 模板采用该间歇节奏，动作强度可自行调整。手机端可开启计时结束时的本地提醒。按秒组不计入力量训练容量（kg × 次）。旧训练记录保持原有次数语义，新模板使用明确的次/秒单位。
 
 四端共用 `assets/plans/training-programs.json` 模板目录，各端仍使用各自的本地存储。
 
@@ -238,7 +241,7 @@ GitHub Actions 会在提交和 Pull Request 后检查代码规范、类型、计
 
 ## 当前边界
 
-这是可运行的本地版，没有账号、跨设备云同步、食品库与扫码识别、HealthKit 接入、付费会员或 AI 训练建议。默认动作演示已全部改为离线、来源和许可明确的素材。部分原创示意的可选联网模型参考仍属于历史原型链接，未取得其媒体再分发授权，因此不下载打包。发布到 App Store / Google Play 还需要开发者账号、签名、隐私材料及真机验收，并确认现有应用标识归属开发者账号。已有安装的升级应保持同一应用标识。
+这是可运行的本地版。经授权后，手机可向 Apple 健康或 Health Connect 写入新保存的训练、体重与体脂率。账号、跨设备云同步、食品库与扫码识别、付费会员和 AI 训练建议尚未提供。默认动作演示使用离线素材，素材说明列出逐项来源和许可。发布到 App Store / Google Play 还需要开发者账号、签名、隐私材料及真机验收，并确认现有应用标识归属开发者账号。
 
 iOS / Android 数据保存在各自设备的 SQLite 数据库中，Mac / Apple Watch 数据保存在各自应用的本地 JSON 文件中。手机、Android 和 Mac 可以把全部计划、训练、身体和饮食数据导出为同一格式的 JSON，并从「文件」或 iCloud Drive 手动恢复；Apple Watch 可以分享出同样的备份，但不能在表上选文件恢复。恢复会替换该设备的当前数据。各端数据不会自动云同步。
 

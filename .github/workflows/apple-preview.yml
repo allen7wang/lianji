@@ -20,17 +20,15 @@ jobs:
         with:
           ref: ${{ inputs.source_ref }}
           persist-credentials: false
-      - name: Verify shared store upgrade, timed programs and training progress
+      - name: Verify shared store upgrade, backup, merge, statistics and progression rules
         run: |
           mkdir -p "$RUNNER_TEMP/lianji-check/module-cache"
           cp assets/plans/training-programs.json assets/exercises/extra-exercises.json assets/exercises/breathing-profiles.json "$RUNNER_TEMP/lianji-check/"
-          progress_sources=()
-          if [[ -f apple/Shared/TrainingProgress.swift ]]; then
-            progress_sources+=(apple/Shared/TrainingProgress.swift)
-          fi
           swiftc -module-cache-path "$RUNNER_TEMP/lianji-check/module-cache" \
             apple/Shared/Models.swift apple/Shared/Breathing.swift apple/Shared/TrainingPrograms.swift \
-            apple/Shared/TrainingStore.swift apple/Shared/TrainingBackup.swift apple/Shared/WellnessTrend.swift "${progress_sources[@]}" scripts/verify-apple-programs.swift \
+            apple/Shared/TrainingStore.swift apple/Shared/TrainingBackup.swift apple/Shared/WellnessTrend.swift \
+            apple/Shared/TrainingProgress.swift apple/Shared/Preferences.swift apple/Shared/Progression.swift \
+            apple/Shared/TrainingImport.swift scripts/verify-apple-programs.swift \
             -o "$RUNNER_TEMP/lianji-check/verify"
           "$RUNNER_TEMP/lianji-check/verify"
       - name: Build macOS universal

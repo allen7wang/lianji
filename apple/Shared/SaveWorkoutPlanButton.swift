@@ -7,7 +7,7 @@ struct SaveWorkoutPlanButton: View {
     let workout: Workout
 
     var body: some View {
-        if workout.completedSets.contains(where: { $0.reps > 0 }) {
+        if workout.completedWorkingSets.contains(where: { $0.reps > 0 }) {
             VStack(alignment: .leading, spacing: 4) {
                 Button("存为训练计划", systemImage: "doc.on.doc") {
                     confirming = true

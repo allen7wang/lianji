@@ -1,13 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { useData } from '@/lib/data';
+import { Alert, Text, View } from 'react-native';
+import { formatVolume, formatWeight } from '@/lib/units';
+import { bestOneRepMax, formatOneRepMax, RpeTag, setOrdinals, setTitle, toDisplayWeight } from '@/ui/set-display';
+import { useActions, useHistory, useLibrary } from '@/lib/data';
 import { findWorkoutComparison, type WorkoutComparison } from '@/lib/training-comparison';
 import { buildTrainingProgress, workoutMilestones } from '@/lib/training-progress';
-import { dateLabel, durationLabel, targetLabel, volumeOf } from '@/lib/types';
+import { dateLabel, durationLabel, isWarmup, targetLabel, volumeOf } from '@/lib/types';
 import { Button, Card, Header, IconButton, Metric, Page, SectionTitle } from '@/ui/components';
-import { C } from '@/ui/theme';
+import { makeStyles, useTheme } from '@/ui/theme';
 
 const recordLabels = {
   weight: { label: '单组重量', unit: 'kg' },
@@ -18,14 +20,18 @@ const recordLabels = {
 const comparisonNumber = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 2 });
 
 export default function HistoryDetail() {
+  const styles = useStyles();
+  const { c } = useTheme();
   const { id, saved } = useLocalSearchParams<{ id: string; saved?: string }>();
-  const { ready, workouts, workoutSets, exercises, deleteWorkout, repeatWorkout } = useData();
+  const { ready, exercises, preferences: { weightUnit } } = useLibrary();
+  const { workouts, sets: workoutSets } = useHistory();
+  const { deleteWorkout, repeatWorkout } = useActions();
   const [starting, setStarting] = useState(false);
   const startInFlight = useRef(false);
   const workout = workouts.find(item => item.id === id && item.endedAt);
   const sets = useMemo(() => workoutSets.filter(set => set.workoutId === id && set.completed), [id, workoutSets]);
   const comparison = useMemo(() => workout ? findWorkoutComparison(workout, workouts, workoutSets) : null, [workout, workouts, workoutSets]);
-  const canSavePlan = sets.some(set => Number.isFinite(set.reps) && set.reps > 0);
+  const canSavePlan = sets.some(set => !isWarmup(set) && Number.isFinite(set.reps) && set.reps > 0);
   const milestones = useMemo(() => {
     if (!workout || !sets.length) return [];
     const exerciseIds = new Set(sets.map(set => set.exerciseId));
@@ -78,14 +84,14 @@ export default function HistoryDetail() {
       <IconButton icon="chevron-back" label="返回" onPress={back} />
       <View style={styles.actions}>
         <IconButton icon="create-outline" label="编辑训练记录" onPress={() => router.push({ pathname: '/history/edit/[id]', params: { id: workout.id } })} />
-        <IconButton icon="trash-outline" label="删除训练记录" color={C.danger} onPress={confirmDelete} />
+        <IconButton icon="trash-outline" label="删除训练记录" color={c.danger} onPress={confirmDelete} />
       </View>
     </View>
     <Header eyebrow={`${justSaved ? '已保存 · ' : ''}${dateLabel(workout.startedAt)}`} title={workout.name} />
     <Card style={styles.metrics}>
       <Metric value={durationLabel(workout.startedAt, workout.endedAt)} label="训练时长" accent />
       <Metric value={String(sets.length)} label="完成组数" />
-      <Metric value={Math.round(volumeOf(sets)).toLocaleString()} label="容量 · kg × 次" />
+      <Metric value={formatVolume(volumeOf(sets), weightUnit)} label={`容量 · ${weightUnit} × 次`} />
     </Card>
     {justSaved ? <Button label="查看训练进度" icon="stats-chart-outline" onPress={() => router.navigate('/history')} /> : null}
     {canSavePlan ? <Button label="存为训练计划" icon="bookmark-outline" variant="secondary" onPress={() => router.push({ pathname: '/plan-editor', params: { workoutId: workout.id } })} /> : null}
@@ -95,13 +101,14 @@ export default function HistoryDetail() {
       <Card style={styles.milestones}>
         {milestones.map(({ exerciseId, metric, value, previous }) => {
           const { label, unit } = recordLabels[metric];
+          const format = (amount: number) => metric === 'weight' ? formatWeight(amount, weightUnit) : `${amount} ${unit}`;
           return <View key={`${exerciseId}:${metric}`} style={styles.milestone}>
-            <Ionicons name={previous ? 'trophy-outline' : 'flag-outline'} color={C.accent} size={20} />
+            <Ionicons name={previous ? 'trophy-outline' : 'flag-outline'} color={c.accent} size={20} />
             <View style={styles.flex}>
               <Text style={styles.exerciseName}>{exercises.find(item => item.id === exerciseId)?.name ?? '未知动作'}</Text>
-              <Text style={styles.exerciseMeta}>{previous ? `${label}新高 · 原纪录 ${previous} ${unit}` : `${label}首次记录`}</Text>
+              <Text style={styles.exerciseMeta}>{previous ? `${label}新高 · 原纪录 ${format(previous)}` : `${label}首次记录`}</Text>
             </View>
-            <Text style={styles.milestoneValue}>{value} {unit}</Text>
+            <Text style={styles.milestoneValue}>{format(value)}</Text>
           </View>;
         })}
       </Card>
@@ -113,25 +120,29 @@ export default function HistoryDetail() {
       const exerciseSets = sets.filter(set => set.exerciseId === exerciseId);
       const volume = volumeOf(exerciseSets);
       const seconds = exerciseSets.reduce((sum, set) => sum + (set.unit === 'seconds' ? set.reps : 0), 0);
+      const ordinals = setOrdinals(exerciseSets);
+      const e1rm = bestOneRepMax(exerciseSets);
       return <Card key={exerciseId}>
         <View style={styles.exerciseHeader}>
           <View style={styles.index}><Text style={styles.indexText}>{String(index + 1).padStart(2, '0')}</Text></View>
           <View style={styles.flex}>
             <Text style={styles.exerciseName}>{exercise?.name ?? '未知动作'}</Text>
-            <Text style={styles.exerciseMeta}>{exerciseSets.length} 组{volume ? ` · ${Math.round(volume)} kg × 次` : ''}{seconds ? ` · ${seconds} 秒` : ''}</Text>
+            <Text style={styles.exerciseMeta}>{exerciseSets.length} 组{volume ? ` · ${formatVolume(volume, weightUnit)} ${weightUnit} × 次` : ''}{seconds ? ` · ${seconds} 秒` : ''}</Text>
+            {e1rm !== undefined ? <Text style={styles.exerciseMeta}>估算 1RM · {formatOneRepMax(e1rm, weightUnit)}</Text> : null}
           </View>
           {exerciseSets.some(set => set.reps > 0) ? <IconButton
             icon="stats-chart-outline"
-            color={C.accent}
+            color={c.accent}
             label={`查看${exercise?.name ?? '该动作'}的进步`}
             onPress={() => router.navigate({ pathname: '/history', params: { exerciseId } })}
           /> : null}
         </View>
         <View style={styles.divider} />
-        {exerciseSets.map(set => <View key={set.id} style={styles.setRow}>
-          <Text style={styles.setNumber}>第 {set.setNumber} 组</Text>
-          <Text style={styles.setValue}>{set.weight > 0 ? `${set.weight} kg × ` : ''}{targetLabel(set.reps, set.unit)}</Text>
-          <Ionicons name="checkmark-circle" size={17} color={C.accent} />
+        {exerciseSets.map(set => <View key={set.id} style={[styles.setRow, ordinals.get(set.id)?.warmup && styles.warmup]}>
+          <Text style={styles.setNumber}>{ordinals.get(set.id)?.warmup ? `W · ${setTitle(ordinals.get(set.id))}` : setTitle(ordinals.get(set.id))}</Text>
+          <Text style={styles.setValue}>{set.weight > 0 ? `${formatWeight(set.weight, weightUnit)} × ` : ''}{targetLabel(set.reps, set.unit)}</Text>
+          <RpeTag rpe={set.rpe} />
+          <Ionicons name="checkmark-circle" size={17} color={c.success} />
         </View>)}
       </Card>;
     })}
@@ -141,8 +152,10 @@ export default function HistoryDetail() {
 }
 
 function ComparisonCard({ comparison: { current, previous, previousWorkout } }: { comparison: WorkoutComparison }) {
+  const styles = useStyles();
+  const { preferences: { weightUnit } } = useLibrary();
   const rows = [{ label: '完成组数', unit: '组', before: previous.completedSets, after: current.completedSets }];
-  if (current.volume || previous.volume) rows.push({ label: '训练容量', unit: 'kg × 次', before: previous.volume, after: current.volume });
+  if (current.volume || previous.volume) rows.push({ label: '训练容量', unit: `${weightUnit} × 次`, before: toDisplayWeight(previous.volume, weightUnit), after: toDisplayWeight(current.volume, weightUnit) });
   if (current.timedSeconds || previous.timedSeconds) rows.push({ label: '计时总时长', unit: '秒', before: previous.timedSeconds, after: current.timedSeconds });
 
   return <>
@@ -163,26 +176,27 @@ function ComparisonCard({ comparison: { current, previous, previousWorkout } }: 
   </>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   back: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
   actions: { flexDirection: 'row', gap: 18 },
   metrics: { flexDirection: 'row', gap: 8 },
   flex: { flex: 1 },
   comparison: { gap: 14 },
   comparisonRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  comparisonSource: { color: C.muted, fontSize: 12, lineHeight: 18 },
-  comparisonChange: { color: C.text, fontSize: 14, fontWeight: '800', flexShrink: 1, textAlign: 'right' },
+  comparisonSource: { color: c.textMuted, fontSize: 12, lineHeight: 18 },
+  comparisonChange: { color: c.text, fontSize: 14, fontWeight: '800', flexShrink: 1, textAlign: 'right' },
   milestones: { gap: 16 },
   milestone: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  milestoneValue: { color: C.accent, fontSize: 17, fontWeight: '800' },
+  milestoneValue: { color: c.accent, fontSize: 17, fontWeight: '800' },
   exerciseHeader: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  index: { width: 38, height: 38, borderRadius: 11, backgroundColor: C.accentDark, alignItems: 'center', justifyContent: 'center' },
-  indexText: { color: C.accent, fontWeight: '800' },
-  exerciseName: { color: C.text, fontSize: 16, fontWeight: '700' },
-  exerciseMeta: { color: C.muted, fontSize: 11, marginTop: 4 },
-  divider: { height: 1, backgroundColor: C.line, marginVertical: 14 },
+  index: { width: 38, height: 38, borderRadius: 11, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  indexText: { color: c.accent, fontWeight: '800' },
+  exerciseName: { color: c.text, fontSize: 16, fontWeight: '700' },
+  exerciseMeta: { color: c.textMuted, fontSize: 11, marginTop: 4 },
+  divider: { height: 1, backgroundColor: c.border, marginVertical: 14 },
+  warmup: { backgroundColor: c.warningSoft, borderRadius: 10, paddingHorizontal: 8 },
   setRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, gap: 10 },
-  setNumber: { color: C.faint, fontSize: 12, width: 55 },
-  setValue: { flex: 1, color: C.text, fontSize: 14 },
-  note: { color: C.text, fontSize: 14, lineHeight: 22 },
-});
+  setNumber: { color: c.textFaint, fontSize: 12, width: 55 },
+  setValue: { flex: 1, color: c.text, fontSize: 14 },
+  note: { color: c.text, fontSize: 14, lineHeight: 22 },
+}));

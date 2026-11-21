@@ -1,15 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Modal, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useData } from '@/lib/data';
+import { useActions, useHistory, useLibrary } from '@/lib/data';
 import { localDayKey, mondayOf } from '@/lib/training-progress';
 import { completedScheduleKeys, parseScheduleDay, scheduleKey, scheduleStatus, type ScheduledTraining } from '@/lib/training-schedule';
 import type { Plan } from '@/lib/types';
 import { useTrainingDate } from '@/lib/use-training-date';
 import { Button, Card, Empty, Field, IconButton, Page } from '@/ui/components';
-import { C, space } from '@/ui/theme';
+import { makeStyles, useTheme, space } from '@/ui/theme';
 
 const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
 
@@ -36,7 +36,11 @@ export default function TrainingSchedule() {
 }
 
 function ScheduleContent({ initialDate, preferredPlanId }: { initialDate: Date | null; preferredPlanId?: string }) {
-  const { ready, plans, workouts, workoutSets, schedule, schedulePlan, unschedulePlan } = useData();
+  const styles = useStyles();
+  const { c } = useTheme();
+  const { ready, plans, schedule } = useLibrary();
+  const { workouts, sets: workoutSets } = useHistory();
+  const { schedulePlan, unschedulePlan, startWorkout } = useActions();
   const today = useTrainingDate();
   const [selectedDate, setSelectedDate] = useState<Date | null>(initialDate);
   const [showPicker, setShowPicker] = useState(false);
@@ -119,9 +123,9 @@ function ScheduleContent({ initialDate, preferredPlanId }: { initialDate: Date |
       </View>
       <Card style={styles.calendar}>
         <View style={styles.weekHeading}>
-          <Pressable accessibilityRole="button" accessibilityLabel="上一周" accessibilityState={{ disabled: saving }} disabled={saving} onPress={() => selectDate(shiftDay(date, -7))} style={styles.weekArrow}><Ionicons name="chevron-back" color={C.text} size={20} /></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="上一周" accessibilityState={{ disabled: saving }} disabled={saving} onPress={() => selectDate(shiftDay(date, -7))} style={styles.weekArrow}><Ionicons name="chevron-back" color={c.text} size={20} /></Pressable>
           <Text accessibilityLiveRegion="polite" style={styles.weekLabel}>{weekTitle(start)}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="下一周" accessibilityState={{ disabled: saving }} disabled={saving} onPress={() => selectDate(shiftDay(date, 7))} style={styles.weekArrow}><Ionicons name="chevron-forward" color={C.text} size={20} /></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="下一周" accessibilityState={{ disabled: saving }} disabled={saving} onPress={() => selectDate(shiftDay(date, 7))} style={styles.weekArrow}><Ionicons name="chevron-forward" color={c.text} size={20} /></Pressable>
         </View>
         <View style={styles.days}>
           {weekdays.map((weekday, index) => {
@@ -139,7 +143,7 @@ function ScheduleContent({ initialDate, preferredPlanId }: { initialDate: Date |
         </View>
         <View style={styles.legend}><View style={[styles.dot, styles.dotVisible]} /><Text style={styles.muted}>有训练安排</Text></View>
       </Card>
-      {!ready ? <View style={styles.loading}><ActivityIndicator color={C.accent} /><Text style={styles.muted}>正在加载训练安排</Text></View> : <>
+      {!ready ? <View style={styles.loading}><ActivityIndicator color={c.accent} /><Text style={styles.muted}>正在加载训练安排</Text></View> : <>
         <View style={styles.dateHeading}>
           <Text accessibilityRole="header" accessibilityLiveRegion="polite" style={styles.dateTitle}>{dateTitle(date)}{dayKey === todayKey ? ' · 今天' : ''}</Text>
           <Text style={styles.muted}>{dayEntries.length} 项安排</Text>
@@ -148,12 +152,20 @@ function ScheduleContent({ initialDate, preferredPlanId }: { initialDate: Date |
           const status = scheduleStatus(entry, todayKey, completed);
           const name = planById.get(entry.planId)?.name ?? '未知计划';
           return <Card key={scheduleKey(entry)} style={styles.entry}>
-            <View style={styles.entryIcon}><Ionicons name={status === '已完成' ? 'checkmark-circle-outline' : 'calendar-outline'} color={C.accent} size={22} /></View>
+            <View style={styles.entryIcon}><Ionicons name={status === '已完成' ? 'checkmark-circle-outline' : 'calendar-outline'} color={c.accent} size={22} /></View>
             <View style={styles.entryContent}>
               <Text style={styles.planName}>{name}</Text>
               <Text style={[styles.status, status === '已完成' && styles.done, status === '待训练' && styles.due]}>{status}</Text>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel={`移除${name}的安排`} accessibilityState={{ disabled: saving }} disabled={saving} onPress={() => confirmRemoval(entry, name)} style={({ pressed }) => [styles.remove, pressed && styles.pressed]}><Ionicons name="trash-outline" color={C.danger} size={20} /></Pressable>
+            {status === '待训练' ? <IconButton icon="play" label={`开始${name}`} disabled={saving} onPress={() => {
+              void startWorkout(entry.planId).then(() => router.push('/workout')).catch(cause => {
+                Alert.alert('无法开始训练', cause instanceof Error ? cause.message : '请再试一次。', [
+                  { text: '取消', style: 'cancel' },
+                  { text: '查看进行中的训练', onPress: () => router.push('/workout') },
+                ]);
+              });
+            }} /> : null}
+            <Pressable accessibilityRole="button" accessibilityLabel={`移除${name}的安排`} accessibilityState={{ disabled: saving }} disabled={saving} onPress={() => confirmRemoval(entry, name)} style={({ pressed }) => [styles.remove, pressed && styles.pressed]}><Ionicons name="trash-outline" color={c.danger} size={20} /></Pressable>
           </Card>;
         })}
         {!showPicker && error ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" style={styles.error}>{error}</Text> : null}
@@ -177,6 +189,8 @@ function SchedulePlanPicker({ date, plans, canAssign, saving, error, onClose, on
   onClose: () => void;
   onSelect: (plan: Plan) => void;
 }) {
+  const styles = useStyles();
+  const { c } = useTheme();
   const [query, setQuery] = useState('');
   const filtered = plans.filter(plan => plan.name.toLowerCase().includes(query.trim().toLowerCase()));
   return <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -186,7 +200,7 @@ function SchedulePlanPicker({ date, plans, canAssign, saving, error, onClose, on
           <Text style={styles.modalTitle} accessibilityRole="header">安排训练计划</Text>
           <Text style={styles.muted}>{dateTitle(date)}</Text>
         </View>
-        {!saving ? <IconButton icon="close" label="关闭计划选择" onPress={onClose} /> : <ActivityIndicator accessibilityLabel="正在保存安排" color={C.accent} />}
+        {!saving ? <IconButton icon="close" label="关闭计划选择" onPress={onClose} /> : <ActivityIndicator accessibilityLabel="正在保存安排" color={c.accent} />}
       </View>
       <View style={styles.search}>
         <Field value={query} onChangeText={setQuery} placeholder="搜索计划名称" />
@@ -194,51 +208,51 @@ function SchedulePlanPicker({ date, plans, canAssign, saving, error, onClose, on
       </View>
       <FlatList data={filtered} keyExtractor={plan => plan.id} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.pickerList} ListEmptyComponent={<Empty icon="search-outline" title="没有找到可安排的计划" subtitle="试试其他关键词。" />} renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`安排${item.name}`} accessibilityState={{ disabled: saving || !canAssign }} disabled={saving || !canAssign} onPress={() => onSelect(item)} style={({ pressed }) => [styles.pickerRow, pressed && styles.pressed]}>
         <Text style={[styles.planName, styles.entryContent]}>{item.name}</Text>
-        <Ionicons name="add-circle-outline" color={C.accent} size={23} />
+        <Ionicons name="add-circle-outline" color={c.accent} size={23} />
       </Pressable>} />
     </SafeAreaView>
   </Modal>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles(c => ({
   content: { width: '100%', maxWidth: 720, alignSelf: 'center', gap: 15, paddingTop: 10 },
   toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
-  title: { color: C.text, fontSize: 22, fontWeight: '800', textAlign: 'center', flexShrink: 1 },
+  title: { color: c.text, fontSize: 22, fontWeight: '800', textAlign: 'center', flexShrink: 1 },
   todayButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
-  todayText: { color: C.accent, fontSize: 13, fontWeight: '800' },
+  todayText: { color: c.accent, fontSize: 13, fontWeight: '800' },
   calendar: { gap: 11, paddingHorizontal: 8, paddingVertical: 10 },
   weekHeading: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 3 },
-  weekArrow: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.elevated, alignItems: 'center', justifyContent: 'center' },
-  weekLabel: { flex: 1, textAlign: 'center', color: C.text, fontSize: 14, fontWeight: '700' },
+  weekArrow: { width: 44, height: 44, borderRadius: 12, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  weekLabel: { flex: 1, textAlign: 'center', color: c.text, fontSize: 14, fontWeight: '700' },
   days: { flexDirection: 'row', gap: 2 },
   day: { flex: 1, minWidth: 0, minHeight: 63, borderRadius: 12, borderWidth: 1, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 5 },
-  dayToday: { borderColor: C.accent },
-  daySelected: { backgroundColor: C.accent, borderColor: C.accent },
-  dayLabel: { color: C.muted, fontSize: 11, textAlign: 'center' },
-  dayNumber: { color: C.text, fontSize: 16, fontWeight: '800', textAlign: 'center', fontVariant: ['tabular-nums'] },
-  dayTextSelected: { color: C.bg },
+  dayToday: { borderColor: c.accent },
+  daySelected: { backgroundColor: c.accent, borderColor: c.accent },
+  dayLabel: { color: c.textMuted, fontSize: 11, textAlign: 'center' },
+  dayNumber: { color: c.text, fontSize: 16, fontWeight: '800', textAlign: 'center', fontVariant: ['tabular-nums'] },
+  dayTextSelected: { color: c.onAccent },
   dot: { width: 5, height: 5, borderRadius: 3 },
-  dotVisible: { backgroundColor: C.accent },
-  dotSelected: { backgroundColor: C.bg },
+  dotVisible: { backgroundColor: c.accent },
+  dotSelected: { backgroundColor: c.bg },
   legend: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
   pressed: { opacity: 0.72 },
   dateHeading: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 6 },
-  dateTitle: { color: C.text, fontSize: 18, fontWeight: '800' },
-  muted: { color: C.muted, fontSize: 13, lineHeight: 19 },
+  dateTitle: { color: c.text, fontSize: 18, fontWeight: '800' },
+  muted: { color: c.textMuted, fontSize: 13, lineHeight: 19 },
   loading: { minHeight: 92, gap: 8, alignItems: 'center', justifyContent: 'center' },
   entry: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 11 },
-  entryIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: C.accentDark, alignItems: 'center', justifyContent: 'center' },
+  entryIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' },
   entryContent: { flex: 1, gap: 4 },
-  planName: { color: C.text, fontSize: 16, fontWeight: '800' },
-  status: { color: C.muted, fontSize: 13, fontWeight: '700' },
-  done: { color: C.accent },
-  due: { color: C.orange },
-  remove: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.elevated, alignItems: 'center', justifyContent: 'center' },
-  error: { color: C.danger, fontSize: 13, fontWeight: '700' },
-  modal: { flex: 1, backgroundColor: C.bg },
+  planName: { color: c.text, fontSize: 16, fontWeight: '800' },
+  status: { color: c.textMuted, fontSize: 13, fontWeight: '700' },
+  done: { color: c.success },
+  due: { color: c.warning },
+  remove: { width: 44, height: 44, borderRadius: 12, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  error: { color: c.danger, fontSize: 13, fontWeight: '700' },
+  modal: { flex: 1, backgroundColor: c.bg },
   modalHeading: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: space.page },
-  modalTitle: { color: C.text, fontSize: 22, fontWeight: '800' },
+  modalTitle: { color: c.text, fontSize: 22, fontWeight: '800' },
   search: { gap: 8, paddingHorizontal: space.page, paddingBottom: 10 },
   pickerList: { paddingHorizontal: space.page, paddingBottom: 20 },
-  pickerRow: { minHeight: 57, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: C.line },
-});
+  pickerRow: { minHeight: 57, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: c.border },
+}));

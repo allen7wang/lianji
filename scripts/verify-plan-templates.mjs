@@ -51,7 +51,7 @@ function database(filename = ':memory:') {
   return { native, db };
 }
 
-const { migrate, readWeeklyGoal, writeWeeklyGoal, readTrainingSchedule, insertScheduledTraining, removeScheduledTraining, readFavoritePlanIds, writePlanFavorite } = loadSource(path.join(root, 'src/lib/database.ts'));
+const { migrate, SCHEMA_VERSION, readWeeklyGoal, writeWeeklyGoal, readTrainingSchedule, insertScheduledTraining, removeScheduledTraining, readFavoritePlanIds, writePlanFavorite } = loadSource(path.join(root, 'src/lib/database.ts'));
 const { trainingPrograms, templatePlanId } = loadSource(path.join(root, 'src/lib/plan-templates.ts'));
 const { importPlanTemplate } = loadSource(path.join(root, 'src/lib/import-plan-template.ts'));
 const { startWorkoutFromPlan, repeatWorkoutFromHistory, addWorkoutExercise, appendWorkoutSet, editFinishedWorkout, reusePreviousWorkoutSet, replaceWorkoutExercise, moveWorkoutExercise } = loadSource(path.join(root, 'src/lib/workout-storage.ts'));
@@ -519,22 +519,33 @@ failure.native.close();
 // Upgrade a legacy database without touching plans, workouts or same-name custom exercises.
 const legacy = database();
 await migrate(legacy.db);
-legacy.native.exec('DROP TABLE training_preferences; DROP TABLE training_schedule; DROP TABLE plan_favorites');
+const canonicalItems = legacy.native.prepare('SELECT * FROM plan_items ORDER BY id').all();
+// Reproduce an actual v1.0.2 database: no user_version, generated exercise IDs, none of the later tables or columns.
+legacy.native.exec('PRAGMA foreign_keys = OFF');
+legacy.native.exec('DROP TABLE training_preferences; DROP TABLE training_schedule; DROP TABLE plan_favorites; DROP TABLE app_settings; DROP TABLE backup_snapshots; DROP INDEX idx_workout_sets_exercise');
 legacy.native.exec("DELETE FROM exercises WHERE id LIKE 'builtin:%'");
-// Remove the new columns to reproduce an actual v1.0.2 schema.
+for (const { id } of legacy.native.prepare('SELECT id FROM exercises').all()) {
+  legacy.native.prepare('UPDATE exercises SET id = ? WHERE id = ?').run(`generated-${id}`, id);
+  legacy.native.prepare('UPDATE plan_items SET exerciseId = ? WHERE exerciseId = ?').run(`generated-${id}`, id);
+}
+legacy.native.exec('ALTER TABLE workout_sets DROP COLUMN kind; ALTER TABLE workout_sets DROP COLUMN rpe;');
 for (const table of ['plan_items', 'workout_sets']) {
   legacy.native.exec(`ALTER TABLE ${table} DROP COLUMN unit; ALTER TABLE ${table} DROP COLUMN restSeconds;`);
 }
+legacy.native.exec('PRAGMA user_version = 0; PRAGMA foreign_keys = ON');
 legacy.native.prepare('INSERT INTO exercises VALUES (?, ?, ?, ?, 1)').run('custom-squat', '自重深蹲', '腿', '自定义');
+legacy.native.prepare('INSERT INTO exercises VALUES (?, ?, ?, ?, 1)').run('custom-bench', '杠铃卧推', '胸', '自定义');
 legacy.native.prepare('UPDATE plans SET name = ? WHERE rowid = (SELECT MIN(rowid) FROM plans)').run('已编辑计划');
 legacy.native.prepare('INSERT INTO workouts VALUES (?, NULL, ?, ?, ?, ?)').run('saved-workout', '保留训练', '2026-10-01', '2026-10-01', '我的笔记');
-const keptExercise = legacy.native.prepare('SELECT id FROM exercises LIMIT 1').get().id;
-legacy.native.prepare('INSERT INTO workout_sets VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run('saved-set', 'saved-workout', keptExercise, 0, 1, 20, 7, 1);
+legacy.native.prepare('INSERT INTO workout_sets VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run('saved-set', 'saved-workout', 'generated-barbell_bench', 0, 1, 20, 7, 1);
+legacy.native.prepare('INSERT INTO workout_sets VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run('custom-set', 'saved-workout', 'custom-bench', 1, 1, 30, 5, 1);
 const savedSet = legacy.native.prepare('SELECT * FROM workout_sets WHERE id = ?').get('saved-set');
 const savedPlans = legacy.native.prepare('SELECT * FROM plans ORDER BY id').all();
-const savedItems = legacy.native.prepare('SELECT * FROM plan_items ORDER BY id').all();
 const savedWorkouts = legacy.native.prepare('SELECT * FROM workouts ORDER BY id').all();
 await migrate(legacy.db);
+assert.equal(legacy.native.prepare('PRAGMA user_version').get().user_version, SCHEMA_VERSION);
+assert.equal(legacy.native.prepare("SELECT COUNT(*) AS count FROM exercises WHERE id LIKE 'generated-%'").get().count, 0, 'generated built-in IDs become the shared IDs');
+assert.equal(legacy.native.prepare('SELECT exerciseId FROM workout_sets WHERE id = ?').get('custom-set').exerciseId, 'custom-bench', 'same-name custom exercises keep their ID');
 assert.equal(await readWeeklyGoal(legacy.db), 0);
 assert.deepEqual(await scheduleRows(legacy.db), []);
 assert.deepEqual(await readFavoritePlanIds(legacy.db), []);
@@ -546,14 +557,14 @@ assert.equal(await readWeeklyGoal(legacy.db), 5);
 assert.deepEqual(await scheduleRows(legacy.db), [{ day: scheduledDay, planId: savedPlans[0].id }]);
 assert.deepEqual(await readFavoritePlanIds(legacy.db), [savedPlans[0].id]);
 assert.equal(legacy.native.prepare('SELECT COUNT(*) AS count FROM exercises WHERE isCustom = 0').get().count, 55);
-assert.equal(legacy.native.prepare('SELECT COUNT(*) AS count FROM exercises WHERE isCustom = 1').get().count, 1);
+assert.equal(legacy.native.prepare('SELECT COUNT(*) AS count FROM exercises WHERE isCustom = 1').get().count, 2);
 assert.deepEqual(legacy.native.prepare('SELECT * FROM plans ORDER BY id').all(), savedPlans);
 const legacyItems = legacy.native.prepare('SELECT * FROM plan_items ORDER BY id').all();
-assert.deepEqual(legacyItems.map(({unit, restSeconds, ...original}) => original), savedItems.map(item => ({...item})));
+assert.deepEqual(legacyItems.map(({ unit, restSeconds, ...original }) => original), canonicalItems.map(({ unit, restSeconds, ...original }) => original));
 assert.ok(legacyItems.every(item => item.unit === 'reps' && item.restSeconds === 90));
-const { unit, restSeconds, ...preservedSet } = legacy.native.prepare('SELECT * FROM workout_sets WHERE id = ?').get('saved-set');
-assert.deepEqual(preservedSet, {...savedSet});
-assert.equal(unit, 'reps'); assert.equal(restSeconds, 90);
+const { unit, restSeconds, kind, rpe, ...preservedSet } = legacy.native.prepare('SELECT * FROM workout_sets WHERE id = ?').get('saved-set');
+assert.deepEqual(preservedSet, { ...savedSet, exerciseId: 'barbell_bench' });
+assert.equal(unit, 'reps'); assert.equal(restSeconds, 90); assert.equal(kind, 'working'); assert.equal(rpe, null);
 assert.deepEqual(legacy.native.prepare('SELECT * FROM workouts ORDER BY id').all(), savedWorkouts);
 for (const id of ['home-dumbbell', 'home-bodyweight']) {
   const program = trainingPrograms.find(p => p.id === id);
@@ -931,7 +942,7 @@ const replacementPlan = replacement.native.prepare('SELECT id FROM plans LIMIT 1
 const insertReplacementWorkout = replacement.native.prepare('INSERT INTO workouts VALUES (?, ?, ?, ?, ?, ?)');
 insertReplacementWorkout.run('replacement-active', replacementPlan, '保留训练', '2026-11-07T10:00:00Z', null, '保留笔记');
 insertReplacementWorkout.run('replacement-history', replacementPlan, '保留历史', '2026-11-06T10:00:00Z', '2026-11-06T11:00:00Z', '历史笔记');
-const insertReplacementSet = replacement.native.prepare('INSERT INTO workout_sets VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+const insertReplacementSet = replacement.native.prepare('INSERT INTO workout_sets (id, workoutId, exerciseId, sortOrder, setNumber, weight, reps, completed, unit, restSeconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 insertReplacementSet.run('replacement-source-2', 'replacement-active', replacementSource, 3, 2, 40, 8, 0, 'reps', 0);
 insertReplacementSet.run('replacement-source-5', 'replacement-active', replacementSource, 3, 5, 45, 6, 0, 'reps', 150);
 insertReplacementSet.run('replacement-other', 'replacement-active', replacementExisting, 4, 1, 0, 20, 1, 'reps', 90);
@@ -1025,7 +1036,7 @@ const movePlan = move.native.prepare('SELECT id FROM plans LIMIT 1').get().id;
 const insertMoveWorkout = move.native.prepare('INSERT INTO workouts VALUES (?, ?, ?, ?, ?, ?)');
 insertMoveWorkout.run('move-active', movePlan, '保留训练', '2026-11-07T10:00:00Z', null, '保留笔记');
 insertMoveWorkout.run('move-history', movePlan, '保留历史', '2026-11-06T10:00:00Z', '2026-11-06T11:00:00Z', '历史笔记');
-const insertMoveSet = move.native.prepare('INSERT INTO workout_sets VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+const insertMoveSet = move.native.prepare('INSERT INTO workout_sets (id, workoutId, exerciseId, sortOrder, setNumber, weight, reps, completed, unit, restSeconds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 insertMoveSet.run('move-a-1', 'move-active', moveA, 5, 7, 45, 8, 1, 'reps', 0);
 insertMoveSet.run('move-a-2', 'move-active', moveA, 9, 3, 0, 45, 0, 'seconds', 120);
 insertMoveSet.run('move-b-1', 'move-active', moveB, 12, 2, 0, 30, 1, 'seconds', 60);
@@ -1087,4 +1098,43 @@ assert.deepEqual(reopenedMove.prepare('SELECT * FROM workout_sets WHERE workoutI
 reopenedMove.close();
 fs.rmSync(moveDirectory, { recursive: true, force: true });
 
-console.log(`Passed: 34 programs / 69 days / ${media.length} demos with offline teaching / ${media.filter(demo => demo.asset).length} bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import, workout repeat and history edits; independent plan copies and favorite ordering; backup, training schedule, favorites and weekly goal round-trip, validation and rollback; calendar, weekly activity, personal-record and training comparison metrics; body and nutrition trends.`);
+// A v3 JSON backup restores new set fields without changing the format version.
+const { mergeBackup, latestSnapshot, undoLastImport } = loadSource(path.join(root, 'src/lib/backup.ts'));
+const v3 = database();
+await migrate(v3.db);
+const imported = {
+  ...await exportBackup(v3.db),
+  preferences: { weightUnit: 'lb', calorieGoal: 2100, proteinGoal: 130 },
+};
+const v3Date = '2026-11-21T08:00:00.000Z';
+imported.tables.workouts.push(
+  { id: 'imported-finished', planId: null, name: '已保存', startedAt: v3Date, endedAt: v3Date, note: '' },
+  { id: 'imported-active', planId: null, name: '还在练', startedAt: v3Date, endedAt: null, note: '' },
+);
+imported.tables.workout_sets.push(
+  { id: 'imported-warmup', workoutId: 'imported-finished', exerciseId: 'barbell_bench', sortOrder: 0, setNumber: 1, reps: 8, weight: 80, completed: 1, unit: 'reps', kind: 'warmup', rpe: 6.5 },
+  { id: 'imported-working', workoutId: 'imported-finished', exerciseId: 'barbell_bench', sortOrder: 0, setNumber: 2, reps: 5, weight: 60, completed: 1, unit: 'reps', kind: 'working', rpe: 8 },
+);
+const decoded = parseBackup(JSON.stringify(imported));
+assert.equal((await mergeBackup(v3.db, decoded)).workouts, 1);
+const v3Export = await exportBackup(v3.db);
+assert.equal(v3Export.tables.workouts.length, 1, 'unfinished sessions are omitted from merge');
+assert.equal(v3Export.preferences.weightUnit, 'lb');
+assert.equal(v3Export.tables.workout_sets.find(set => set.id === 'imported-warmup').rpe, 6.5);
+assert.equal(volumeOf(v3Export.tables.workout_sets), 300, 'warm-up load never counts toward volume');
+const v3Progress = buildTrainingProgress(v3Export.tables.workouts, v3Export.tables.workout_sets);
+assert.equal(v3Progress.byExercise.get('barbell_bench').best.e1rm.e1rm, 70);
+for (let attempt = 0; attempt < 3; attempt++) {
+  assert.equal((await mergeBackup(v3.db, decoded)).workouts, 0, 'repeated merge is idempotent');
+}
+assert.equal(v3.native.prepare('SELECT COUNT(*) AS count FROM backup_snapshots').get().count, 3);
+assert.equal((await latestSnapshot(v3.db)).reason, 'merge');
+await undoLastImport(v3.db);
+assert.equal((await exportBackup(v3.db)).tables.workouts.length, 1, 'undo restores the immediate pre-import state');
+assert.equal(v3.native.prepare('SELECT COUNT(*) AS count FROM backup_snapshots').get().count, 2);
+const invalidRpe = structuredClone(decoded);
+invalidRpe.tables.workout_sets[0].rpe = 8.2;
+assert.throws(() => parseBackup(JSON.stringify(invalidRpe)), /rpe/i);
+v3.native.close();
+
+console.log(`Passed: 34 programs / 69 days / ${media.length} demos with offline teaching / ${media.filter(demo => demo.asset).length} bundled GIF mappings; nine sports; timed intervals and rest retained; legacy schema and data preserved; atomic import, workout repeat and history edits; independent plan copies and favorite ordering; backup, training schedule, favorites and weekly goal round-trip, validation and rollback; calendar, weekly activity, personal-record and training comparison metrics; body and nutrition trends; v3 merge, snapshots, warm-up exclusion, RPE and estimated 1RM.`);

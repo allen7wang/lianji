@@ -1,6 +1,5 @@
 import SwiftUI
-
-private let lime = Color(red: 0.725, green: 0.953, blue: 0.416)
+import WatchKit
 
 struct WatchHomeView: View {
     @EnvironmentObject private var store: TrainingStore
@@ -13,23 +12,24 @@ struct WatchHomeView: View {
                         NavigationLink {
                             WatchWorkoutView()
                         } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Label("继续训练", systemImage: "bolt.fill")
-                                    .font(.caption.bold()).foregroundStyle(lime)
-                                Text(workout.name).font(.headline).lineLimit(2)
-                                Text("\(workout.completedSets.count) / \(workout.sets.count) 组")
-                                    .font(.caption2).foregroundStyle(.secondary)
+                            SignalCard(padding: Theme.Spacing.sm) {
+                                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                                    Label("继续训练", systemImage: "bolt.fill").themeText(.caption)
+                                    Text(workout.name).themeText(.title3).lineLimit(2)
+                                    TraceProgress(value: Double(workout.completedSets.count) / Double(max(1, workout.sets.count)), tone: .complete)
+                                    Text("\(workout.completedSets.count) / \(workout.sets.count) 组").themeText(.caption)
+                                }
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(7)
                         }
+                        .buttonStyle(.plain)
                     } else {
-                        Text("今天练什么？").font(.headline)
+                        Text("今天练什么？").themeText(.title1)
                         Button {
                             store.startWorkout(planId: nil)
                         } label: {
                             Label("自由训练", systemImage: "plus.circle.fill")
                         }
+                        .buttonStyle(.themePrimary(.small, fullWidth: true))
                     }
                     NavigationLink {
                         WatchPlansView()
@@ -81,12 +81,18 @@ struct WatchHomeView: View {
                         Label("身体饮食", systemImage: "scalemass")
                     }
                     NavigationLink {
+                        WatchSettingsView()
+                    } label: {
+                        Label("设置", systemImage: "gearshape")
+                    }
+                    NavigationLink {
                         WatchDemoLibrary()
                     } label: {
                         Label("动作动图", systemImage: "play.circle")
                     }
                 }
             }
+            .containerBackground(Theme.Colors.bg, for: .navigation)
             .navigationTitle("练迹")
         }
     }
@@ -148,7 +154,7 @@ private struct WatchScheduleView: View {
                     Text(item.plan.name).font(.subheadline.bold())
                     Text("\(item.entry.day) · \(item.status.rawValue)")
                         .font(.caption2)
-                        .foregroundStyle(item.status == .missed ? .secondary : lime)
+                        .foregroundStyle(item.status == .completed ? Theme.Colors.success : Theme.Colors.textMuted)
                     TrainingScheduleActions(item: item) { showWorkout = true }
                 }
             }
@@ -279,7 +285,7 @@ private struct WatchProgramDayPreview: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Text(day.focus).font(.caption2).foregroundStyle(lime)
+                Text(day.focus).font(.caption2).foregroundStyle(Theme.Colors.data)
                 ForEach(day.exercises, id: \.name) { item in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(item.name).font(.caption.bold())
@@ -305,9 +311,9 @@ private struct WatchWorkoutView: View {
                     HStack {
                         Text("\(workout.completedSets.count)/\(workout.sets.count) 组")
                         Spacer()
-                        Text("\(Int(workout.volume)) kg")
+                        Text("\(store.state.preferences.weightUnit.format(kilograms: workout.volume))")
                     }
-                    .font(.caption).foregroundStyle(lime)
+                    .font(.caption).foregroundStyle(Theme.Colors.data)
 
                     ForEach(workout.exerciseIds, id: \.self) { exerciseId in
                         NavigationLink {
@@ -327,6 +333,9 @@ private struct WatchWorkoutView: View {
                     }
                     Button("结束训练") {
                         store.finishWorkout()
+                        if let saved = store.finishedWorkouts.first(where: { $0.id == workout.id }) {
+                            Task { try? await WatchHealth.save(saved) }
+                        }
                         dismiss()
                     }
                     .disabled(workout.completedSets.isEmpty)
@@ -353,6 +362,7 @@ private struct WatchExerciseView: View {
 
     var body: some View {
         let workout = store.activeWorkout
+        let unit = store.state.preferences.weightUnit
         let references = workout.map {
             TrainingComparison(workouts: store.state.workouts).previousExerciseSets(for: $0, exerciseId: exerciseId)[exerciseId] ?? []
         } ?? []
@@ -376,63 +386,84 @@ private struct WatchExerciseView: View {
                 if let restUntil {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         let remaining = max(0, Int(restUntil.timeIntervalSince(context.date)))
-                        Text(remaining > 0 ? "\(timerLabel) \(remaining) 秒" : "计时结束，请按实际情况记录")
-                            .font(.caption.bold())
-                        .foregroundStyle(lime)
+                        SignalCard(padding: Theme.Spacing.sm) {
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                                Text(remaining > 0 ? timerLabel : "计时结束").themeText(.caption)
+                                Text("\(remaining) 秒").themeText(.number)
+                            }
+                        }
                     }
                     Button("停止计时") { self.restUntil = nil }
                 }
+                TrainingSuggestionRow(exerciseId: exerciseId)
                 ForEach(workout?.sets.filter { $0.exerciseId == exerciseId } ?? []) { set in
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text("第 \(set.setNumber) 组").font(.caption.bold()).foregroundStyle(lime)
-                        if BreathingProfile.find(store.exercise(exerciseId)) == nil {
-                            Stepper(value: Binding(get: { set.weight }, set: { store.updateSet(set.id, weight: $0) }), in: 0...2000, step: 2.5) {
-                                Text("\(set.weight.formatted()) kg")
-                            }
-                        }
-                        Stepper(value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), in: 0...1000) {
-                            Text(set.targetLabel)
-                        }
-                        if let workout,
-                           let reference = references.first(where: { $0.unit == (set.unit ?? .reps) }),
-                           let source = reference.reusableSet(for: set, in: workout) {
-                            ReusePreviousSetButton(workoutId: workout.id, setId: set.id, source: source)
-                        }
-                        if set.unit == .seconds && !set.completed {
-                            if let profile = BreathingProfile.find(store.exercise(exerciseId)) {
-                                NavigationLink("呼吸引导 \(set.reps) 秒") {
-                                    ScrollView { BreathingGuideView(profile: profile, seconds: set.reps).padding(.horizontal, 4) }
-                                        .navigationTitle("呼吸引导")
-                                }
-                            } else {
-                                Button("计时 \(set.reps) 秒") {
-                                    guard store.activeWorkout?.sets.contains(where: { $0.id == set.id }) == true else { return }
-                                    timerLabel = "动作计时"
-                                    restUntil = .now.addingTimeInterval(Double(set.reps))
-                                }
-                            }
-                        }
-                        Button {
-                            store.updateSet(set.id, completed: !set.completed)
-                            if !set.completed, store.activeWorkout?.sets.contains(where: { $0.id == set.id && $0.completed }) == true {
-                                timerLabel = "休息"
-                                restUntil = .now.addingTimeInterval(Double(set.restSeconds ?? 90))
-                            }
-                        } label: {
-                            Label(set.completed ? "已完成" : "完成这组", systemImage: set.completed ? "checkmark.circle.fill" : "circle")
-                        }
-                        .disabled(set.reps == 0)
-                        .buttonStyle(.borderedProminent)
-                    }
-                    .padding(.vertical, 5)
-                    Divider()
+                    setCard(set, workout: workout, references: references, unit: unit)
                 }
                 Button("添加一组", systemImage: "plus") {
                     store.addSet(for: exerciseId)
                 }
+                Button("添加热身组") { store.addWarmupSet(for: exerciseId) }
             }
         }
         .navigationTitle("动作")
+        .task(id: restUntil) {
+            guard let restUntil, restUntil > .now else { return }
+            do {
+                try await Task.sleep(for: .seconds(restUntil.timeIntervalSinceNow))
+                if DeviceSettings().haptics { WKInterfaceDevice.current().play(.success) }
+            } catch {}
+        }
+    }
+
+    private func setCard(_ set: TrainingSet, workout: Workout?, references: [PreviousExerciseSets], unit: WeightUnit) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            ThemeTag(text: set.isWarmup ? "W · 热身" : "第 \(workout?.workingSetOrdinal(of: set.id) ?? set.setNumber) 组", tone: set.isWarmup ? .warning : .neutral)
+            if BreathingProfile.find(store.exercise(exerciseId)) == nil {
+                Stepper {
+                    Text(unit.format(kilograms: set.weight)).monospacedDigit()
+                } onIncrement: {
+                    store.updateSet(set.id, weight: min(2000, set.weight + unit.toKilograms(unit.step)))
+                } onDecrement: {
+                    store.updateSet(set.id, weight: max(0, set.weight - unit.toKilograms(unit.step)))
+                }
+            }
+            Stepper(value: Binding(get: { set.reps }, set: { store.updateSet(set.id, reps: $0) }), in: 0...1000) {
+                Text(set.targetLabel)
+            }
+            if let workout,
+               let reference = references.first(where: { $0.unit == (set.unit ?? .reps) }),
+               let source = reference.reusableSet(for: set, in: workout) {
+                ReusePreviousSetButton(workoutId: workout.id, setId: set.id, source: source)
+            }
+            if set.unit == .seconds && !set.completed {
+                if let profile = BreathingProfile.find(store.exercise(exerciseId)) {
+                    NavigationLink("呼吸引导 \(set.reps) 秒") {
+                        ScrollView { BreathingGuideView(profile: profile, seconds: set.reps).padding(.horizontal, 4) }
+                            .navigationTitle("呼吸引导")
+                    }
+                } else {
+                    Button("计时 \(set.reps) 秒") {
+                        guard store.activeWorkout?.sets.contains(where: { $0.id == set.id }) == true else { return }
+                        timerLabel = "动作计时"
+                        restUntil = .now.addingTimeInterval(Double(set.reps))
+                    }
+                }
+            }
+            Button {
+                store.updateSet(set.id, completed: !set.completed)
+                if !set.completed, store.activeWorkout?.sets.contains(where: { $0.id == set.id && $0.completed }) == true {
+                    timerLabel = "休息"
+                    restUntil = .now.addingTimeInterval(Double(set.restSeconds ?? 90))
+                }
+            } label: {
+                Label(set.completed ? "已完成" : "完成这组", systemImage: set.completed ? "checkmark.circle.fill" : "circle")
+            }
+            .disabled(set.reps == 0)
+            .buttonStyle(.themeSecondary(.small, fullWidth: true))
+            .foregroundStyle(set.completed ? Theme.Colors.success : Theme.Colors.text)
+            SetKindAndRPE(set: set)
+        }
+        .themeCard(padding: Theme.Spacing.sm)
     }
 }
 
@@ -466,7 +497,7 @@ private struct WatchProgressView: View {
                                     .font(.caption2.monospacedDigit())
                                     .lineLimit(1).minimumScaleFactor(0.65)
                                 Circle()
-                                    .fill(day.completedSets > 0 ? lime : .secondary.opacity(0.45))
+                                    .fill(day.completedSets > 0 ? Theme.Colors.data : .secondary.opacity(0.45))
                                     .frame(width: 6, height: 6)
                             }
                             .frame(maxWidth: .infinity)
@@ -475,7 +506,7 @@ private struct WatchProgressView: View {
                         }
                     }
                     Text("\(week.activeDays()) 天 · \(week.completedSets) 组")
-                        .font(.caption.bold()).foregroundStyle(lime)
+                        .font(.caption.bold()).foregroundStyle(Theme.Colors.data)
                 }
                 Button(weekOffset == 0 ? "查看上周" : "返回本周") {
                     weekOffset = weekOffset == 0 ? -1 : 0
@@ -516,10 +547,10 @@ private struct WatchExerciseProgressView: View {
                     Text("暂无可比较的次数或时长。").font(.caption).foregroundStyle(.secondary)
                 }
                 ForEach(progress.records.metrics) { metric in
-                    if let label = progress.records.label(metric) {
+                    if let label = progress.records.label(metric, unit: store.state.preferences.weightUnit) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(metric.rawValue).font(.caption2).foregroundStyle(.secondary)
-                            Text(label).font(.subheadline.bold()).foregroundStyle(lime)
+                            Text(label).font(.subheadline.bold()).foregroundStyle(Theme.Colors.data)
                         }
                     }
                 }
@@ -530,7 +561,7 @@ private struct WatchExerciseProgressView: View {
                         Text(session.date.formatted(date: .abbreviated, time: .shortened))
                             .font(.caption2).foregroundStyle(.secondary)
                         ForEach(session.records.metrics) { metric in
-                            if let label = session.records.label(metric) {
+                            if let label = session.records.label(metric, unit: store.state.preferences.weightUnit) {
                                 Text(label).font(.caption)
                             }
                         }
@@ -555,6 +586,9 @@ private struct WatchBackupView: View {
 private struct WatchWellnessView: View {
     @EnvironmentObject private var store: TrainingStore
 
+    @State private var meal = "加餐"
+    @State private var notice: String?
+
     var body: some View {
         let trend = WellnessTrend.bodyTrend(store.state.bodyEntries)
         let today = ScheduledTraining.localDay(.now)
@@ -563,8 +597,8 @@ private struct WatchWellnessView: View {
             Section("最近体重") {
                 if let latest = trend.latest {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("\(latest.weight.formatted()) kg")
-                            .font(.headline).foregroundStyle(lime)
+                        Text("\(store.state.preferences.weightUnit.format(kilograms: latest.weight))")
+                            .font(.headline).foregroundStyle(Theme.Colors.data)
                         if let delta = trend.weightDelta {
                             Text(weightChange(delta))
                                 .font(.caption2).foregroundStyle(.secondary)
@@ -578,9 +612,27 @@ private struct WatchWellnessView: View {
             }
             Section("今日热量") {
                 Text("\((todayCalories ?? 0).formatted()) 千卡")
-                    .font(.headline).foregroundStyle(lime)
+                    .font(.headline).foregroundStyle(Theme.Colors.data)
+                NutritionGoalsSummary(progress: store.nutritionProgress())
                 if todayCalories == nil {
                     Text("今天还没有饮食记录。").font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+            let foods = store.recentFoods(limit: 3)
+            if !foods.isEmpty {
+                Section("快速记录") {
+                    Picker("餐次", selection: $meal) {
+                        ForEach(["早餐", "午餐", "晚餐", "加餐"], id: \.self) { Text($0) }
+                    }
+                    ForEach(foods) { food in
+                        Button(food.name) {
+                            do {
+                                _ = try store.relogFood(food, meal: meal)
+                                notice = "已记录\(food.name)"
+                            } catch { notice = error.localizedDescription }
+                        }
+                        .accessibilityLabel("记录\(food.name)到\(meal)")
+                    }
                 }
             }
             if !trend.points.isEmpty {
@@ -590,20 +642,23 @@ private struct WatchWellnessView: View {
                             Text(point.recordedAt.formatted(date: .abbreviated, time: .omitted))
                                 .font(.caption2)
                             Spacer()
-                            Text("\(point.weight.formatted()) kg")
-                                .font(.caption).foregroundStyle(lime)
+                            Text("\(store.state.preferences.weightUnit.format(kilograms: point.weight))")
+                                .font(.caption).foregroundStyle(Theme.Colors.data)
                         }
                     }
                 }
             }
         }
         .navigationTitle("身体饮食")
+        .alert("饮食记录", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
+            Button("好", role: .cancel) {}
+        } message: { Text(notice ?? "") }
     }
 
     private func weightChange(_ delta: Double) -> String {
         if delta == 0 { return "与上次相同" }
-        if delta > 0 { return "+\(delta.formatted()) kg" }
-        return "−\(abs(delta).formatted()) kg"
+        if delta > 0 { return "+\(store.state.preferences.weightUnit.format(kilograms: delta))" }
+        return "−\(store.state.preferences.weightUnit.format(kilograms: abs(delta)))"
     }
 }
 
@@ -617,8 +672,8 @@ private struct WatchHistoryView: View {
                 Text(workout.name).font(.subheadline.bold()).lineLimit(2)
                 Text(workout.startedAt.formatted(date: .abbreviated, time: .omitted))
                     .font(.caption2).foregroundStyle(.secondary)
-                Text("\(workout.completedSets.count) 组 · \(Int(workout.volume)) kg")
-                    .font(.caption2).foregroundStyle(lime)
+                Text("\(workout.completedSets.count) 组 · \(store.state.preferences.weightUnit.format(kilograms: workout.volume))")
+                    .font(.caption2).foregroundStyle(Theme.Colors.data)
                 if let prior = comparison.previousPlanWorkout(for: workout) {
                     PlanWorkoutComparisonView(comparison: prior)
                 }
@@ -641,5 +696,18 @@ private struct WatchDemoLibrary: View {
             }
         }
         .navigationTitle("动作动图")
+    }
+}
+
+private struct WatchSettingsView: View {
+    @AppStorage(DeviceSettings.Key.haptics.rawValue) private var haptics = DeviceSettings.Key.haptics.defaultValue
+
+    var body: some View {
+        List {
+            TrainingPreferencesView()
+            Toggle("计时震动", isOn: $haptics)
+            WatchHealthSetting()
+        }
+        .navigationTitle("设置")
     }
 }

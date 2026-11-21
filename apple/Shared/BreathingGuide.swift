@@ -15,7 +15,7 @@ struct BreathingGuideView: View {
     @State private var session = BreathingSession()
     @State private var clock = Date.distantPast
     private let ticker = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
-    private let accent = Color(red: 0.725, green: 0.953, blue: 0.416)
+    private let accent = Theme.Colors.data
     private var elapsed: Double { min(Double(seconds), session.elapsed(at: clock) / 1000) }
     private var finished: Bool { elapsed >= Double(seconds) }
     private var running: Bool { session.startedAt != nil && !finished }

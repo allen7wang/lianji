@@ -145,7 +145,7 @@ struct ExerciseDemoView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(exercise.name).font(.title3.bold())
                 Text("\(exercise.muscle) · \(exercise.equipment)").font(.caption).foregroundStyle(.secondary)
-                if let demo { Text(demo.mediaLabel).font(.caption2.bold()).foregroundStyle(.green) }
+                if let demo { Text(demo.mediaLabel).font(.caption2.bold()).foregroundStyle(Theme.Colors.data) }
                 if let breathing = BreathingProfile.find(exercise) {
                     BreathingGuideView(profile: breathing, seconds: breathing.id == "box_breathing" ? 64 : 60)
                 } else if let demo {
@@ -214,7 +214,7 @@ private struct ExerciseGuideContent: View {
             Text("动作步骤").font(.headline)
             ForEach(Array(guide.steps.enumerated()), id: \.offset) { step in
                 HStack(alignment: .top, spacing: 8) {
-                    Text("\(step.offset + 1)").font(.caption.bold()).foregroundStyle(.green)
+                    Text("\(step.offset + 1)").font(.caption.bold()).foregroundStyle(Theme.Colors.data)
                     Text(step.element).font(.caption).fixedSize(horizontal: false, vertical: true)
                 }
             }

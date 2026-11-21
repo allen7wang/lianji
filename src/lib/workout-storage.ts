@@ -2,13 +2,31 @@ import { withWriteTransaction } from './write-transaction';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { findPreviousSetMatches } from './training-comparison';
 import { defaultSetTarget } from './training-target';
-import { id, type Exercise, type Plan, type PlanItem, type Workout, type WorkoutSet } from './types';
+import { id, isRpe, isWarmup, type Exercise, type Plan, type PlanItem, type SetKind, type Workout, type WorkoutSet } from './types';
 
 export type FinishedWorkoutEdit = {
   name: string;
   note: string;
-  sets: Pick<WorkoutSet, 'id' | 'weight' | 'reps' | 'completed'>[];
+  sets: (Pick<WorkoutSet, 'id' | 'weight' | 'reps' | 'completed'> & Partial<Pick<WorkoutSet, 'rpe'>>)[];
 };
+
+export type SetPatch = Partial<Pick<WorkoutSet, 'weight' | 'reps' | 'completed' | 'rpe'>>;
+
+function validatePatch(patch: SetPatch) {
+  if (patch.weight !== undefined && (!Number.isFinite(patch.weight) || patch.weight < 0 || patch.weight > 2000)) throw new Error('重量需介于 0–2000 kg。');
+  if (patch.reps !== undefined && (!Number.isInteger(patch.reps) || patch.reps < 0 || patch.reps > 1000)) throw new Error('次数或秒数需为 0–1000 的整数。');
+  if (patch.completed !== undefined && patch.completed !== 0 && patch.completed !== 1) throw new Error('组的完成状态无效。');
+  if (patch.rpe !== undefined && patch.rpe !== null && !isRpe(patch.rpe)) throw new Error('RPE 需为 5–10，步长 0.5。');
+}
+
+async function activeSet(db: SQLiteDatabase, setId: string) {
+  const set = await db.getFirstAsync<WorkoutSet>(`
+    SELECT workout_sets.* FROM workout_sets JOIN workouts ON workouts.id = workout_sets.workoutId
+    WHERE workout_sets.id = ? AND workouts.endedAt IS NULL
+  `, setId);
+  if (!set) throw new Error('找不到这组训练，请重新打开训练。');
+  return set;
+}
 
 async function createWorkout(db: SQLiteDatabase, planId: string | null, name: string, note: string) {
   const workoutId = id();
@@ -16,8 +34,8 @@ async function createWorkout(db: SQLiteDatabase, planId: string | null, name: st
   return workoutId;
 }
 
-async function createWorkoutSet(db: SQLiteDatabase, workoutId: string, set: Pick<WorkoutSet, 'exerciseId' | 'sortOrder' | 'weight' | 'reps' | 'unit' | 'restSeconds'>, number: number) {
-  await db.runAsync('INSERT INTO workout_sets (id, workoutId, exerciseId, sortOrder, setNumber, weight, reps, completed, unit, restSeconds) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)', id(), workoutId, set.exerciseId, set.sortOrder, number, set.weight, set.reps, set.unit ?? 'reps', set.restSeconds ?? 90);
+async function createWorkoutSet(db: SQLiteDatabase, workoutId: string, set: Pick<WorkoutSet, 'exerciseId' | 'sortOrder' | 'weight' | 'reps' | 'unit' | 'restSeconds' | 'kind'>, number: number) {
+  await db.runAsync('INSERT INTO workout_sets (id, workoutId, exerciseId, sortOrder, setNumber, weight, reps, completed, unit, restSeconds, kind) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)', id(), workoutId, set.exerciseId, set.sortOrder, number, set.weight, set.reps, set.unit ?? 'reps', set.restSeconds ?? 90, set.kind ?? 'working');
 }
 
 export async function startWorkoutFromPlan(db: SQLiteDatabase, planId?: string) {
@@ -87,13 +105,15 @@ export async function editFinishedWorkout(db: SQLiteDatabase, workoutId: string,
       }
       if (set.completed !== 0 && set.completed !== 1) throw new Error('组的完成状态无效。');
       if (set.completed && set.reps <= 0) throw new Error('已完成的组需要填写大于 0 的次数或秒数。');
-      if (weightChanged || targetChanged || set.completed !== original.completed) changedSets.push(set);
+      const rpe = set.rpe === undefined ? original.rpe ?? null : set.rpe;
+      if (rpe !== null && !isRpe(rpe)) throw new Error('RPE 需为 5–10，步长 0.5。');
+      if (weightChanged || targetChanged || set.completed !== original.completed || rpe !== (original.rpe ?? null)) changedSets.push({ ...set, rpe });
     }
     if (!edit.sets.some(set => set.completed)) throw new Error('请至少保留一组已完成的训练。');
 
     await transaction.runAsync('UPDATE workouts SET name = ?, note = ? WHERE id = ?', name, edit.note.trim(), workoutId);
     for (const set of changedSets) {
-      await transaction.runAsync('UPDATE workout_sets SET weight = ?, reps = ?, completed = ? WHERE id = ? AND workoutId = ?', set.weight, set.reps, set.completed, set.id, workoutId);
+      await transaction.runAsync('UPDATE workout_sets SET weight = ?, reps = ?, completed = ?, rpe = ? WHERE id = ? AND workoutId = ?', set.weight, set.reps, set.completed, set.rpe ?? null, set.id, workoutId);
     }
   });
 }
@@ -106,6 +126,7 @@ export async function reusePreviousWorkoutSet(db: SQLiteDatabase, setId: string,
     const current = await transaction.getFirstAsync<Workout>('SELECT * FROM workouts WHERE id = ? AND endedAt IS NULL', target.workoutId);
     if (!current) throw new Error('只能在进行中的训练里沿用上次组次。');
     if (target.completed) throw new Error('这组训练已完成，请先取消勾选。');
+    if (isWarmup(target)) throw new Error('热身组不沿用上次组次。');
 
     const [workouts, sets] = await Promise.all([
       transaction.getAllAsync<Workout>(`
@@ -206,12 +227,76 @@ export async function moveWorkoutExercise(db: SQLiteDatabase, workoutId: string,
   });
 }
 
-export async function appendWorkoutSet(db: SQLiteDatabase, workoutId: string, exerciseId: string) {
+export async function appendWorkoutSet(db: SQLiteDatabase, workoutId: string, exerciseId: string, kind: SetKind = 'working') {
   await withWriteTransaction(db, async transaction => {
     const workout = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workouts WHERE id = ? AND endedAt IS NULL', workoutId);
     if (!workout) throw new Error('只能在进行中的训练里添加组数。');
-    const previous = await transaction.getFirstAsync<WorkoutSet>('SELECT * FROM workout_sets WHERE workoutId = ? AND exerciseId = ? ORDER BY setNumber DESC LIMIT 1', workoutId, exerciseId);
-    if (!previous) throw new Error('这个动作已变更，请重新查看训练。');
-    await createWorkoutSet(transaction, workoutId, previous, previous.setNumber + 1);
+    const sets = await transaction.getAllAsync<WorkoutSet>('SELECT * FROM workout_sets WHERE workoutId = ? AND exerciseId = ? ORDER BY setNumber', workoutId, exerciseId);
+    if (!sets.length) throw new Error('这个动作已变更，请重新查看训练。');
+    const working = sets.filter(set => !isWarmup(set));
+    const template = working.at(-1) ?? sets.at(-1)!;
+    if (kind === 'working') {
+      await createWorkoutSet(transaction, workoutId, { ...template, kind }, sets.at(-1)!.setNumber + 1);
+      return;
+    }
+    // Warm-ups go after existing warm-ups and before working sets, at about half the load.
+    const warmups = sets.filter(isWarmup);
+    const number = warmups.length ? warmups.at(-1)!.setNumber + 1 : sets[0].setNumber;
+    const weight = template.unit === 'seconds' ? template.weight : Math.round(template.weight * 0.5 / 2.5) * 2.5;
+    // Shift from the end so the (workoutId, setNumber) order never collides mid-update.
+    for (const set of [...sets].reverse()) {
+      if (set.setNumber >= number) await transaction.runAsync('UPDATE workout_sets SET setNumber = ? WHERE id = ?', set.setNumber + 1, set.id);
+    }
+    await createWorkoutSet(transaction, workoutId, { ...template, weight, kind }, number);
+  });
+}
+
+export async function updateWorkoutSet(db: SQLiteDatabase, setId: string, patch: SetPatch) {
+  validatePatch(patch);
+  const fields = (['weight', 'reps', 'completed', 'rpe'] as const).filter(key => patch[key] !== undefined);
+  if (!fields.length) return;
+  await withWriteTransaction(db, async transaction => {
+    await activeSet(transaction, setId);
+    await transaction.runAsync(`UPDATE workout_sets SET ${fields.map(key => `${key} = ?`).join(', ')} WHERE id = ?`, ...fields.map(key => patch[key] ?? null), setId);
+  });
+}
+
+export async function setWorkoutSetKind(db: SQLiteDatabase, setId: string, kind: SetKind) {
+  if (kind !== 'working' && kind !== 'warmup') throw new Error('组的类型无效。');
+  await withWriteTransaction(db, async transaction => {
+    await activeSet(transaction, setId);
+    await transaction.runAsync('UPDATE workout_sets SET kind = ? WHERE id = ?', kind, setId);
+  });
+}
+
+export async function deleteWorkoutSet(db: SQLiteDatabase, setId: string) {
+  await withWriteTransaction(db, async transaction => {
+    await activeSet(transaction, setId);
+    await transaction.runAsync('DELETE FROM workout_sets WHERE id = ?', setId);
+  });
+}
+
+/** Fills the load into every unfinished working set of one exercise. */
+export async function applyWorkoutWeight(db: SQLiteDatabase, workoutId: string, exerciseId: string, weight: number) {
+  validatePatch({ weight });
+  let changed = 0;
+  await withWriteTransaction(db, async transaction => {
+    const workout = await transaction.getFirstAsync<{ id: string }>('SELECT id FROM workouts WHERE id = ? AND endedAt IS NULL', workoutId);
+    if (!workout) throw new Error('只能在进行中的训练里调整重量。');
+    const result = await transaction.runAsync(`UPDATE workout_sets SET weight = ?
+      WHERE workoutId = ? AND exerciseId = ? AND completed = 0 AND kind != 'warmup' AND unit != 'seconds'`, weight, workoutId, exerciseId);
+    changed = result.changes;
+  });
+  return changed;
+}
+
+export async function finishActiveWorkout(db: SQLiteDatabase, workoutId: string, note: string) {
+  await withWriteTransaction(db, async transaction => {
+    const done = await transaction.getFirstAsync<{ count: number }>(`
+      SELECT COUNT(*) AS count FROM workout_sets JOIN workouts ON workouts.id = workout_sets.workoutId
+      WHERE workouts.id = ? AND workouts.endedAt IS NULL AND workout_sets.completed = 1
+    `, workoutId);
+    if (!done?.count) throw new Error('至少完成一组训练后再结束。');
+    await transaction.runAsync('UPDATE workouts SET endedAt = ?, note = ? WHERE id = ? AND endedAt IS NULL', new Date().toISOString(), note.trim(), workoutId);
   });
 }

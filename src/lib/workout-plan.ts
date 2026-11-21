@@ -1,4 +1,4 @@
-import type { PlanDraftItem, WorkoutSet } from './types';
+import { isWarmup, type PlanDraftItem, type WorkoutSet } from './types';
 
 export const planLimits = {
   sets: 20,
@@ -9,7 +9,7 @@ export const planLimits = {
 
 export function draftPlanFromWorkout(sets: WorkoutSet[]): PlanDraftItem[] {
   const byExercise = new Map<string, WorkoutSet[]>();
-  const completed = sets.filter(set => set.completed && Number.isFinite(set.reps) && set.reps > 0)
+  const completed = sets.filter(set => set.completed && !isWarmup(set) && Number.isFinite(set.reps) && set.reps > 0)
     .sort((a, b) => a.sortOrder - b.sortOrder || a.setNumber - b.setNumber);
 
   for (const set of completed) {

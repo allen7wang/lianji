@@ -1,80 +1,88 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useData } from '@/lib/data';
+import { ActivityIndicator, Pressable, View } from 'react-native';
+import { useActions, useLibrary } from '@/lib/data';
 import type { WeeklyTrainingActivity } from '@/lib/training-progress';
-import { Button, Card, IconButton } from './components';
-import { C, space } from './theme';
+import { Button, Card, ProgressTrack, Sheet, Tag, Txt } from './components';
+import { makeStyles, radius, space, useTheme } from './theme';
 
 const goalOptions = [1, 2, 3, 4, 5, 6, 7];
+const weekdays = '一二三四五六日';
 
-export function WeeklyTrainingGoal({ weeks, showRecent = false }: { weeks: WeeklyTrainingActivity[]; showRecent?: boolean }) {
-  const { ready, weeklyGoal, setWeeklyGoal } = useData();
+export function WeeklyTrainingGoal({ weeks, showRecent = false, children }: { weeks: WeeklyTrainingActivity[]; showRecent?: boolean; children?: React.ReactNode }) {
+  const { ready, weeklyGoal } = useLibrary();
+  const { setWeeklyGoal } = useActions();
+  const s = useStyles();
+  const { c } = useTheme();
   const [editing, setEditing] = useState(false);
-  if (!ready) return <Card style={styles.loading}>
-    <ActivityIndicator color={C.accent} />
-    <Text style={styles.detail}>正在加载本周目标</Text>
-  </Card>;
+  if (!ready) return <Card style={s.loading}><ActivityIndicator color={c.accent} /><Txt variant="caption" tone="muted">正在加载本周目标</Txt></Card>;
   const week = weeks[0];
   if (!week) return null;
   const remaining = Math.max(weeklyGoal - week.count, 0);
   const reached = weeklyGoal > 0 && remaining === 0;
-  const status = reached ? '本周已达标' : `还差 ${remaining} 天`;
   const actionLabel = weeklyGoal ? '调整目标' : '设定目标';
 
-  return <Card style={styles.card}>
-    <View style={styles.cardHeader}>
-      <View style={styles.labelRow}>
-        <Ionicons name={reached ? 'checkmark-circle' : 'flag-outline'} size={20} color={C.accent} />
-        <Text accessibilityRole="header" style={styles.title}>本周训练目标</Text>
+  return <Card style={s.card}>
+    <View style={s.top}>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Txt variant="overline" tone="muted">本周训练</Txt>
+        <Txt variant="display" style={s.count}>{week.count}<Txt variant="title3" tone="muted">{weeklyGoal ? ` / ${weeklyGoal} 天` : ' 天'}</Txt></Txt>
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel={actionLabel} onPress={() => setEditing(true)} style={({ pressed }) => [styles.editAction, pressed && styles.pressed]}>
-        <Text style={styles.editText}>{actionLabel}</Text>
-        <Ionicons name="chevron-forward" size={15} color={C.accent} />
-      </Pressable>
+      <View style={{ alignItems: 'flex-end', gap: space.sm }}>
+        {weeklyGoal ? <Tag label={reached ? '本周已达标' : `还差 ${remaining} 天`} tone={reached ? 'success' : 'accent'} icon={reached ? 'checkmark' : 'flag'} /> : null}
+        <Pressable accessibilityRole="button" accessibilityLabel={actionLabel} hitSlop={10} onPress={() => setEditing(true)} style={({ pressed }) => [s.action, pressed && { opacity: 0.6 }]}>
+          <Txt variant="bodyStrong" tone="accent" style={{ fontSize: 14 }}>{actionLabel}</Txt>
+          <Ionicons name="chevron-forward" size={14} color={c.accentText} />
+        </Pressable>
+      </View>
     </View>
-    {weeklyGoal ? <>
-      <View style={styles.summary}>
-        <Text style={styles.count}>{week.count}<Text style={styles.target}> / {weeklyGoal} 天</Text></Text>
-        <Text style={[styles.status, reached && styles.reached]}>{status}</Text>
-      </View>
-      <View accessible accessibilityRole="progressbar" accessibilityLabel="本周训练目标进度" accessibilityValue={{ min: 0, max: weeklyGoal, now: Math.min(week.count, weeklyGoal), text: `已训练 ${week.count} 天，目标 ${weeklyGoal} 天，${status}` }} style={styles.track}>
-        <View style={[styles.fill, { width: `${Math.min(1, week.count / weeklyGoal) * 100}%` }]} />
-      </View>
-    </> : <Text style={styles.detail}>已训练 {week.count} 天 · 设定每周要练几天</Text>}
-    {showRecent ? <RecentTrainingWeeks weeks={weeks} /> : null}
+    {weeklyGoal ? <ProgressTrack value={week.count / weeklyGoal} tone={reached ? 'success' : 'accent'} /> : null}
+    <View style={s.days} accessible accessibilityLabel={`本周已训练 ${week.count} 天：${week.days.filter(day => day.trained).map(day => `周${weekdays[(day.date.getDay() + 6) % 7]}`).join('、') || '还没有训练'}`}>
+      {week.days.map((day, index) => {
+        const future = !day.trained && !day.today && day.date > new Date();
+        return <View key={day.key} style={s.day}>
+          <View style={[s.dot, day.trained && s.dotTrained, day.today && !day.trained && s.dotToday, future && s.dotFuture]}>
+            {day.trained ? <Ionicons name="checkmark" size={15} color={c.onInverse} /> : <Txt variant="caption" tone={day.today ? 'accent' : 'faint'} style={{ fontWeight: '700' }}>{day.date.getDate()}</Txt>}
+          </View>
+          <Txt variant="caption" tone={day.today ? 'default' : 'faint'} style={{ fontSize: 11, fontWeight: day.today ? '800' : '600' }}>{weekdays[index]}</Txt>
+        </View>;
+      })}
+    </View>
+    {children}
+    {showRecent ? <RecentTrainingWeeks weeks={weeks} goal={weeklyGoal} /> : null}
     {editing ? <GoalEditor initial={weeklyGoal} onSave={setWeeklyGoal} onClose={() => setEditing(false)} /> : null}
   </Card>;
 }
 
-function RecentTrainingWeeks({ weeks }: { weeks: WeeklyTrainingActivity[] }) {
-  return <View style={styles.recent}>
-    <Text style={styles.detail} accessibilityRole="header">近 {weeks.length} 周训练天数</Text>
-    <View style={styles.weekRow}>
-      {weeks.map((week, index) => {
-        const current = index === 0;
-        const start = `${week.start.getMonth() + 1}/${week.start.getDate()}`;
-        return <View key={week.start.getTime()} accessible accessibilityLabel={`${current ? '本周' : `${week.start.getMonth() + 1}月${week.start.getDate()}日起的一周`}训练 ${week.count} 天`} style={[styles.week, current && styles.currentWeek]}>
-          <Text style={styles.weekLabel}>{current ? '本周' : `${start} 起`}</Text>
-          <Text style={[styles.weekCount, current && styles.currentWeekCount]}>{week.count} 天</Text>
+function RecentTrainingWeeks({ weeks, goal }: { weeks: WeeklyTrainingActivity[]; goal: number }) {
+  const s = useStyles();
+  const { c } = useTheme();
+  const max = Math.max(7, goal);
+  return <View style={s.recent}>
+    <Txt variant="caption" tone="muted" accessibilityRole="header">近 {weeks.length} 周训练天数</Txt>
+    <View style={s.weekRow}>
+      {[...weeks].reverse().map((week, index, list) => {
+        const current = index === list.length - 1;
+        const label = current ? '本周' : `${week.start.getMonth() + 1}/${week.start.getDate()}`;
+        const met = goal > 0 && week.count >= goal;
+        return <View key={week.start.getTime()} accessible accessibilityLabel={`${current ? '本周' : `${week.start.getMonth() + 1}月${week.start.getDate()}日起的一周`}训练 ${week.count} 天`} style={s.weekColumn}>
+          <Txt variant="caption" style={{ fontWeight: '800', fontVariant: ['tabular-nums'] }}>{week.count}</Txt>
+          <View style={s.barTrack}>
+            <View style={[s.bar, { height: `${Math.max(6, (week.count / max) * 100)}%`, backgroundColor: week.count ? met ? c.success : current ? c.accent : c.data : c.surfaceAlt }]} />
+          </View>
+          <Txt variant="caption" tone={current ? 'default' : 'faint'} style={{ fontSize: 11 }}>{label}</Txt>
         </View>;
-      }).reverse()}
+      })}
     </View>
   </View>;
 }
 
 function GoalEditor({ initial, onSave, onClose }: { initial: number; onSave: (days: number) => Promise<void>; onClose: () => void }) {
+  const s = useStyles();
   const [draft, setDraft] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
   const pending = useRef(false);
-  const close = () => { if (!pending.current) onClose(); };
-
-  function select(days: number) {
-    setDraft(days);
-    setError(false);
-  }
 
   async function save() {
     if (pending.current || draft === initial) return;
@@ -92,70 +100,43 @@ function GoalEditor({ initial, onSave, onClose }: { initial: number; onSave: (da
     }
   }
 
-  return <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={close}>
-    <SafeAreaView style={styles.modal} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.modalContent}>
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle} accessibilityRole="header">每周训练目标</Text>
-          {!saving ? <IconButton icon="close" label="关闭目标设置" onPress={close} /> : null}
-        </View>
-        <Text style={styles.detail}>一周从周一开始。训练至少完成一组并保存后计入，同一天最多计 1 天。</Text>
-        <Text style={styles.title}>每周计划训练几天？</Text>
-        <View style={styles.choices}>
-          {goalOptions.map(days => {
-            const checked = draft === days;
-            return <Pressable key={days} accessibilityRole="radio" accessibilityLabel={`每周 ${days} 天`} accessibilityState={{ checked, disabled: saving }} disabled={saving} onPress={() => select(days)} style={({ pressed }) => [styles.choice, checked && styles.choiceChecked, pressed && styles.pressed]}>
-              <Text style={[styles.choiceText, checked && styles.choiceTextChecked]}>{days} 天</Text>
-            </Pressable>;
-          })}
-        </View>
-        <Pressable accessibilityRole="radio" accessibilityLabel="关闭目标" accessibilityState={{ checked: draft === 0, disabled: saving }} disabled={saving} onPress={() => select(0)} style={({ pressed }) => [styles.off, draft === 0 && styles.choiceChecked, pressed && styles.pressed]}>
-          <Ionicons name={draft === 0 ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={draft === 0 ? C.accent : C.muted} />
-          <Text style={[styles.choiceText, draft === 0 && styles.choiceTextChecked]}>关闭目标</Text>
-        </Pressable>
-      </ScrollView>
-      <View style={styles.modalFooter}>
-        {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" style={styles.error}>保存目标失败，请重试。</Text> : null}
-        <Button label={saving ? '正在保存…' : '保存目标'} icon="checkmark" disabled={saving || draft === initial} onPress={save} />
-      </View>
-    </SafeAreaView>
-  </Modal>;
+  return <Sheet visible title="每周训练目标" subtitle="一周从周一开始；保存一场含完成组的训练计 1 天" onClose={() => { if (!pending.current) onClose(); }} closeDisabled={saving}
+    footer={<View style={{ gap: space.sm }}>
+      {error ? <Txt variant="caption" tone="danger" accessibilityRole="alert" accessibilityLiveRegion="assertive">保存目标失败，请重试。</Txt> : null}
+      <Button label={saving ? '正在保存…' : '保存目标'} icon="checkmark" loading={saving} disabled={draft === initial} onPress={save} />
+    </View>}>
+    <Txt variant="title3">每周计划训练几天？</Txt>
+    <View style={s.choices}>
+      {goalOptions.map(days => {
+        const checked = draft === days;
+        return <Pressable key={days} accessibilityRole="radio" accessibilityLabel={`每周 ${days} 天`} accessibilityState={{ checked, disabled: saving }} disabled={saving} onPress={() => { setDraft(days); setError(false); }} style={({ pressed }) => [s.choice, checked && s.choiceChecked, pressed && { opacity: 0.7 }]}>
+          <Txt variant="number" tone={checked ? 'inverse' : 'default'}>{days}</Txt>
+          <Txt variant="caption" tone={checked ? 'inverse' : 'muted'}>天</Txt>
+        </Pressable>;
+      })}
+    </View>
+    <Button label="关闭每周目标" variant={draft === 0 ? 'inverse' : 'secondary'} icon={draft === 0 ? 'checkmark-circle' : 'ellipse-outline'} disabled={saving} onPress={() => { setDraft(0); setError(false); }} />
+  </Sheet>;
 }
 
-const styles = StyleSheet.create({
-  card: { gap: 6, paddingVertical: 12 },
-  loading: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', columnGap: 8 },
-  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
-  title: { color: C.text, fontSize: 15, fontWeight: '800', flexShrink: 1 },
-  editAction: { flexDirection: 'row', gap: 3, minHeight: 44, alignItems: 'center' },
-  editText: { color: C.accent, fontSize: 13, fontWeight: '700' },
-  pressed: { opacity: 0.72 },
-  summary: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 },
-  count: { color: C.accent, fontSize: 25, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  target: { color: C.text, fontSize: 15, fontWeight: '700' },
-  status: { color: C.muted, fontSize: 13, fontWeight: '700' },
-  reached: { color: C.accent },
-  track: { height: 7, borderRadius: 4, overflow: 'hidden', backgroundColor: C.line },
-  fill: { height: 7, borderRadius: 4, backgroundColor: C.accent },
-  detail: { color: C.muted, fontSize: 13, lineHeight: 19 },
-  recent: { borderTopWidth: 1, borderTopColor: C.line, marginTop: 6, paddingTop: 9, gap: 8 },
-  weekRow: { flexDirection: 'row', gap: 5 },
-  week: { flex: 1, minWidth: 0, gap: 3, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3, paddingVertical: 7, borderRadius: 11, backgroundColor: C.elevated },
-  currentWeek: { backgroundColor: C.accentDark },
-  weekLabel: { color: C.muted, fontSize: 11, textAlign: 'center' },
-  weekCount: { color: C.text, fontSize: 13, fontWeight: '800', textAlign: 'center' },
-  currentWeekCount: { color: C.accent },
-  modal: { flex: 1, backgroundColor: C.bg },
-  modalContent: { width: '100%', maxWidth: 560, alignSelf: 'center', gap: 17, paddingHorizontal: space.page, paddingVertical: 20 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44, gap: 8 },
-  modalTitle: { color: C.text, fontSize: 23, fontWeight: '800', flexShrink: 1 },
-  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  choice: { minWidth: 60, minHeight: 47, borderRadius: 13, paddingHorizontal: 9, paddingVertical: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: C.elevated, borderWidth: 1, borderColor: C.line },
-  choiceChecked: { backgroundColor: C.accentDark, borderColor: C.accent },
-  choiceText: { color: C.text, fontSize: 15, fontWeight: '700' },
-  choiceTextChecked: { color: C.accent },
-  off: { minHeight: 47, padding: 12, borderRadius: 13, borderWidth: 1, borderColor: C.line, backgroundColor: C.elevated, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  modalFooter: { width: '100%', maxWidth: 560, alignSelf: 'center', gap: 8, paddingHorizontal: space.page, paddingVertical: 14, borderTopWidth: 1, borderTopColor: C.line },
-  error: { color: C.danger, fontSize: 13, fontWeight: '700' },
-});
+const useStyles = makeStyles(c => ({
+  card: { gap: space.lg },
+  loading: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: space.md },
+  top: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
+  count: { marginTop: 2 },
+  action: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 28 },
+  days: { flexDirection: 'row', justifyContent: 'space-between' },
+  day: { alignItems: 'center', gap: 6, flex: 1 },
+  dot: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: c.border },
+  dotTrained: { backgroundColor: c.inverse, borderColor: c.inverse },
+  dotToday: { borderColor: c.accent, borderWidth: 2 },
+  dotFuture: { backgroundColor: c.surfaceAlt, borderColor: c.surfaceAlt },
+  recent: { gap: space.md, borderTopWidth: 1, borderTopColor: c.border, paddingTop: space.lg },
+  weekRow: { flexDirection: 'row', gap: space.md },
+  weekColumn: { flex: 1, alignItems: 'center', gap: 6 },
+  barTrack: { height: 64, width: '100%', maxWidth: 36, justifyContent: 'flex-end' },
+  bar: { width: '100%', borderRadius: radius.sm },
+  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  choice: { width: 72, height: 72, borderRadius: radius.lg, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  choiceChecked: { backgroundColor: c.inverse },
+}));
