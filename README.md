@@ -4,9 +4,11 @@
 
 ## 下载预览版
 
-[练迹 v3.0.0 GitHub 预览版](https://github.com/allen7wang/lianji/releases/tag/v3.0.0)提供构建附件、各平台安装条件和校验值。macOS 包未签名、未公证，iPhone 和 Apple Watch 模拟器包需在 Xcode 模拟器中使用。
+[下载 Android APK · v3.0.0](https://github.com/allen7wang/lianji/releases/download/v3.0.0/Lianji-3.0.0-Android.apk)。需要 Android 8.0 或更高版本。在手机上下载后打开安装，按系统提示允许当前下载来源安装应用。安装后直接打开「练迹」，无需 Expo Go 或连接开发电脑。Android 7.x 手机可继续使用 [v1.3.0 发布页](https://github.com/allen7wang/lianji/releases/tag/v1.3.0)的旧版 APK。
 
-Android v3 需要 Android 8.0 或更高版本。已发布的旧版 APK 可从 [v1.3.0 发布页](https://github.com/allen7wang/lianji/releases/tag/v1.3.0)下载。完整变更和验收范围见 [v3.0.0 发布说明](docs/release-v3.0.0.md)。
+已安装 1.3.0 或更早 APK 的手机需要重新安装一次：先在旧版「我的」点「导出备份」并保存 JSON 文件，卸载旧版后安装 3.0.0，再在「我的」点「从备份恢复」。原因见下方「Android APK 发布」。
+
+[练迹 v3.0.0 GitHub 预览版](https://github.com/allen7wang/lianji/releases/tag/v3.0.0)还提供 [macOS 通用预览包](https://github.com/allen7wang/lianji/releases/download/v3.0.0/Lianji-3.0.0-macOS-universal.zip)、iPhone / Apple Watch 模拟器包和各附件的校验值。macOS 包未签名、未公证，iPhone 和 Apple Watch 模拟器包需在 Xcode 模拟器中使用。完整变更和验收范围见 [v3.0.0 发布说明](docs/release-v3.0.0.md)。
 
 <img src="docs/iphone-preview.png" alt="练迹 iPhone 首页预览" width="280" />
 
@@ -225,15 +227,19 @@ GitHub Actions 会在提交和 Pull Request 后检查代码规范、类型、计
 
 ### Android APK 发布
 
-「Android APK」工作流可选择已发布的源码标签，由 Expo 生成 Android 原生工程并编译包含 JavaScript 和本地素材的 Release APK。工作流产物使用临时构建签名，发布前需使用单独保管的固定发布密钥重新签名；私钥和口令不进入源码仓库或工作流。
+「Android APK」工作流可选择已发布的源码标签或提交，由 Expo 生成 Android 原生工程，并编译包含 JavaScript 和本地素材的 Release APK。从 v3.0.0 起，发布页直接附带工作流产物，不再在本地重新签名。产物使用 Expo 模板证书签名，即 Expo 生成的 `android/app/debug.keystore`，证书 SHA-256 为 `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c`。
 
-下载工作流产物后，使用 `bash scripts/sign-android-apk.sh <构建产物.apk> <发布包.apk>` 完成签名与校验。需要配置 `ANDROID_HOME` 和可用的 Java；默认发布密钥保存在 Mac 的 `~/Library/Application Support/Lianji/Signing/Android/`，也可通过 `LIANJI_ANDROID_KEYSTORE`、`LIANJI_ANDROID_PASSWORD_FILE` 指定现有密钥和口令文件。脚本不会生成新密钥或覆盖已有发布包。
+v1.3.0 及更早的 APK 使用单独保管的发布密钥签名，证书 SHA-256 为 `305630aa75b603ada3390fd3d431cffd7aa8be9027c09e3391fe9cd9047d1cb0`。这把密钥已无法取得，源码仓库和工作流中也没有保存。Expo 模板证书不依赖私密配置，每次工作流构建都使用同一张证书，所以之后的版本都能直接覆盖安装 3.0.0 并保留数据。模板密钥是公开的，签名本身不能证明安装包的来源，请从本仓库发布页下载，并用 `SHA256SUMS` 核对。
 
-「Android APK smoke test」工作流会校验发布包的 SHA-256，然后在 Android 模拟器安装最终签名的 APK，检查首页、34 套计划入口和关闭后重新启动，再验证导入、重复导入、按秒计划保存、动作计时、休息计时、地面流动及 9 个专项筛选，并验证呼吸暂停、继续、重新开始、完整引导结束与记录保存，保存截图与运行日志。后续升级应保持 `com.allenwang.lianji` 和同一发布签名。
+证书更换后，已安装 1.3.0 或更早 APK 的手机不能直接覆盖安装 3.0.0，系统会提示与已安装的应用冲突。迁移只需一次：在旧版「我的」点「导出备份」并保存 JSON 文件，然后卸载旧版。卸载会删除旧版的本机数据。安装 3.0.0 后，在「我的」点「从备份恢复」，选择备份文件并点「合并（推荐）」。
+
+`scripts/sign-android-apk.sh` 用于以原发布密钥重新签名，现行发布流程不再使用。换用其他证书签名的 APK 不能覆盖安装 3.0.0。
+
+「Android APK smoke test」工作流会校验发布包的 SHA-256，然后在 Android 模拟器安装发布页的 APK，检查首页、34 套计划入口和关闭后重新启动，再验证导入、重复导入、按秒计划保存、动作计时、休息计时、地面流动及 9 个专项筛选，并验证呼吸暂停、继续、重新开始、完整引导结束与记录保存，保存截图与运行日志。后续升级应保持 `com.allenwang.lianji` 和 Expo 模板证书。
 
 「Apple preview packages」工作流在相同源码上运行共享数据兼容测试，生成 Mac 通用包及 iPhone / Apple Watch 模拟器包。
 
-`eas.json` 也提供生成 APK 的 `preview` 构建配置，使用 EAS 需要先登录 Expo 并配置相同的发布凭据。
+`eas.json` 也提供生成 APK 的 `preview` 构建配置，使用 EAS 需要先登录 Expo。EAS 默认使用自己保管的 Android 密钥，产物要覆盖安装发布页的 APK，需改用同一张 Expo 模板证书。
 
 ## 许可
 
