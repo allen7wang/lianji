@@ -1,13 +1,13 @@
 {
   "source_repository": "allen7wang/lianji",
-  "source_commit": "1625b08aa8c067df640723e7392bf32ebba4e4aa",
+  "source_commit": "fb78d3061bcd9fc717977ebc3b80e105eb027a28",
   "base": "/lianji-web/",
   "backend_required": false,
   "files": {
     ".nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "404.html": "c1b2ab07e6f1282a8424b8e09203f312237aa47d3a42bab34eab9a7a64f02acc",
-    "_expo/static/js/web/entry-3d3f93380d61a70b3d61dd95b664bb9a.js": "3061a09e328c5607714723fa6d1db09978e0a41805c94b2fbedf62f0022d3b8f",
-    "_expo/static/js/web/worker-55d4588710e7c5984a7a228d93638b18.js": "1cb6baf4573a6c51cf2ff289e00100a6c99f5dc31f1316d3c27826bd732a3453",
+    "404.html": "0ed0629caf0ec48f779ab73eda75842672bfd284707a0cacf686db76521290e1",
+    "_expo/static/js/web/entry-5991fee48b0830490f19ebd2db34d293.js": "7d9fb0f40c568ea459e0bbefcd5f89382eaf9a652ef3a81944587de0f3a35079",
+    "_expo/static/js/web/worker-8c9dfe4f329de797a6f0f5f23b391ebe.js": "16b448d700dd2b22a0047bb48821046e0f1a65078122d2f0b6c073ccfc5fc341",
     "assets/assets/exercises/ape_hold.6ac6dbd8685dded114d41dc1483fa4f2.gif": "c56535bd534cc1a5de9e95138e8cf93985c6776f7e1c6661c643c5ad611a98b0",
     "assets/assets/exercises/barbell_bench.15a11a093b3f1499eadefdbf4018b157.gif": "52df29b72449a4f967c1fbc0bcc96ec50308eb27339a4728402669c60735cee5",
     "assets/assets/exercises/barbell_curl.b09aefe6ac33fcb6d65ae94169480845.gif": "c7b67e3e6b52c94d2c0503ca8ad16afdabc05539431e86181793e75a69d6260d",
@@ -97,8 +97,8 @@
     "assets/node_modules/expo-router/assets/sitemap.412dd9275b6b48ad28f5e3d81bb1f626.png": "acf691957a3bcce7d195856dce98a5cf14dce10bea28aa5c10b3550c078e23b5",
     "assets/node_modules/expo-router/assets/unmatched.20e71bdf79e3a97bf55fd9e164041578.png": "efc79da3c4c97dfb1571bff6202958ab0529c5aa31e8392600578b3e359d1447",
     "assets/node_modules/expo-sqlite/web/wa-sqlite/wa-sqlite.7ca566fbbc2ec2a172c5aefa63a20f4b.wasm": "e40812d09b0a9e78dcb2b95f99fb2e88efdffdc7642d75909efe0fda54d8f020",
-    "favicon.ico": "6d06b4d96e45dd3c9c56c76dd87bb98e09a639c49f91a7e8156e2b8a003058f1",
-    "index.html": "c1b2ab07e6f1282a8424b8e09203f312237aa47d3a42bab34eab9a7a64f02acc",
+    "favicon.ico": "cdffae884a1141d7c3e9c545f35bc678d43a8aaca838fe40d5c0b1d1a3245f90",
+    "index.html": "0ed0629caf0ec48f779ab73eda75842672bfd284707a0cacf686db76521290e1",
     "isolation.js": "e66696eca61aafdd00fa6735709ad965b513b0007b3af724d633799bf9f0e073",
     "metadata.json": "aa5f19cc84d41c0f8c70ececb2bc82e863227ea1e121632aca879eb616056991",
     "web-start.js": "72a3cd82e68d36ba66904cf68ccaf4d2a67526864571df448d6c30c56ba80c60"
