@@ -10,6 +10,8 @@
 
 [练迹 v3.0.0 GitHub 预览版](https://github.com/allen7wang/lianji/releases/tag/v3.0.0)还提供 [macOS 通用预览包](https://github.com/allen7wang/lianji/releases/download/v3.0.0/Lianji-3.0.0-macOS-universal.zip)、iPhone / Apple Watch 模拟器包和各附件的校验值。macOS 包未签名、未公证，iPhone 和 Apple Watch 模拟器包需在 Xcode 模拟器中使用。完整变更和验收范围见 [v3.0.0 发布说明](docs/release-v3.0.0.md)。
 
+产品定位、竞品对比与商业化建议见[产品与商业化分析](product-strategy/README.md)。
+
 <img src="docs/iphone-preview.png" alt="练迹 iPhone 首页预览" width="280" />
 
 > **v1.3.1 动图补齐**：51 项本地 GIF 与 4 项呼吸动画已全部随包提供，55 个内置动作的默认演示无需联网。
